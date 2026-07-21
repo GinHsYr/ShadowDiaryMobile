@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
+import 'package:shadow_diary_mobile/core/services/diary_image_service.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 import 'package:shadow_diary_mobile/features/editor/editor_page.dart';
@@ -144,6 +145,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(toolbarKey), findsOneWidget);
+    expect(find.byKey(const Key('editor-add-image-button')), findsOneWidget);
     final toolbar = tester.widget<QuillSimpleToolbar>(find.byKey(toolbarKey));
     expect(toolbar.config.showListNumbers, isFalse);
     expect(toolbar.config.showListBullets, isFalse);
@@ -152,6 +154,7 @@ void main() {
     expect(toolbar.config.showRightAlignment, isFalse);
     expect(toolbar.config.showJustifyAlignment, isFalse);
     expect(toolbar.config.showQuote, isTrue);
+    expect(toolbar.config.customButtons, hasLength(1));
 
     final attributes = tester
         .widgetList<QuillToolbarToggleStyleButton>(
@@ -180,6 +183,167 @@ void main() {
     expect(find.byKey(toolbarKey), findsNothing);
   });
 
+  testWidgets('inserts multiple WebP images and resizes from four corners', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(480, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    final repository = MemoryDiaryRepository();
+    final imageService = _FakeDiaryImageService([
+      _storedImage('picked-1.webp'),
+      _storedImage('picked-2.webp'),
+    ]);
+    await tester.pumpWidget(_testApp(repository, imageService: imageService));
+    await tester.pumpAndSettle();
+
+    final addImageButton = find.byKey(const Key('editor-add-image-button'));
+    await tester.ensureVisible(addImageButton);
+    await tester.pumpAndSettle();
+    await tester.tap(addImageButton);
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<QuillEditor>(
+      find.byKey(const Key('editor-quill-editor')),
+    );
+    var imageOperations = _imageOperations(editor.controller.document);
+    expect(imageService.pickCount, 1);
+    expect(imageService.requestedLimits, [9]);
+    expect(imageOperations, hasLength(2));
+    expect(
+      imageOperations.map(_imageSource),
+      containsAll([endsWith('picked-1.webp'), endsWith('picked-2.webp')]),
+    );
+    expect(imageOperations.map(_imageWidth), everyElement('100%'));
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    editor.scrollController.jumpTo(0);
+    await tester.pumpAndSettle();
+    final firstImage = find.byKey(const Key('diary-image-0'));
+    await tester.ensureVisible(firstImage);
+    await tester.tap(firstImage);
+    await tester.pump();
+    for (final corner in [
+      'top-left',
+      'top-right',
+      'bottom-left',
+      'bottom-right',
+    ]) {
+      expect(find.byKey(Key('diary-image-handle-$corner-0')), findsOneWidget);
+    }
+    expect(find.byType(Slider), findsNothing);
+
+    await tester.drag(
+      find.byKey(const Key('diary-image-handle-top-left-0')),
+      const Offset(140, 140),
+    );
+    await tester.pump();
+
+    imageOperations = _imageOperations(editor.controller.document);
+    var percentage = _imagePercentage(imageOperations.first);
+    expect(percentage, lessThan(100));
+
+    await tester.drag(
+      find.byKey(const Key('diary-image-handle-top-right-0')),
+      const Offset(30, -30),
+    );
+    await tester.pump();
+    var nextPercentage = _imagePercentage(
+      _imageOperations(editor.controller.document).first,
+    );
+    expect(nextPercentage, greaterThan(percentage));
+    percentage = nextPercentage;
+
+    await tester.drag(
+      find.byKey(const Key('diary-image-handle-bottom-left-0')),
+      const Offset(-30, 30),
+    );
+    await tester.pump();
+    nextPercentage = _imagePercentage(
+      _imageOperations(editor.controller.document).first,
+    );
+    expect(nextPercentage, greaterThan(percentage));
+    percentage = nextPercentage;
+
+    await tester.drag(
+      find.byKey(const Key('diary-image-handle-bottom-right-0')),
+      const Offset(-30, -30),
+    );
+    await tester.pump();
+    nextPercentage = _imagePercentage(
+      _imageOperations(editor.controller.document).first,
+    );
+    expect(nextPercentage, lessThan(percentage));
+    final resizedWidth = '${nextPercentage.round()}%';
+
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pumpAndSettle();
+    expect(repository.entries, hasLength(1));
+    expect(
+      repository.entries.single.plainContent.runes.where(
+        (rune) => rune == 0xfffc,
+      ),
+      hasLength(2),
+    );
+    expect(repository.entries.single.content, contains('picked-1.webp'));
+    expect(repository.entries.single.content, contains('picked-2.webp'));
+    expect(repository.entries.single.content, contains('width:$resizedWidth'));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('enforces the twenty image limit for one diary', (tester) async {
+    tester.view.physicalSize = const Size(480, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final existingHtml = List.generate(
+      19,
+      (index) =>
+          '<p><img src="file:///existing-$index.webp" style="width:100%"></p>',
+    ).join();
+    final repository = MemoryDiaryRepository([
+      _entry(
+        'image-limit',
+        today,
+        '',
+        existingHtml,
+        List.filled(19, '\uFFFC').join('\n'),
+      ),
+    ]);
+    final imageService = _FakeDiaryImageService([
+      _storedImage('new-1.webp'),
+      _storedImage('new-2.webp'),
+    ]);
+    await tester.pumpWidget(_testApp(repository, imageService: imageService));
+    await tester.pumpAndSettle();
+
+    final addImageButton = find.byKey(const Key('editor-add-image-button'));
+    await tester.ensureVisible(addImageButton);
+    await tester.pumpAndSettle();
+    await tester.tap(addImageButton);
+    await tester.pumpAndSettle();
+
+    final editor = tester.widget<QuillEditor>(
+      find.byKey(const Key('editor-quill-editor')),
+    );
+    expect(_imageOperations(editor.controller.document), hasLength(20));
+    expect(imageService.requestedLimits, [1]);
+
+    await tester.tap(addImageButton);
+    await tester.pump();
+    expect(imageService.pickCount, 1);
+    expect(find.text('A diary can contain up to 20 images.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('editor has no overflow on a narrow screen', (tester) async {
     tester.view.physicalSize = const Size(320, 640);
     tester.view.devicePixelRatio = 1;
@@ -195,9 +359,16 @@ void main() {
   });
 }
 
-Widget _testApp(MemoryDiaryRepository repository) {
+Widget _testApp(
+  MemoryDiaryRepository repository, {
+  DiaryImageService? imageService,
+}) {
   return ProviderScope(
-    overrides: [diaryRepositoryProvider.overrideWithValue(repository)],
+    overrides: [
+      diaryRepositoryProvider.overrideWithValue(repository),
+      if (imageService != null)
+        diaryImageServiceProvider.overrideWithValue(imageService),
+    ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       locale: const Locale('en'),
@@ -214,6 +385,47 @@ Widget _testApp(MemoryDiaryRepository repository) {
       home: const EditorPage(),
     ),
   );
+}
+
+class _FakeDiaryImageService implements DiaryImageService {
+  _FakeDiaryImageService(this.images);
+
+  final List<StoredDiaryImage> images;
+  int pickCount = 0;
+  final List<int> requestedLimits = [];
+
+  @override
+  Future<List<StoredDiaryImage>> pickAndStore({required int maxImages}) async {
+    pickCount++;
+    requestedLimits.add(maxImages);
+    return images;
+  }
+}
+
+StoredDiaryImage _storedImage(String filename) {
+  final path = 'C:\\shadow_diary_test\\$filename';
+  return StoredDiaryImage(filePath: path, uri: Uri.file(path));
+}
+
+List<Map<String, dynamic>> _imageOperations(Document document) {
+  return document.toDelta().toJson().where((operation) {
+    final insertion = operation['insert'];
+    return insertion is Map && insertion.containsKey(BlockEmbed.imageType);
+  }).toList();
+}
+
+String _imageSource(Map<String, dynamic> operation) {
+  return (operation['insert'] as Map<String, dynamic>)[BlockEmbed.imageType]
+      as String;
+}
+
+String _imageWidth(Map<String, dynamic> operation) {
+  return (operation['attributes'] as Map<String, dynamic>)[Attribute.width.key]
+      as String;
+}
+
+double _imagePercentage(Map<String, dynamic> operation) {
+  return double.parse(_imageWidth(operation).replaceFirst('%', ''));
 }
 
 String _titleText(WidgetTester tester) {

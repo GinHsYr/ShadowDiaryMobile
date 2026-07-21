@@ -206,6 +206,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorMoodSad => '难过';
 
   @override
+  String get editorAddImage => '添加图片';
+
+  @override
+  String get editorImageAddError => '添加图片失败。';
+
+  @override
+  String editorImageDiaryLimit(int maxImages) {
+    return '每篇日记最多添加 $maxImages 张图片。';
+  }
+
+  @override
+  String get editorAdjustImageSize => '调整图片大小';
+
+  @override
+  String get editorImageMissing => '图片不可用';
+
+  @override
   String get bootstrapFailed => '影迹启动失败';
 
   @override

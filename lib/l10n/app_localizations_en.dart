@@ -210,6 +210,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorMoodSad => 'Sad';
 
   @override
+  String get editorAddImage => 'Add image';
+
+  @override
+  String get editorImageAddError => 'Could not add the image.';
+
+  @override
+  String editorImageDiaryLimit(int maxImages) {
+    return 'A diary can contain up to $maxImages images.';
+  }
+
+  @override
+  String get editorAdjustImageSize => 'Adjust image size';
+
+  @override
+  String get editorImageMissing => 'Image unavailable';
+
+  @override
   String get bootstrapFailed => 'ShadowDiary could not start';
 
   @override

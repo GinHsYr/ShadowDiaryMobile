@@ -3,18 +3,20 @@ import 'dart:async';
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
-import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 
 import '../../core/diary/diary_entry.dart';
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
+import '../../core/services/diary_image_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'diary_document_codec.dart';
+import 'diary_image_embed.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
   const EditorPage({this.entryId, this.initialDate, super.key});
@@ -28,6 +30,8 @@ class EditorPage extends ConsumerStatefulWidget {
 
 class _EditorPageState extends ConsumerState<EditorPage>
     with WidgetsBindingObserver {
+  static const _maxImagesPerSelection = 9;
+  static const _maxImagesPerDiary = 20;
   static final _firstDate = DateTime(1900);
   static final _lastDate = DateTime(2100, 12, 31);
   static const _defaultMood = 'calm';
@@ -53,6 +57,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   bool _isSaving = false;
   bool _hasChanges = false;
   bool _isApplyingEntry = false;
+  bool _isAddingImage = false;
   bool _isChangingDate = false;
   bool _isExiting = false;
   bool _allowPop = false;
@@ -101,8 +106,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   Document _documentFromEntry(DiaryEntry? entry) {
     if (entry == null || entry.content.trim().isEmpty) return Document();
     try {
-      final delta = HtmlToDelta().convert(entry.content);
-      return delta.isEmpty ? Document() : Document.fromDelta(delta);
+      return diaryDocumentFromHtml(entry.content);
     } on Object {
       final document = Document();
       if (entry.plainContent.isNotEmpty) {
@@ -156,9 +160,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
       return true;
     }
 
-    final content = QuillDeltaToHtmlConverter(
-      _quillController.document.toDelta().toJson(),
-    ).convert();
+    final content = diaryDocumentToHtml(_quillController.document);
     final now = DateTime.now();
     final createdAt = DateTime(
       date.year,
@@ -281,6 +283,89 @@ class _EditorPageState extends ConsumerState<EditorPage>
     );
   }
 
+  Future<void> _addImages() async {
+    if (_isAddingImage) return;
+    final imageCount = _countImages(_quillController.document);
+    final availableSlots = _maxImagesPerDiary - imageCount;
+    if (availableSlots <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).editorImageDiaryLimit(_maxImagesPerDiary),
+          ),
+        ),
+      );
+      return;
+    }
+    final selectionLimit = availableSlots
+        .clamp(1, _maxImagesPerSelection)
+        .toInt();
+    setState(() => _isAddingImage = true);
+    try {
+      final images =
+          (await ref
+                  .read(diaryImageServiceProvider)
+                  .pickAndStore(maxImages: selectionLimit))
+              .take(selectionLimit)
+              .toList(growable: false);
+      if (images.isEmpty || !mounted) return;
+
+      final selection = _quillController.selection;
+      final documentEnd = _quillController.document.length - 1;
+      final start = selection.isValid
+          ? selection.start.clamp(0, documentEnd).toInt()
+          : documentEnd;
+      final end = selection.isValid
+          ? selection.end.clamp(start, documentEnd).toInt()
+          : start;
+      final plainText = _quillController.document.toPlainText();
+      final startsAtLineBoundary =
+          start == 0 || plainText.codeUnitAt(start - 1) == 0x0a;
+      final endsAtLineBoundary =
+          end < plainText.length && plainText.codeUnitAt(end) == 0x0a;
+      final insertion = Delta();
+      if (!startsAtLineBoundary) insertion.insert('\n');
+      for (var index = 0; index < images.length; index++) {
+        insertion.insert(
+          BlockEmbed.image(images[index].uri.toString()).toJson(),
+          {Attribute.width.key: '100%'},
+        );
+        if (index < images.length - 1 || !endsAtLineBoundary) {
+          insertion.insert('\n');
+        }
+      }
+      _quillController.replaceText(start, end - start, insertion, null);
+      final insertedLength = insertion.toList().fold<int>(
+        0,
+        (length, operation) => length + operation.length!,
+      );
+      _quillController.updateSelection(
+        TextSelection.collapsed(offset: start + insertedLength),
+        ChangeSource.local,
+      );
+      _editorFocusNode.requestFocus();
+    } on Object catch (error, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'ShadowDiary image picker',
+        ),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).editorImageAddError),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAddingImage = false);
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||
@@ -373,6 +458,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                           config: QuillEditorConfig(
                             placeholder: l10n.editorBodyPlaceholder,
                             padding: const EdgeInsets.all(AppSpacing.md),
+                            embedBuilders: const [DiaryImageEmbedBuilder()],
                           ),
                         ),
                       ),
@@ -381,7 +467,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                         QuillSimpleToolbar(
                           key: const Key('editor-keyboard-toolbar'),
                           controller: _quillController,
-                          config: const QuillSimpleToolbarConfig(
+                          config: QuillSimpleToolbarConfig(
                             showFontFamily: false,
                             showFontSize: false,
                             showColorButton: false,
@@ -402,6 +488,26 @@ class _EditorPageState extends ConsumerState<EditorPage>
                             showSubscript: false,
                             showSuperscript: false,
                             multiRowsDisplay: false,
+                            customButtons: [
+                              QuillToolbarCustomButtonOptions(
+                                tooltip: l10n.editorAddImage,
+                                onPressed: _isAddingImage
+                                    ? null
+                                    : () => unawaited(_addImages()),
+                                icon: _isAddingImage
+                                    ? const SizedBox.square(
+                                        key: Key('editor-add-image-button'),
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.add_photo_alternate_outlined,
+                                        key: Key('editor-add-image-button'),
+                                      ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -412,6 +518,17 @@ class _EditorPageState extends ConsumerState<EditorPage>
       ),
     );
   }
+}
+
+int _countImages(Document document) {
+  var count = 0;
+  for (final operation in document.toDelta().toJson()) {
+    final insertion = operation['insert'];
+    if (insertion is Map && insertion.containsKey(BlockEmbed.imageType)) {
+      count++;
+    }
+  }
+  return count;
 }
 
 class _EditorHeader extends StatelessWidget {

@@ -14,11 +14,13 @@ dependencies:
   bonsoir: ^7.1.4
   dynamic_color: ^1.7.0
   easy_date_timeline: ^2.0.9
+  flutter_image_compress: ^2.4.0
   flutter_quill: ^11.5.0
   flutter_quill_delta_from_html: ^1.5.3
   flutter_riverpod: ^3.3.2
   go_router: ^17.3.0
   intl: ^0.20.2
+  image_picker: ^1.1.2
   ionicons_flutter: ^1.0.0
   local_auth: ^3.0.2
   path: ^1.9.1

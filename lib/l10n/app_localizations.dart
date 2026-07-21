@@ -488,6 +488,36 @@ abstract class AppLocalizations {
   /// **'难过'**
   String get editorMoodSad;
 
+  /// No description provided for @editorAddImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片'**
+  String get editorAddImage;
+
+  /// No description provided for @editorImageAddError.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片失败。'**
+  String get editorImageAddError;
+
+  /// No description provided for @editorImageDiaryLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'每篇日记最多添加 {maxImages} 张图片。'**
+  String editorImageDiaryLimit(int maxImages);
+
+  /// No description provided for @editorAdjustImageSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整图片大小'**
+  String get editorAdjustImageSize;
+
+  /// No description provided for @editorImageMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片不可用'**
+  String get editorImageMissing;
+
   /// No description provided for @bootstrapFailed.
   ///
   /// In zh, this message translates to:

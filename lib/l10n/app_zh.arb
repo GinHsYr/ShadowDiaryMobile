@@ -71,6 +71,16 @@
   "editorMoodCalm": "平静",
   "editorMoodTired": "疲惫",
   "editorMoodSad": "难过",
+  "editorAddImage": "添加图片",
+  "editorImageAddError": "添加图片失败。",
+  "editorImageDiaryLimit": "每篇日记最多添加 {maxImages} 张图片。",
+  "@editorImageDiaryLimit": {
+    "placeholders": {
+      "maxImages": {"type": "int"}
+    }
+  },
+  "editorAdjustImageSize": "调整图片大小",
+  "editorImageMissing": "图片不可用",
   "bootstrapFailed": "影迹启动失败",
   "bootstrapFailedHint": "无法初始化本地数据库，请重新启动应用。"
 }

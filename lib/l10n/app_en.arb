@@ -71,6 +71,16 @@
   "editorMoodCalm": "Calm",
   "editorMoodTired": "Tired",
   "editorMoodSad": "Sad",
+  "editorAddImage": "Add image",
+  "editorImageAddError": "Could not add the image.",
+  "editorImageDiaryLimit": "A diary can contain up to {maxImages} images.",
+  "@editorImageDiaryLimit": {
+    "placeholders": {
+      "maxImages": {"type": "int"}
+    }
+  },
+  "editorAdjustImageSize": "Adjust image size",
+  "editorImageMissing": "Image unavailable",
   "bootstrapFailed": "ShadowDiary could not start",
   "bootstrapFailedHint": "The local database could not be initialized. Restart the app to try again."
 }
