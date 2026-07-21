@@ -5,6 +5,7 @@ import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
@@ -47,6 +48,10 @@ void main() {
 
     expect(_titleText(tester), 'Today title');
     expect(_bodyText(tester), contains('Today body'));
+    expect(
+      find.byKey(Key('editor-calendar-diary-${_dayKey(today)}')),
+      findsOneWidget,
+    );
 
     await tester.enterText(
       find.byKey(const Key('editor-title-field')),
@@ -94,6 +99,85 @@ void main() {
     expect(saved.plainContent, 'Rich body');
     expect(saved.content, contains('Rich body'));
     expect(saved.content, contains('<p>'));
+    final today = DateUtils.dateOnly(DateTime.now());
+    expect(
+      find.byKey(Key('editor-calendar-diary-${_dayKey(today)}')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('does not create or mark a mood-only empty diary', (
+    tester,
+  ) async {
+    final repository = MemoryDiaryRepository();
+    await tester.pumpWidget(_testApp(repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('editor-mood-happy')));
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pumpAndSettle();
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    expect(repository.entries, isEmpty);
+    expect(
+      find.byKey(Key('editor-calendar-diary-${_dayKey(today)}')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('shows the requested toolbar only above the keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(_testApp(MemoryDiaryRepository()));
+    await tester.pumpAndSettle();
+
+    const toolbarKey = Key('editor-keyboard-toolbar');
+    expect(find.byKey(toolbarKey), findsNothing);
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(toolbarKey), findsOneWidget);
+    final toolbar = tester.widget<QuillSimpleToolbar>(find.byKey(toolbarKey));
+    expect(toolbar.config.showListNumbers, isFalse);
+    expect(toolbar.config.showListBullets, isFalse);
+    expect(toolbar.config.showLeftAlignment, isTrue);
+    expect(toolbar.config.showCenterAlignment, isTrue);
+    expect(toolbar.config.showRightAlignment, isFalse);
+    expect(toolbar.config.showJustifyAlignment, isFalse);
+    expect(toolbar.config.showQuote, isTrue);
+
+    final attributes = tester
+        .widgetList<QuillToolbarToggleStyleButton>(
+          find.byType(QuillToolbarToggleStyleButton),
+        )
+        .map((button) => button.attribute)
+        .toList();
+    expect(
+      attributes,
+      containsAll(<Attribute>[
+        Attribute.leftAlignment,
+        Attribute.centerAlignment,
+        Attribute.blockQuote,
+      ]),
+    );
+    expect(attributes, isNot(contains(Attribute.rightAlignment)));
+    expect(attributes, isNot(contains(Attribute.justifyAlignment)));
+    expect(attributes, isNot(contains(Attribute.ol)));
+    expect(attributes, isNot(contains(Attribute.ul)));
+
+    expect(tester.getBottomLeft(find.byKey(toolbarKey)).dy, closeTo(340, 1));
+    expect(tester.takeException(), isNull);
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pumpAndSettle();
+    expect(find.byKey(toolbarKey), findsNothing);
   });
 
   testWidgets('editor has no overflow on a narrow screen', (tester) async {
@@ -188,6 +272,20 @@ class MemoryDiaryRepository implements DiaryRepository {
   }
 
   @override
+  Future<DiaryOverview> loadOverview() async {
+    return calculateDiaryOverview(
+      entries.map(
+        (entry) => (
+          createdAt: entry.createdAt,
+          title: entry.title,
+          plainContent: entry.plainContent,
+        ),
+      ),
+      today: DateTime.now(),
+    );
+  }
+
+  @override
   Future<void> save(DiaryEntry entry) async {
     final index = entries.indexWhere((candidate) => candidate.id == entry.id);
     if (index == -1) {
@@ -196,4 +294,8 @@ class MemoryDiaryRepository implements DiaryRepository {
       entries[index] = entry;
     }
   }
+}
+
+int _dayKey(DateTime date) {
+  return date.year * 10000 + date.month * 100 + date.day;
 }

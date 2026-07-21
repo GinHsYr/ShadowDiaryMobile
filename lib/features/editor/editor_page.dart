@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 
 import '../../core/diary/diary_entry.dart';
+import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -145,8 +146,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
     final revision = _changeRevision;
     final title = _titleController.text.trim();
     final plainContent = _quillController.document.toPlainText().trim();
-    final hasContent =
-        title.isNotEmpty || plainContent.isNotEmpty || _mood != _defaultMood;
+    final hasContent = hasWrittenDiaryContent(
+      title: title,
+      plainContent: plainContent,
+    );
     if (!hasContent && _entry == null) {
       _hasChanges = false;
       if (updateUi && mounted) setState(() {});
@@ -195,6 +198,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
       try {
         await _repository.save(entry);
         _lastSaveSucceeded = true;
+        if (mounted) ref.invalidate(diaryOverviewProvider);
         if (date == _selectedDate && revision == _changeRevision) {
           _hasChanges = false;
         }
@@ -306,6 +310,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context);
+    final diaryDates =
+        ref.watch(diaryOverviewProvider).value?.diaryDates ??
+        const <DateTime>[];
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
     return PopScope(
       canPop: _allowPop,
       onPopInvokedWithResult: (didPop, result) {
@@ -341,6 +349,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                                 controller: _datePickerController,
                                 firstDate: _firstDate,
                                 lastDate: _lastDate,
+                                diaryDates: diaryDates,
                                 onDateChange: _selectDate,
                               )
                             : const SizedBox.shrink(),
@@ -355,26 +364,6 @@ class _EditorPageState extends ConsumerState<EditorPage>
                         l10n: l10n,
                       ),
                       const Divider(height: 1),
-                      QuillSimpleToolbar(
-                        controller: _quillController,
-                        config: const QuillSimpleToolbarConfig(
-                          showFontFamily: false,
-                          showFontSize: false,
-                          showColorButton: false,
-                          showBackgroundColorButton: false,
-                          showAlignmentButtons: false,
-                          showListCheck: false,
-                          showCodeBlock: false,
-                          showQuote: false,
-                          showIndent: false,
-                          showLink: false,
-                          showSearchButton: false,
-                          showSubscript: false,
-                          showSuperscript: false,
-                          multiRowsDisplay: false,
-                        ),
-                      ),
-                      const Divider(height: 1),
                       Expanded(
                         child: QuillEditor(
                           key: const Key('editor-quill-editor'),
@@ -387,6 +376,35 @@ class _EditorPageState extends ConsumerState<EditorPage>
                           ),
                         ),
                       ),
+                      if (isKeyboardVisible) ...[
+                        const Divider(height: 1),
+                        QuillSimpleToolbar(
+                          key: const Key('editor-keyboard-toolbar'),
+                          controller: _quillController,
+                          config: const QuillSimpleToolbarConfig(
+                            showFontFamily: false,
+                            showFontSize: false,
+                            showColorButton: false,
+                            showBackgroundColorButton: false,
+                            showAlignmentButtons: true,
+                            showLeftAlignment: true,
+                            showCenterAlignment: true,
+                            showRightAlignment: false,
+                            showJustifyAlignment: false,
+                            showListNumbers: false,
+                            showListBullets: false,
+                            showListCheck: false,
+                            showCodeBlock: false,
+                            showQuote: true,
+                            showIndent: false,
+                            showLink: false,
+                            showSearchButton: false,
+                            showSubscript: false,
+                            showSuperscript: false,
+                            multiRowsDisplay: false,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -462,6 +480,7 @@ class _DatePicker extends StatelessWidget {
     required this.controller,
     required this.firstDate,
     required this.lastDate,
+    required this.diaryDates,
     required this.onDateChange,
   });
 
@@ -470,11 +489,13 @@ class _DatePicker extends StatelessWidget {
   final EasyDatePickerController controller;
   final DateTime firstDate;
   final DateTime lastDate;
+  final Iterable<DateTime> diaryDates;
   final ValueChanged<DateTime> onDateChange;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final diaryDayKeys = diaryDates.map(_dayKey).toSet();
     return Container(
       key: const Key('editor-day-picker'),
       decoration: BoxDecoration(
@@ -485,18 +506,142 @@ class _DatePicker extends StatelessWidget {
           ),
         ),
       ),
-      child: EasyDateTimeLinePicker(
+      child: EasyDateTimeLinePicker.itemBuilder(
         controller: controller,
         firstDate: firstDate,
         lastDate: lastDate,
         focusedDate: selectedDate,
         locale: locale,
+        itemExtent: 68,
         headerOptions: const HeaderOptions(headerType: HeaderType.none),
         timelineOptions: const TimelineOptions(
           height: 92,
           padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         ),
+        itemBuilder: (context, date, isSelected, isDisabled, isToday, onTap) {
+          return _EditorCalendarDay(
+            date: date,
+            locale: locale,
+            isSelected: isSelected,
+            isDisabled: isDisabled,
+            isToday: isToday,
+            hasDiary: diaryDayKeys.contains(_dayKey(date)),
+            onTap: onTap,
+          );
+        },
         onDateChange: onDateChange,
+      ),
+    );
+  }
+
+  static int _dayKey(DateTime date) {
+    return date.year * 10000 + date.month * 100 + date.day;
+  }
+}
+
+class _EditorCalendarDay extends StatelessWidget {
+  const _EditorCalendarDay({
+    required this.date,
+    required this.locale,
+    required this.isSelected,
+    required this.isDisabled,
+    required this.isToday,
+    required this.hasDiary,
+    required this.onTap,
+  });
+
+  final DateTime date;
+  final Locale locale;
+  final bool isSelected;
+  final bool isDisabled;
+  final bool isToday;
+  final bool hasDiary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final localeTag = locale.toLanguageTag();
+    final foreground = isDisabled
+        ? colors.onSurface.withValues(alpha: 0.38)
+        : isSelected
+        ? colors.onPrimary
+        : isToday
+        ? colors.primary
+        : colors.onSurface;
+    final borderColor = isSelected || isToday
+        ? colors.primary
+        : colors.outlineVariant.withValues(alpha: 0.55);
+    final dayKey = date.year * 10000 + date.month * 100 + date.day;
+
+    return Semantics(
+      label: DateFormat.yMMMMd(localeTag).format(date),
+      button: true,
+      selected: isSelected,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isDisabled ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: AnimatedContainer(
+            key: Key('editor-calendar-day-$dayKey'),
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: isSelected ? colors.primary : Colors.transparent,
+              border: Border.all(color: borderColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Text(
+                      DateFormat.E(localeTag).format(date),
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      '${date.day}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      DateFormat.MMM(localeTag).format(date),
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ],
+                ),
+                if (hasDiary)
+                  PositionedDirectional(
+                    end: 0,
+                    bottom: 0,
+                    child: Icon(
+                      Icons.check_rounded,
+                      key: Key('editor-calendar-diary-$dayKey'),
+                      size: 14,
+                      color: isSelected ? colors.onPrimary : colors.primary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

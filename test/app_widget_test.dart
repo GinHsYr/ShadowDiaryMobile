@@ -7,6 +7,7 @@ import 'package:shadow_diary_mobile/app/app_ionicons.dart';
 import 'package:shadow_diary_mobile/app/router.dart';
 import 'package:shadow_diary_mobile/app/shell.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
@@ -218,6 +219,9 @@ class EmptyDiaryRepository implements DiaryRepository {
 
   @override
   Future<DiaryEntry?> findById(String id) async => null;
+
+  @override
+  Future<DiaryOverview> loadOverview() async => DiaryOverview.empty;
 
   @override
   Future<void> save(DiaryEntry entry) async {}

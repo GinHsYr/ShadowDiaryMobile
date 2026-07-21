@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 import 'package:shadow_diary_mobile/features/home/home_page.dart';
@@ -141,13 +144,23 @@ void main() {
 }
 
 Widget _homeApp({required Locale locale, required ThemeData theme}) {
-  return MaterialApp(
-    locale: locale,
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    theme: theme,
-    home: const Scaffold(
-      body: HomePage(diaryCount: 147, streakDays: 20, characterCount: 76177),
+  return ProviderScope(
+    overrides: [
+      diaryOverviewProvider.overrideWith((ref) async {
+        return DiaryOverview(
+          diaryDates: [DateTime(2026, 7, 20)],
+          diaryCount: 147,
+          streakDays: 20,
+          characterCount: 76177,
+        );
+      }),
+    ],
+    child: MaterialApp(
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: theme,
+      home: const Scaffold(body: HomePage()),
     ),
   );
 }

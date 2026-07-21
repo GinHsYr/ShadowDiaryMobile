@@ -1,30 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:wheel_slider/wheel_slider.dart';
 
+import '../../core/diary/diary_overview.dart';
+import '../../core/diary/diary_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({
-    this.diaryCount = 0,
-    this.streakDays = 0,
-    this.characterCount = 0,
-    this.onCalendarDateSelected,
-    super.key,
-  }) : assert(diaryCount >= 0),
-       assert(streakDays >= 0),
-       assert(characterCount >= 0);
+class HomePage extends ConsumerWidget {
+  const HomePage({this.onCalendarDateSelected, super.key});
 
-  final int diaryCount;
-  final int streakDays;
-  final int characterCount;
   final ValueChanged<DateTime>? onCalendarDateSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final overview =
+        ref.watch(diaryOverviewProvider).value ?? DiaryOverview.empty;
     return AppPage(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -36,12 +30,15 @@ class HomePage extends StatelessWidget {
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.md),
-          HomeCalendar(onDateSelected: onCalendarDateSelected),
+          HomeCalendar(
+            diaryDates: overview.diaryDates,
+            onDateSelected: onCalendarDateSelected,
+          ),
           const SizedBox(height: AppSpacing.md),
           HomeStatisticsCards(
-            diaryCount: diaryCount,
-            streakDays: streakDays,
-            characterCount: characterCount,
+            diaryCount: overview.diaryCount,
+            streakDays: overview.streakDays,
+            characterCount: overview.characterCount,
           ),
         ],
       ),
@@ -75,7 +72,7 @@ class HomeStatisticsCards extends StatelessWidget {
 
         return SizedBox(
           key: const Key('home-statistics-cards'),
-          height: 100,
+          height: 112,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -332,6 +329,22 @@ class _HomeCalendarState extends State<HomeCalendar> {
               selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
               eventLoader: (day) =>
                   _hasDiary(day) ? const <bool>[true] : const <bool>[],
+              calendarBuilders: CalendarBuilders<bool>(
+                markerBuilder: (context, day, events) {
+                  if (events.isEmpty) return null;
+                  final isSelected = isSameDay(day, _selectedDay);
+                  return PositionedDirectional(
+                    end: 1,
+                    bottom: 0,
+                    child: Icon(
+                      Icons.check_rounded,
+                      key: Key('home-calendar-diary-${_dayKey(day)}'),
+                      size: 13,
+                      color: isSelected ? colors.onPrimary : colors.primary,
+                    ),
+                  );
+                },
+              ),
               headerVisible: false,
               availableCalendarFormats: const {CalendarFormat.month: 'Month'},
               calendarFormat: CalendarFormat.month,
@@ -390,13 +403,6 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   color: colors.secondaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                markerDecoration: BoxDecoration(
-                  color: colors.primary,
-                  shape: BoxShape.circle,
-                ),
-                markersAlignment: Alignment.bottomCenter,
-                markerMargin: const EdgeInsets.only(top: 1),
-                markerSize: 4,
               ),
             ),
             const Divider(height: AppSpacing.md),
@@ -405,13 +411,10 @@ class _HomeCalendarState extends State<HomeCalendar> {
               runSpacing: AppSpacing.sm,
               children: [
                 _LegendItem(
-                  marker: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: colors.primary,
-                      shape: BoxShape.circle,
-                    ),
+                  marker: Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: colors.primary,
                   ),
                   label: l10n.calendarHasDiary,
                 ),

@@ -2,9 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
 import 'diary_entry.dart';
+import 'diary_overview.dart';
 
 final diaryRepositoryProvider = Provider<DiaryRepository>((ref) {
   throw StateError('DiaryRepository must be overridden at bootstrap.');
+});
+
+final diaryOverviewProvider = FutureProvider<DiaryOverview>((ref) {
+  return ref.watch(diaryRepositoryProvider).loadOverview();
 });
 
 abstract interface class DiaryRepository {
@@ -12,13 +17,17 @@ abstract interface class DiaryRepository {
 
   Future<DiaryEntry?> findByDate(DateTime date);
 
+  Future<DiaryOverview> loadOverview();
+
   Future<void> save(DiaryEntry entry);
 }
 
 class SqliteDiaryRepository implements DiaryRepository {
-  SqliteDiaryRepository(this._appDatabase);
+  SqliteDiaryRepository(this._appDatabase, {DateTime Function()? now})
+    : _now = now ?? DateTime.now;
 
   final AppDatabase _appDatabase;
+  final DateTime Function() _now;
 
   @override
   Future<DiaryEntry?> findById(String id) async {
@@ -40,9 +49,35 @@ class SqliteDiaryRepository implements DiaryRepository {
       where: 'created_at >= ? AND created_at < ?',
       whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
       orderBy: 'updated_at DESC',
-      limit: 1,
     );
-    return rows.isEmpty ? null : _fromRow(rows.single);
+    for (final row in rows) {
+      final entry = _fromRow(row);
+      if (hasWrittenDiaryContent(
+        title: entry.title,
+        plainContent: entry.plainContent,
+      )) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<DiaryOverview> loadOverview() async {
+    final rows = await _appDatabase.database.query(
+      'diary_entries',
+      columns: ['created_at', 'title', 'plain_content'],
+    );
+    final entries = rows.map<DiaryOverviewSource>((row) {
+      return (
+        createdAt: DateTime.fromMillisecondsSinceEpoch(
+          row['created_at']! as int,
+        ),
+        title: row['title']! as String,
+        plainContent: row['plain_content']! as String,
+      );
+    });
+    return calculateDiaryOverview(entries, today: _now());
   }
 
   @override

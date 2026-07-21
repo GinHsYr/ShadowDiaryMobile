@@ -197,6 +197,55 @@ void main() {
     expect((await repository.findById(entry.id))?.content, entry.content);
   });
 
+  test('loads diary dates and real home statistics', () async {
+    final today = DateTime(2026, 7, 20, 12);
+    final repository = SqliteDiaryRepository(appDatabase, now: () => today);
+    final entries = <DiaryEntry>[
+      _overviewEntry('today', DateTime(2026, 7, 20, 8), '今天'),
+      _overviewEntry('yesterday', DateTime(2026, 7, 19, 9), 'abc'),
+      _overviewEntry('duplicate-day', DateTime(2026, 7, 19, 21), '日记'),
+      _overviewEntry('two-days-ago', DateTime(2026, 7, 18, 10), '🙂'),
+      _overviewEntry('empty-day', DateTime(2026, 7, 17, 10), '', title: ''),
+      _overviewEntry('gap', DateTime(2026, 7, 16, 10), 'x y'),
+      _overviewEntry(
+        'whitespace-day',
+        DateTime(2026, 7, 15, 10),
+        ' \n',
+        title: ' \t',
+      ),
+      _overviewEntry(
+        'title-only',
+        DateTime(2026, 7, 14, 10),
+        '',
+        title: 'A title',
+      ),
+      _overviewEntry(
+        'newer-empty-today',
+        DateTime(2026, 7, 20, 23),
+        '',
+        title: '',
+      ),
+    ];
+    for (final entry in entries) {
+      await repository.save(entry);
+    }
+
+    final overview = await repository.loadOverview();
+
+    expect(overview.diaryCount, 6);
+    expect(overview.streakDays, 3);
+    expect(overview.characterCount, 11);
+    expect(overview.diaryDates, <DateTime>[
+      DateTime(2026, 7, 14),
+      DateTime(2026, 7, 16),
+      DateTime(2026, 7, 18),
+      DateTime(2026, 7, 19),
+      DateTime(2026, 7, 20),
+    ]);
+    expect(await repository.findByDate(DateTime(2026, 7, 17)), isNull);
+    expect((await repository.findByDate(DateTime(2026, 7, 20)))?.id, 'today');
+  });
+
   test('updates a diary without replacing its related rows', () async {
     final repository = SqliteDiaryRepository(appDatabase);
     final createdAt = DateTime(2026, 7, 20, 9);
@@ -247,6 +296,23 @@ Future<void> _insertEntry(
     'created_at': 1,
     'updated_at': 1,
   });
+}
+
+DiaryEntry _overviewEntry(
+  String id,
+  DateTime createdAt,
+  String plainContent, {
+  String? title,
+}) {
+  return DiaryEntry(
+    id: id,
+    title: title ?? id,
+    content: '<p>$plainContent</p>',
+    plainContent: plainContent,
+    mood: 'calm',
+    createdAt: createdAt,
+    updatedAt: createdAt,
+  );
 }
 
 Future<List<Map<String, Object?>>> _search(AppDatabase database, String query) {

@@ -29,6 +29,14 @@ void main() {
       expect(find.text('已写 2 / 31 天'), findsOneWidget);
       expect(find.text('6.5%'), findsOneWidget);
       expect(
+        find.byKey(const Key('home-calendar-diary-20260701')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('home-calendar-diary-20260720')),
+        findsOneWidget,
+      );
+      expect(
         tester.getCenter(find.byKey(const Key('calendar-shortcut-row'))).dx,
         closeTo(
           tester.getCenter(find.byKey(const Key('home-calendar-card'))).dx,
