@@ -1,7 +1,9 @@
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
 import '../core/settings/app_settings_controller.dart';
 import '../core/settings/app_settings.dart';
@@ -38,6 +40,8 @@ class ShadowDiaryApp extends ConsumerWidget {
             GlobalMaterialLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
+            FlutterQuillLocalizations.delegate,
+            EasyDateTimelineLocalizations.delegate,
           ],
           localeListResolutionCallback: (locales, supportedLocales) {
             for (final locale in locales ?? const <Locale>[]) {

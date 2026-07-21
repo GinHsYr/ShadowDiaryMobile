@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/archives/archives_page.dart';
-import '../features/editor/editor_placeholder_page.dart';
+import '../features/editor/editor_page.dart';
 import '../features/home/home_page.dart';
 import '../features/media/media_page.dart';
 import '../features/settings/settings_page.dart';
@@ -63,12 +63,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.newEntry,
-        builder: (context, state) => const EditorPlaceholderPage(),
+        builder: (context, state) => const EditorPage(),
       ),
       GoRoute(
         path: '/entries/:id/edit',
         builder: (context, state) {
-          return EditorPlaceholderPage(entryId: state.pathParameters['id']);
+          return EditorPage(entryId: state.pathParameters['id']);
         },
       ),
     ],

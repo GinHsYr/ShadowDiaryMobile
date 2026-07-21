@@ -6,6 +6,8 @@ import 'package:shadow_diary_mobile/app/app.dart';
 import 'package:shadow_diary_mobile/app/app_ionicons.dart';
 import 'package:shadow_diary_mobile/app/router.dart';
 import 'package:shadow_diary_mobile/app/shell.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
@@ -42,7 +44,9 @@ void main() {
       tester.element(find.text('还没有档案')),
     ).go(AppRoutes.editEntry('entry-1'));
     await tester.pumpAndSettle();
-    expect(find.text('编辑日记'), findsOneWidget);
+    expect(find.byKey(const Key('editor-exit-button')), findsOneWidget);
+    expect(find.byKey(const Key('editor-day-picker')), findsOneWidget);
+    expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
     expect(find.byType(AppBar), findsNothing);
   });
 
@@ -170,9 +174,21 @@ Widget _testApp(MemorySettingsRepository repository) {
     overrides: [
       appSettingsRepositoryProvider.overrideWithValue(repository),
       initialAppSettingsProvider.overrideWithValue(repository.settings),
+      diaryRepositoryProvider.overrideWithValue(EmptyDiaryRepository()),
     ],
     child: const ShadowDiaryApp(),
   );
+}
+
+class EmptyDiaryRepository implements DiaryRepository {
+  @override
+  Future<DiaryEntry?> findByDate(DateTime date) async => null;
+
+  @override
+  Future<DiaryEntry?> findById(String id) async => null;
+
+  @override
+  Future<void> save(DiaryEntry entry) async {}
 }
 
 class MemorySettingsRepository implements AppSettingsRepository {

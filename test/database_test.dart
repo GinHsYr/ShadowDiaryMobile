@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/database/app_database.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -172,6 +174,63 @@ void main() {
       'value': 'future-mode',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
     expect((await repository.load()).themeMode, AppThemeMode.system);
+  });
+
+  test('saves and loads a diary by local calendar date', () async {
+    final repository = SqliteDiaryRepository(appDatabase);
+    final createdAt = DateTime(2026, 7, 20, 23, 30);
+    final entry = DiaryEntry(
+      id: 'dated-entry',
+      title: 'Evening',
+      content: '<p>A quiet evening</p>',
+      plainContent: 'A quiet evening',
+      mood: 'calm',
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+
+    await repository.save(entry);
+
+    expect((await repository.findByDate(DateTime(2026, 7, 20)))?.id, entry.id);
+    expect(await repository.findByDate(DateTime(2026, 7, 19)), isNull);
+    expect(await repository.findByDate(DateTime(2026, 7, 21)), isNull);
+    expect((await repository.findById(entry.id))?.content, entry.content);
+  });
+
+  test('updates a diary without replacing its related rows', () async {
+    final repository = SqliteDiaryRepository(appDatabase);
+    final createdAt = DateTime(2026, 7, 20, 9);
+    final entry = DiaryEntry(
+      id: 'entry-with-attachment',
+      title: 'Morning',
+      content: '<p>First draft</p>',
+      plainContent: 'First draft',
+      mood: 'happy',
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+    await repository.save(entry);
+    await appDatabase.database.insert('attachments', {
+      'id': 'attachment-for-update',
+      'diary_id': entry.id,
+      'filename': 'photo.png',
+      'mime_type': 'image/png',
+      'file_path': 'media/photo.png',
+      'size': 10,
+      'created_at': createdAt.millisecondsSinceEpoch,
+    });
+
+    await repository.save(
+      entry.copyWith(
+        title: 'Updated morning',
+        content: '<p>Updated draft</p>',
+        plainContent: 'Updated draft',
+        updatedAt: createdAt.add(const Duration(minutes: 5)),
+      ),
+    );
+
+    expect((await repository.findById(entry.id))?.title, 'Updated morning');
+    expect(await appDatabase.database.query('attachments'), hasLength(1));
   });
 }
 

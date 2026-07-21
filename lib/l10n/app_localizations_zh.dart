@@ -164,6 +164,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorPlaceholder => '富文本编辑器将在后续功能阶段接入。';
 
   @override
+  String get editorLoadError => '无法加载这一天的日记。';
+
+  @override
+  String get editorTitlePlaceholder => '今天的标题';
+
+  @override
+  String get editorBodyPlaceholder => '写下今天发生的事……';
+
+  @override
+  String get editorMood => '心情';
+
+  @override
+  String get editorSaving => '正在保存…';
+
+  @override
+  String get editorSaved => '已自动保存';
+
+  @override
+  String get editorSaveError => '保存失败，请重试。';
+
+  @override
+  String get editorCollapseDates => '收起日期';
+
+  @override
+  String get editorExpandDates => '展开日期';
+
+  @override
+  String get editorMoodHappy => '开心';
+
+  @override
+  String get editorMoodExcited => '兴奋';
+
+  @override
+  String get editorMoodCalm => '平静';
+
+  @override
+  String get editorMoodTired => '疲惫';
+
+  @override
+  String get editorMoodSad => '难过';
+
+  @override
   String get bootstrapFailed => '影迹启动失败';
 
   @override

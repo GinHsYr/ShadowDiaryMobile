@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'core/database/app_database.dart';
+import 'core/diary/diary_repository.dart';
 import 'core/settings/app_settings_controller.dart';
 import 'core/settings/app_settings_repository.dart';
 
@@ -11,14 +12,16 @@ Future<void> main() async {
 
   try {
     final database = await AppDatabase.openBundled();
-    final repository = SqliteAppSettingsRepository(database);
-    final initialSettings = await repository.load();
+    final settingsRepository = SqliteAppSettingsRepository(database);
+    final diaryRepository = SqliteDiaryRepository(database);
+    final initialSettings = await settingsRepository.load();
 
     runApp(
       ProviderScope(
         overrides: [
-          appSettingsRepositoryProvider.overrideWithValue(repository),
+          appSettingsRepositoryProvider.overrideWithValue(settingsRepository),
           initialAppSettingsProvider.overrideWithValue(initialSettings),
+          diaryRepositoryProvider.overrideWithValue(diaryRepository),
         ],
         child: const ShadowDiaryApp(),
       ),

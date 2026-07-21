@@ -404,6 +404,90 @@ abstract class AppLocalizations {
   /// **'富文本编辑器将在后续功能阶段接入。'**
   String get editorPlaceholder;
 
+  /// No description provided for @editorLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载这一天的日记。'**
+  String get editorLoadError;
+
+  /// No description provided for @editorTitlePlaceholder.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的标题'**
+  String get editorTitlePlaceholder;
+
+  /// No description provided for @editorBodyPlaceholder.
+  ///
+  /// In zh, this message translates to:
+  /// **'写下今天发生的事……'**
+  String get editorBodyPlaceholder;
+
+  /// No description provided for @editorMood.
+  ///
+  /// In zh, this message translates to:
+  /// **'心情'**
+  String get editorMood;
+
+  /// No description provided for @editorSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存…'**
+  String get editorSaving;
+
+  /// No description provided for @editorSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已自动保存'**
+  String get editorSaved;
+
+  /// No description provided for @editorSaveError.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败，请重试。'**
+  String get editorSaveError;
+
+  /// No description provided for @editorCollapseDates.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起日期'**
+  String get editorCollapseDates;
+
+  /// No description provided for @editorExpandDates.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开日期'**
+  String get editorExpandDates;
+
+  /// No description provided for @editorMoodHappy.
+  ///
+  /// In zh, this message translates to:
+  /// **'开心'**
+  String get editorMoodHappy;
+
+  /// No description provided for @editorMoodExcited.
+  ///
+  /// In zh, this message translates to:
+  /// **'兴奋'**
+  String get editorMoodExcited;
+
+  /// No description provided for @editorMoodCalm.
+  ///
+  /// In zh, this message translates to:
+  /// **'平静'**
+  String get editorMoodCalm;
+
+  /// No description provided for @editorMoodTired.
+  ///
+  /// In zh, this message translates to:
+  /// **'疲惫'**
+  String get editorMoodTired;
+
+  /// No description provided for @editorMoodSad.
+  ///
+  /// In zh, this message translates to:
+  /// **'难过'**
+  String get editorMoodSad;
+
   /// No description provided for @bootstrapFailed.
   ///
   /// In zh, this message translates to:

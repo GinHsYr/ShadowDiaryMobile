@@ -168,6 +168,48 @@ class AppLocalizationsEn extends AppLocalizations {
       'The rich-text editor will be connected in a later feature phase.';
 
   @override
+  String get editorLoadError => 'This diary could not be loaded.';
+
+  @override
+  String get editorTitlePlaceholder => 'Today\'s title';
+
+  @override
+  String get editorBodyPlaceholder => 'Write what happened today...';
+
+  @override
+  String get editorMood => 'Mood';
+
+  @override
+  String get editorSaving => 'Saving...';
+
+  @override
+  String get editorSaved => 'Auto-saved';
+
+  @override
+  String get editorSaveError => 'Could not save. Please try again.';
+
+  @override
+  String get editorCollapseDates => 'Collapse dates';
+
+  @override
+  String get editorExpandDates => 'Expand dates';
+
+  @override
+  String get editorMoodHappy => 'Happy';
+
+  @override
+  String get editorMoodExcited => 'Excited';
+
+  @override
+  String get editorMoodCalm => 'Calm';
+
+  @override
+  String get editorMoodTired => 'Tired';
+
+  @override
+  String get editorMoodSad => 'Sad';
+
+  @override
   String get bootstrapFailed => 'ShadowDiary could not start';
 
   @override
