@@ -23,6 +23,7 @@ void main() {
 
     expect(find.textContaining('你好，准备写点什么？'), findsOneWidget);
     expect(find.byKey(const Key('home-calendar-card')), findsOneWidget);
+    expect(find.byKey(const Key('home-statistics-cards')), findsOneWidget);
     expect(find.text('从今天开始记录'), findsNothing);
     expect(find.byType(AppBar), findsNothing);
     expect(find.byType(SliverAppBar), findsNothing);

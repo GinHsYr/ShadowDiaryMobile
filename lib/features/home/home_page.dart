@@ -7,7 +7,18 @@ import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  const HomePage({
+    this.diaryCount = 0,
+    this.streakDays = 0,
+    this.characterCount = 0,
+    super.key,
+  }) : assert(diaryCount >= 0),
+       assert(streakDays >= 0),
+       assert(characterCount >= 0);
+
+  final int diaryCount;
+  final int streakDays;
+  final int characterCount;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +35,171 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           const HomeCalendar(),
+          const SizedBox(height: AppSpacing.md),
+          HomeStatisticsCards(
+            diaryCount: diaryCount,
+            streakDays: streakDays,
+            characterCount: characterCount,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class HomeStatisticsCards extends StatelessWidget {
+  const HomeStatisticsCards({
+    required this.diaryCount,
+    required this.streakDays,
+    required this.characterCount,
+    super.key,
+  }) : assert(diaryCount >= 0),
+       assert(streakDays >= 0),
+       assert(characterCount >= 0);
+
+  final int diaryCount;
+  final int streakDays;
+  final int characterCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = constraints.maxWidth < 400
+            ? AppSpacing.sm
+            : AppSpacing.md;
+
+        return SizedBox(
+          key: const Key('home-statistics-cards'),
+          height: 100,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _HomeStatisticCard(
+                  key: const Key('home-statistics-diary-card'),
+                  identifier: 'diary',
+                  label: l10n.homeStatisticsDiaryLabel,
+                  value: diaryCount,
+                  unit: l10n.homeStatisticsDiaryUnit,
+                ),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                child: _HomeStatisticCard(
+                  key: const Key('home-statistics-streak-card'),
+                  identifier: 'streak',
+                  label: l10n.homeStatisticsStreakLabel,
+                  value: streakDays,
+                  unit: l10n.homeStatisticsStreakUnit,
+                ),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                child: _HomeStatisticCard(
+                  key: const Key('home-statistics-character-card'),
+                  identifier: 'character',
+                  label: l10n.homeStatisticsCharacterLabel,
+                  value: characterCount,
+                  unit: l10n.homeStatisticsCharacterUnit,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeStatisticCard extends StatelessWidget {
+  const _HomeStatisticCard({
+    required this.identifier,
+    required this.label,
+    required this.value,
+    required this.unit,
+    super.key,
+  });
+
+  final String identifier;
+  final String label;
+  final int value;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final primaryBrightness = ThemeData.estimateBrightnessForColor(
+      colors.primary,
+    );
+    final valueColor = primaryBrightness == theme.brightness
+        ? colors.onSurface
+        : colors.primary;
+
+    return Semantics(
+      container: true,
+      label: '$label $value $unit',
+      excludeSemantics: true,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 36,
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Text(
+                    label,
+                    key: Key('home-statistics-$identifier-label'),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: value.toString(),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: valueColor,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' $unit',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    key: Key('home-statistics-$identifier-value'),
+                    maxLines: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

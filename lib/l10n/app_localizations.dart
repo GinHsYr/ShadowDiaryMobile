@@ -152,6 +152,42 @@ abstract class AppLocalizations {
   /// **'日历、统计和最近日记将在后续功能阶段加入。'**
   String get homeEmptyBody;
 
+  /// No description provided for @homeStatisticsDiaryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'你一共写了'**
+  String get homeStatisticsDiaryLabel;
+
+  /// No description provided for @homeStatisticsDiaryUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'篇日记'**
+  String get homeStatisticsDiaryUnit;
+
+  /// No description provided for @homeStatisticsStreakLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续记录'**
+  String get homeStatisticsStreakLabel;
+
+  /// No description provided for @homeStatisticsStreakUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'天'**
+  String get homeStatisticsStreakUnit;
+
+  /// No description provided for @homeStatisticsCharacterLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'共写了'**
+  String get homeStatisticsCharacterLabel;
+
+  /// No description provided for @homeStatisticsCharacterUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'字'**
+  String get homeStatisticsCharacterUnit;
+
   /// No description provided for @calendarToday.
   ///
   /// In zh, this message translates to:

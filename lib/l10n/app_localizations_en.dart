@@ -37,6 +37,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Calendar, insights, and recent entries will arrive in a later feature phase.';
 
   @override
+  String get homeStatisticsDiaryLabel => 'You wrote';
+
+  @override
+  String get homeStatisticsDiaryUnit => 'entries';
+
+  @override
+  String get homeStatisticsStreakLabel => 'Streak';
+
+  @override
+  String get homeStatisticsStreakUnit => 'days';
+
+  @override
+  String get homeStatisticsCharacterLabel => 'Total';
+
+  @override
+  String get homeStatisticsCharacterUnit => 'characters';
+
+  @override
   String get calendarToday => 'Today';
 
   @override

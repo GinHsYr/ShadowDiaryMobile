@@ -36,6 +36,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeEmptyBody => '日历、统计和最近日记将在后续功能阶段加入。';
 
   @override
+  String get homeStatisticsDiaryLabel => '你一共写了';
+
+  @override
+  String get homeStatisticsDiaryUnit => '篇日记';
+
+  @override
+  String get homeStatisticsStreakLabel => '连续记录';
+
+  @override
+  String get homeStatisticsStreakUnit => '天';
+
+  @override
+  String get homeStatisticsCharacterLabel => '共写了';
+
+  @override
+  String get homeStatisticsCharacterUnit => '字';
+
+  @override
   String get calendarToday => '今天';
 
   @override
