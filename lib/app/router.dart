@@ -15,6 +15,14 @@ abstract final class AppRoutes {
   static const settings = '/settings';
   static const newEntry = '/entries/new';
 
+  static String newEntryForDate(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    return Uri(
+      path: newEntry,
+      queryParameters: {'date': dateOnly.toIso8601String()},
+    ).toString();
+  }
+
   static String editEntry(String id) => '/entries/$id/edit';
 }
 
@@ -31,7 +39,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.home,
-                builder: (context, state) => const HomePage(),
+                builder: (context, state) => HomePage(
+                  onCalendarDateSelected: (date) {
+                    context.push(AppRoutes.newEntryForDate(date));
+                  },
+                ),
               ),
             ],
           ),
@@ -63,7 +75,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.newEntry,
-        builder: (context, state) => const EditorPage(),
+        builder: (context, state) {
+          final date = DateTime.tryParse(
+            state.uri.queryParameters['date'] ?? '',
+          );
+          return EditorPage(initialDate: date);
+        },
       ),
       GoRoute(
         path: '/entries/:id/edit',

@@ -50,6 +50,33 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
+  testWidgets('opens the editor for a tapped home calendar date', (
+    tester,
+  ) async {
+    final settingsRepository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.en),
+    );
+    final diaryRepository = RecordingDiaryRepository();
+    await tester.pumpWidget(
+      _testApp(settingsRepository, diaryRepository: diaryRepository),
+    );
+    await tester.pumpAndSettle();
+
+    final now = DateTime.now();
+    final selectedDate = DateTime(now.year, now.month, 15);
+    final calendarDay = find.descendant(
+      of: find.byKey(const Key('home-month-calendar')),
+      matching: find.text('15'),
+    );
+
+    expect(calendarDay, findsOneWidget);
+    await tester.tap(calendarDay);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
+    expect(diaryRepository.requestedDates, <DateTime>[selectedDate]);
+  });
+
   testWidgets('changes and persists theme and locale preferences', (
     tester,
   ) async {
@@ -169,12 +196,17 @@ void main() {
   });
 }
 
-Widget _testApp(MemorySettingsRepository repository) {
+Widget _testApp(
+  MemorySettingsRepository repository, {
+  DiaryRepository? diaryRepository,
+}) {
   return ProviderScope(
     overrides: [
       appSettingsRepositoryProvider.overrideWithValue(repository),
       initialAppSettingsProvider.overrideWithValue(repository.settings),
-      diaryRepositoryProvider.overrideWithValue(EmptyDiaryRepository()),
+      diaryRepositoryProvider.overrideWithValue(
+        diaryRepository ?? EmptyDiaryRepository(),
+      ),
     ],
     child: const ShadowDiaryApp(),
   );
@@ -189,6 +221,16 @@ class EmptyDiaryRepository implements DiaryRepository {
 
   @override
   Future<void> save(DiaryEntry entry) async {}
+}
+
+class RecordingDiaryRepository extends EmptyDiaryRepository {
+  final List<DateTime> requestedDates = [];
+
+  @override
+  Future<DiaryEntry?> findByDate(DateTime date) async {
+    requestedDates.add(date);
+    return null;
+  }
 }
 
 class MemorySettingsRepository implements AppSettingsRepository {

@@ -16,9 +16,10 @@ import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
-  const EditorPage({this.entryId, super.key});
+  const EditorPage({this.entryId, this.initialDate, super.key});
 
   final String? entryId;
+  final DateTime? initialDate;
 
   @override
   ConsumerState<EditorPage> createState() => _EditorPageState();
@@ -61,7 +62,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void initState() {
     super.initState();
     _repository = ref.read(diaryRepositoryProvider);
-    _selectedDate = DateUtils.dateOnly(DateTime.now());
+    _selectedDate = DateUtils.dateOnly(widget.initialDate ?? DateTime.now());
     _quillController = QuillController.basic();
     WidgetsBinding.instance.addObserver(this);
     _listenToDocument();

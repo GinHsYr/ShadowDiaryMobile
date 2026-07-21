@@ -11,6 +11,7 @@ class HomePage extends StatelessWidget {
     this.diaryCount = 0,
     this.streakDays = 0,
     this.characterCount = 0,
+    this.onCalendarDateSelected,
     super.key,
   }) : assert(diaryCount >= 0),
        assert(streakDays >= 0),
@@ -19,6 +20,7 @@ class HomePage extends StatelessWidget {
   final int diaryCount;
   final int streakDays;
   final int characterCount;
+  final ValueChanged<DateTime>? onCalendarDateSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,7 @@ class HomePage extends StatelessWidget {
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.md),
-          const HomeCalendar(),
+          HomeCalendar(onDateSelected: onCalendarDateSelected),
           const SizedBox(height: AppSpacing.md),
           HomeStatisticsCards(
             diaryCount: diaryCount,
@@ -214,11 +216,13 @@ class HomeCalendar extends StatefulWidget {
   const HomeCalendar({
     this.diaryDates = const <DateTime>[],
     this.initialDate,
+    this.onDateSelected,
     super.key,
   });
 
   final Iterable<DateTime> diaryDates;
   final DateTime? initialDate;
+  final ValueChanged<DateTime>? onDateSelected;
 
   @override
   State<HomeCalendar> createState() => _HomeCalendarState();
@@ -254,6 +258,9 @@ class _HomeCalendarState extends State<HomeCalendar> {
     final daysInMonth = _daysInMonth(_focusedDay);
     final writtenDays = _writtenDaysInMonth(_focusedDay);
     final progress = writtenDays / daysInMonth;
+    final dayCellDecoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+    );
 
     return Card(
       key: const Key('home-calendar-card'),
@@ -333,10 +340,12 @@ class _HomeCalendarState extends State<HomeCalendar> {
               startingDayOfWeek: StartingDayOfWeek.sunday,
               availableGestures: AvailableGestures.horizontalSwipe,
               onDaySelected: (selectedDay, focusedDay) {
+                final date = DateUtils.dateOnly(selectedDay);
                 setState(() {
-                  _selectedDay = DateUtils.dateOnly(selectedDay);
+                  _selectedDay = date;
                   _focusedDay = DateUtils.dateOnly(focusedDay);
                 });
+                widget.onDateSelected?.call(date);
               },
               onPageChanged: (focusedDay) {
                 setState(() => _focusedDay = DateUtils.dateOnly(focusedDay));
@@ -362,6 +371,9 @@ class _HomeCalendarState extends State<HomeCalendar> {
                 outsideTextStyle: theme.textTheme.bodyMedium!.copyWith(
                   color: colors.onSurface.withValues(alpha: 0.28),
                 ),
+                defaultDecoration: dayCellDecoration,
+                weekendDecoration: dayCellDecoration,
+                outsideDecoration: dayCellDecoration,
                 selectedTextStyle: theme.textTheme.bodyMedium!.copyWith(
                   color: colors.onPrimary,
                   fontWeight: FontWeight.w700,
