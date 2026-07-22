@@ -436,8 +436,9 @@ class _MediaEmptyState extends StatelessWidget {
         88,
       ),
       child: Center(
-        child: EmptyStateCard(
-          icon: Icons.photo_library_outlined,
+        child: AppEmptyState(
+          key: const Key('media-empty-state'),
+          icon: Icons.photo_library_rounded,
           title: l10n.mediaEmptyTitle,
           body: l10n.mediaEmptyBody,
         ),

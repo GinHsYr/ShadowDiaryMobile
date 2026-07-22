@@ -12,6 +12,7 @@ import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/media/media_library.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
+import 'package:shadow_diary_mobile/core/widgets/app_page.dart';
 import 'package:shadow_diary_mobile/features/media/media_page.dart';
 import 'package:shadow_diary_mobile/l10n/app_localizations.dart';
 
@@ -125,6 +126,20 @@ void main() {
 
     expect(find.text('还没有媒体'), findsOneWidget);
     expect(find.text('日记和档案中的图片会汇集到这里。'), findsOneWidget);
+    final emptyState = find.byKey(const Key('media-empty-state'));
+    expect(emptyState, findsOneWidget);
+    expect(
+      find.descendant(of: emptyState, matching: find.byType(Card)),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: emptyState,
+        matching: find.byIcon(Icons.photo_library_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(AppEmptyState), findsOneWidget);
     expect(find.byType(SliverMasonryGrid), findsNothing);
   });
 }

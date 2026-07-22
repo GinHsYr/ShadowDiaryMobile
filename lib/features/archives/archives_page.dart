@@ -10,6 +10,7 @@ import '../../core/archives/archive_repository.dart';
 import '../../core/archives/archive_sort.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
 typedef OpenNewArchive = Future<Object?> Function();
@@ -315,41 +316,11 @@ class _ArchivesEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
-    return Column(
+    return AppEmptyState(
       key: const Key('archives-empty-state'),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Icon(
-            Icons.folder_open_rounded,
-            size: 34,
-            color: colors.onSecondaryContainer,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          l10n.archivesEmptyTitle,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          l10n.archivesEmptyBody,
-          textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
-        ),
-      ],
+      icon: Icons.folder_open_rounded,
+      title: l10n.archivesEmptyTitle,
+      body: l10n.archivesEmptyBody,
     );
   }
 }
