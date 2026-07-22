@@ -153,7 +153,7 @@ void main() {
     expect(await appDatabase.database.query('person_mention_stats'), isEmpty);
   });
 
-  test('persists appearance and locale settings', () async {
+  test('persists appearance, locale, and app lock settings', () async {
     final repository = SqliteAppSettingsRepository(appDatabase);
     expect((await repository.load()).themeSeed, ThemeSeed.neutral);
 
@@ -161,6 +161,7 @@ void main() {
       themeMode: AppThemeMode.dark,
       themeSeed: ThemeSeed.monet,
       localePreference: AppLocalePreference.en,
+      appLockEnabled: true,
     );
     await repository.save(expected);
 
@@ -168,12 +169,19 @@ void main() {
     expect(restored.themeMode, expected.themeMode);
     expect(restored.themeSeed, expected.themeSeed);
     expect(restored.localePreference, expected.localePreference);
+    expect(restored.appLockEnabled, isTrue);
 
     await appDatabase.database.insert('settings', {
       'key': 'appearance.theme_mode',
       'value': 'future-mode',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
     expect((await repository.load()).themeMode, AppThemeMode.system);
+
+    await appDatabase.database.insert('settings', {
+      'key': 'security.app_lock_enabled',
+      'value': 'future-value',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    expect((await repository.load()).appLockEnabled, isFalse);
   });
 
   test('saves and loads a diary by local calendar date', () async {

@@ -15,6 +15,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
   static const _themeModeKey = 'appearance.theme_mode';
   static const _themeSeedKey = 'appearance.seed_color';
   static const _localeKey = 'appearance.locale';
+  static const _appLockEnabledKey = 'security.app_lock_enabled';
 
   final AppDatabase _appDatabase;
 
@@ -40,6 +41,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
         values[_localeKey],
         AppLocalePreference.system,
       ),
+      appLockEnabled: values[_appLockEnabledKey] == 'true',
     );
   }
 
@@ -50,6 +52,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
       _upsert(batch, _themeModeKey, settings.themeMode.name);
       _upsert(batch, _themeSeedKey, settings.themeSeed.name);
       _upsert(batch, _localeKey, settings.localePreference.name);
+      _upsert(batch, _appLockEnabledKey, settings.appLockEnabled.toString());
       await batch.commit(noResult: true);
     });
   }

@@ -37,8 +37,12 @@ class AppSettingsController extends Notifier<AppSettings> {
     return _persist(state.copyWith(localePreference: value));
   }
 
+  Future<void> setAppLockEnabled(bool value) {
+    return _persist(state.copyWith(appLockEnabled: value));
+  }
+
   Future<void> _persist(AppSettings next) async {
-    state = next;
     await _repository.save(next);
+    state = next;
   }
 }

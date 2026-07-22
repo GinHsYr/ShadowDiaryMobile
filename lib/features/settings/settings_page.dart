@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/security/app_lock_controller.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/settings/app_settings_controller.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,6 +16,7 @@ class SettingsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(appSettingsControllerProvider);
     final controller = ref.read(appSettingsControllerProvider.notifier);
+    final lockState = ref.watch(appLockControllerProvider);
 
     return AppPage(
       child: Column(
@@ -65,18 +67,28 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          _SectionTitle(l10n.settingsSecurity),
+          Card(
+            child: SwitchListTile(
+              key: const Key('app-lock-toggle'),
+              secondary: const Icon(Icons.fingerprint_rounded),
+              title: Text(l10n.appLock),
+              subtitle: Text(
+                lockState.enabled
+                    ? l10n.appLockEnabledDescription
+                    : l10n.appLockDisabledDescription,
+              ),
+              value: lockState.enabled,
+              onChanged: lockState.isAuthenticating
+                  ? null
+                  : (enabled) => _setAppLock(context, ref, enabled),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           _SectionTitle(l10n.settingsServices),
           Card(
             child: Column(
               children: [
-                ListTile(
-                  enabled: false,
-                  leading: const Icon(Icons.fingerprint_rounded),
-                  title: Text(l10n.biometricLock),
-                  subtitle: Text(l10n.notConfigured),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   enabled: false,
                   leading: const Icon(Icons.sync_rounded),
@@ -90,6 +102,31 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _setAppLock(
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final controller = ref.read(appLockControllerProvider.notifier);
+    final result = enabled
+        ? await controller.enable(l10n.appLockEnableReason)
+        : await controller.disable();
+    if (!context.mounted || result == AppLockResult.success) {
+      return;
+    }
+
+    final message = switch (result) {
+      AppLockResult.unavailable => l10n.appLockUnavailable,
+      AppLockResult.canceled => l10n.appLockCanceled,
+      AppLockResult.failed => l10n.appLockFailed,
+      AppLockResult.success => '',
+    };
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _themeSeedLabel(AppLocalizations l10n, ThemeSeed seed) {

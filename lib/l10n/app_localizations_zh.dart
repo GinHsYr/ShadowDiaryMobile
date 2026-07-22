@@ -110,6 +110,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLanguage => '语言';
 
   @override
+  String get settingsSecurity => '安全';
+
+  @override
   String get settingsServices => '服务';
 
   @override
@@ -147,6 +150,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get biometricLock => '生物识别锁';
+
+  @override
+  String get appLock => '系统解锁';
+
+  @override
+  String get appLockDisabledDescription => '使用指纹、人脸、虹膜或锁屏凭据保护日记';
+
+  @override
+  String get appLockEnabledDescription => '每次打开或返回应用时需要验证';
+
+  @override
+  String get appLockEnableReason => '验证身份以开启影迹的系统解锁';
+
+  @override
+  String get appLockAuthenticateReason => '解锁影迹以查看日记';
+
+  @override
+  String get appLockLockedTitle => '影迹已锁定';
+
+  @override
+  String get appLockLockedDescription => '请使用生物特征或 PIN、图案、密码继续';
+
+  @override
+  String get appLockUnlock => '解锁';
+
+  @override
+  String get appLockAuthenticating => '正在验证…';
+
+  @override
+  String get appLockUnavailable => '请先在系统设置中配置生物特征、PIN、图案或密码。';
+
+  @override
+  String get appLockCanceled => '未完成身份验证。';
+
+  @override
+  String get appLockFailed => '无法验证身份，请重试。';
 
   @override
   String get lanSync => '局域网同步';

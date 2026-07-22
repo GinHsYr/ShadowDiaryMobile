@@ -27,21 +27,25 @@ class AppSettings {
     this.themeMode = AppThemeMode.system,
     this.themeSeed = ThemeSeed.neutral,
     this.localePreference = AppLocalePreference.system,
+    this.appLockEnabled = false,
   });
 
   final AppThemeMode themeMode;
   final ThemeSeed themeSeed;
   final AppLocalePreference localePreference;
+  final bool appLockEnabled;
 
   AppSettings copyWith({
     AppThemeMode? themeMode,
     ThemeSeed? themeSeed,
     AppLocalePreference? localePreference,
+    bool? appLockEnabled,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       themeSeed: themeSeed ?? this.themeSeed,
       localePreference: localePreference ?? this.localePreference,
+      appLockEnabled: appLockEnabled ?? this.appLockEnabled,
     );
   }
 }

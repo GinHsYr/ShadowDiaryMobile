@@ -1,30 +1,47 @@
 import 'package:local_auth/local_auth.dart';
 
-abstract interface class BiometricAuthService {
+enum DeviceAuthenticationResult { success, canceled, unavailable, failed }
+
+abstract interface class DeviceAuthenticationService {
   Future<bool> isAvailable();
 
-  Future<bool> authenticate(String localizedReason);
+  Future<DeviceAuthenticationResult> authenticate(String localizedReason);
 }
 
-class LocalAuthBiometricService implements BiometricAuthService {
-  LocalAuthBiometricService({LocalAuthentication? authentication})
+class LocalDeviceAuthenticationService implements DeviceAuthenticationService {
+  LocalDeviceAuthenticationService({LocalAuthentication? authentication})
     : _authentication = authentication ?? LocalAuthentication();
 
   final LocalAuthentication _authentication;
 
   @override
-  Future<bool> isAvailable() async {
-    return await _authentication.isDeviceSupported() &&
-        await _authentication.canCheckBiometrics;
-  }
+  Future<bool> isAvailable() => _authentication.isDeviceSupported();
 
   @override
-  Future<bool> authenticate(String localizedReason) {
-    return _authentication.authenticate(
-      localizedReason: localizedReason,
-      biometricOnly: true,
-      persistAcrossBackgrounding: true,
-    );
+  Future<DeviceAuthenticationResult> authenticate(
+    String localizedReason,
+  ) async {
+    try {
+      final authenticated = await _authentication.authenticate(
+        localizedReason: localizedReason,
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
+      );
+      return authenticated
+          ? DeviceAuthenticationResult.success
+          : DeviceAuthenticationResult.failed;
+    } on LocalAuthException catch (error) {
+      return switch (error.code) {
+        LocalAuthExceptionCode.userCanceled ||
+        LocalAuthExceptionCode.systemCanceled ||
+        LocalAuthExceptionCode.timeout => DeviceAuthenticationResult.canceled,
+        LocalAuthExceptionCode.noCredentialsSet =>
+          DeviceAuthenticationResult.unavailable,
+        _ => DeviceAuthenticationResult.failed,
+      };
+    } on Object {
+      return DeviceAuthenticationResult.failed;
+    }
   }
 }
 

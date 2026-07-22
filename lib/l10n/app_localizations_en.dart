@@ -113,6 +113,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguage => 'Language';
 
   @override
+  String get settingsSecurity => 'Security';
+
+  @override
   String get settingsServices => 'Services';
 
   @override
@@ -150,6 +153,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get biometricLock => 'Biometric lock';
+
+  @override
+  String get appLock => 'System unlock';
+
+  @override
+  String get appLockDisabledDescription =>
+      'Protect diaries with biometrics or your screen lock';
+
+  @override
+  String get appLockEnabledDescription =>
+      'Authenticate whenever you open or return to the app';
+
+  @override
+  String get appLockEnableReason =>
+      'Authenticate to turn on system unlock for ShadowDiary';
+
+  @override
+  String get appLockAuthenticateReason =>
+      'Unlock ShadowDiary to view your diaries';
+
+  @override
+  String get appLockLockedTitle => 'ShadowDiary is locked';
+
+  @override
+  String get appLockLockedDescription =>
+      'Use biometrics, a PIN, pattern, or password to continue';
+
+  @override
+  String get appLockUnlock => 'Unlock';
+
+  @override
+  String get appLockAuthenticating => 'Authenticating…';
+
+  @override
+  String get appLockUnavailable =>
+      'Set up biometrics, a PIN, pattern, or password in system settings first.';
+
+  @override
+  String get appLockCanceled => 'Authentication was not completed.';
+
+  @override
+  String get appLockFailed => 'Could not authenticate. Try again.';
 
   @override
   String get lanSync => 'LAN sync';

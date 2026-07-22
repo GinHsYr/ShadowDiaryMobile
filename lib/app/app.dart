@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
+import '../core/security/app_lock_gate.dart';
 import '../core/settings/app_settings_controller.dart';
 import '../core/settings/app_settings.dart';
 import '../core/theme/app_theme.dart';
@@ -52,6 +53,9 @@ class ShadowDiaryApp extends ConsumerWidget {
               }
             }
             return const Locale('zh');
+          },
+          builder: (context, child) {
+            return AppLockGate(child: child ?? const SizedBox.shrink());
           },
           routerConfig: router,
         );

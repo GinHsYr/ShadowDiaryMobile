@@ -296,6 +296,12 @@ abstract class AppLocalizations {
   /// **'语言'**
   String get settingsLanguage;
 
+  /// No description provided for @settingsSecurity.
+  ///
+  /// In zh, this message translates to:
+  /// **'安全'**
+  String get settingsSecurity;
+
   /// No description provided for @settingsServices.
   ///
   /// In zh, this message translates to:
@@ -373,6 +379,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'生物识别锁'**
   String get biometricLock;
+
+  /// No description provided for @appLock.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统解锁'**
+  String get appLock;
+
+  /// No description provided for @appLockDisabledDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用指纹、人脸、虹膜或锁屏凭据保护日记'**
+  String get appLockDisabledDescription;
+
+  /// No description provided for @appLockEnabledDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'每次打开或返回应用时需要验证'**
+  String get appLockEnabledDescription;
+
+  /// No description provided for @appLockEnableReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证身份以开启影迹的系统解锁'**
+  String get appLockEnableReason;
+
+  /// No description provided for @appLockAuthenticateReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁影迹以查看日记'**
+  String get appLockAuthenticateReason;
+
+  /// No description provided for @appLockLockedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'影迹已锁定'**
+  String get appLockLockedTitle;
+
+  /// No description provided for @appLockLockedDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'请使用生物特征或 PIN、图案、密码继续'**
+  String get appLockLockedDescription;
+
+  /// No description provided for @appLockUnlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁'**
+  String get appLockUnlock;
+
+  /// No description provided for @appLockAuthenticating.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在验证…'**
+  String get appLockAuthenticating;
+
+  /// No description provided for @appLockUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先在系统设置中配置生物特征、PIN、图案或密码。'**
+  String get appLockUnavailable;
+
+  /// No description provided for @appLockCanceled.
+  ///
+  /// In zh, this message translates to:
+  /// **'未完成身份验证。'**
+  String get appLockCanceled;
+
+  /// No description provided for @appLockFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法验证身份，请重试。'**
+  String get appLockFailed;
 
   /// No description provided for @lanSync.
   ///
