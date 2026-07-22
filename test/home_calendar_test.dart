@@ -4,6 +4,7 @@ import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 import 'package:shadow_diary_mobile/features/home/home_page.dart';
 import 'package:shadow_diary_mobile/l10n/app_localizations.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:wheel_slider/wheel_slider.dart';
 
 void main() {
@@ -231,17 +232,63 @@ void main() {
     expect(find.byKey(const Key('calendar-month-wheel')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('neutral dark calendar uses high-contrast active colors', (
+    tester,
+  ) async {
+    final theme = AppTheme.dark(ThemeSeed.neutral);
+    final colors = theme.colorScheme;
+
+    await tester.pumpWidget(
+      _calendarApp(locale: const Locale('en'), theme: theme),
+    );
+    await tester.pumpAndSettle();
+
+    final calendar = tester.widget<TableCalendar<bool>>(
+      find.byKey(const Key('home-month-calendar')),
+    );
+    expect(
+      (calendar.calendarStyle.selectedDecoration as BoxDecoration).color,
+      colors.primary,
+    );
+    expect(calendar.calendarStyle.selectedTextStyle.color, colors.onPrimary);
+    expect(
+      (calendar.calendarStyle.todayDecoration as BoxDecoration).color,
+      colors.secondaryContainer,
+    );
+    expect(
+      calendar.calendarStyle.todayTextStyle.color,
+      colors.onSecondaryContainer,
+    );
+
+    final progress = tester.widget<LinearProgressIndicator>(
+      find.byKey(const Key('calendar-progress')),
+    );
+    expect(progress.color, colors.primary);
+    expect(progress.color, isNot(Colors.black));
+    expect(progress.backgroundColor, colors.surfaceContainerHighest);
+
+    await tester.tap(find.byKey(const Key('calendar-month-picker')));
+    await tester.pumpAndSettle();
+    final yearWheel = tester.widget<WheelSlider>(
+      find.byKey(const Key('calendar-year-wheel')),
+    );
+    expect(yearWheel.selectedNumberStyle?.color, colors.primary);
+    expect(yearWheel.selectedNumberStyle?.color, isNot(Colors.black));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _calendarApp({
   required Locale locale,
   Iterable<DateTime> diaryDates = const <DateTime>[],
+  ThemeData? theme,
 }) {
   return MaterialApp(
     locale: locale,
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: [...AppLocalizations.localizationsDelegates],
-    theme: AppTheme.light(ThemeSeed.neutral),
+    theme: theme ?? AppTheme.light(ThemeSeed.neutral),
     home: Scaffold(
       body: SingleChildScrollView(
         child: Padding(

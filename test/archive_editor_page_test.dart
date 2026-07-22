@@ -135,6 +135,54 @@ void main() {
     expect(find.byKey(const Key('archive-gallery-image-18')), findsOneWidget);
   });
 
+  testWidgets('neutral dark editor controls use readable active colors', (
+    tester,
+  ) async {
+    final theme = AppTheme.dark(ThemeSeed.neutral);
+    final colors = theme.colorScheme;
+    final repository = _MemoryArchiveRepository();
+
+    await tester.pumpWidget(
+      _testApp(
+        repository,
+        brightness: Brightness.dark,
+        seed: ThemeSeed.neutral,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open-archive-editor')));
+    await tester.pumpAndSettle();
+
+    final saveFinder = find.byKey(const Key('archive-save-button'));
+    final saveButton = tester.widget<FilledButton>(saveFinder);
+    final saveStyle = saveButton.defaultStyleOf(tester.element(saveFinder));
+    expect(
+      saveStyle.backgroundColor?.resolve(const <WidgetState>{}),
+      colors.primary,
+    );
+    expect(
+      saveStyle.foregroundColor?.resolve(const <WidgetState>{}),
+      colors.onPrimary,
+    );
+    expect(colors.primary, isNot(Colors.black));
+
+    final personLabel = find.descendant(
+      of: find.byKey(const Key('archive-type-selector')),
+      matching: find.text('Person'),
+    );
+    final segmentStyle = TextButtonTheme.of(tester.element(personLabel)).style!;
+    const selected = <WidgetState>{WidgetState.selected};
+    expect(
+      segmentStyle.backgroundColor?.resolve(selected),
+      colors.secondaryContainer,
+    );
+    expect(
+      segmentStyle.foregroundColor?.resolve(selected),
+      colors.onSecondaryContainer,
+    );
+    expect(colors.secondaryContainer, isNot(Colors.black));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('confirms unsaved exit and cleans newly selected images', (
     tester,
   ) async {
@@ -267,6 +315,7 @@ Widget _testApp(
   String? archiveId,
   ArchiveImageService? imageService,
   Brightness brightness = Brightness.light,
+  ThemeSeed seed = ThemeSeed.teal,
 }) {
   return ProviderScope(
     overrides: [
@@ -276,8 +325,8 @@ Widget _testApp(
     ],
     child: MaterialApp(
       theme: brightness == Brightness.light
-          ? AppTheme.light(ThemeSeed.teal)
-          : AppTheme.dark(ThemeSeed.teal),
+          ? AppTheme.light(seed)
+          : AppTheme.dark(seed),
       locale: const Locale('en'),
       localizationsDelegates: const [
         AppLocalizations.delegate,

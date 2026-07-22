@@ -107,23 +107,26 @@ abstract final class AppTheme {
     final isDark = brightness == Brightness.dark;
     const black = Color(0xFF000000);
     const white = Color(0xFFFFFFFF);
+    const darkControl = Color(0xFFE5E5E5);
+    const darkControlContainer = Color(0xFFD8D8D8);
+    const darkOnControl = Color(0xFF171717);
     return ColorScheme.fromSeed(
       seedColor: black,
       brightness: brightness,
     ).copyWith(
-      primary: black,
-      onPrimary: white,
-      primaryContainer: black,
-      onPrimaryContainer: white,
-      secondary: black,
-      onSecondary: white,
-      secondaryContainer: black,
-      onSecondaryContainer: white,
-      tertiary: black,
-      onTertiary: white,
-      tertiaryContainer: black,
-      onTertiaryContainer: white,
-      surfaceTint: black,
+      primary: isDark ? darkControl : black,
+      onPrimary: isDark ? darkOnControl : white,
+      primaryContainer: isDark ? darkControlContainer : black,
+      onPrimaryContainer: isDark ? darkOnControl : white,
+      secondary: isDark ? darkControl : black,
+      onSecondary: isDark ? darkOnControl : white,
+      secondaryContainer: isDark ? darkControlContainer : black,
+      onSecondaryContainer: isDark ? darkOnControl : white,
+      tertiary: isDark ? darkControl : black,
+      onTertiary: isDark ? darkOnControl : white,
+      tertiaryContainer: isDark ? darkControlContainer : black,
+      onTertiaryContainer: isDark ? darkOnControl : white,
+      surfaceTint: isDark ? darkControl : black,
       onSurface: isDark ? const Color(0xFFF5F5F5) : const Color(0xFF171717),
       onSurfaceVariant: isDark
           ? const Color(0xFFD4D4D4)

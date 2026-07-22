@@ -115,7 +115,7 @@ void main() {
 
     expect(
       _metricNumberColor(tester, 'diary'),
-      neutralTheme.colorScheme.onSurface,
+      neutralTheme.colorScheme.primary,
     );
     expect(
       _labelColor(tester, 'diary'),

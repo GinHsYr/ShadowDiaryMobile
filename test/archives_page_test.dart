@@ -111,6 +111,50 @@ void main() {
     expect(find.byKey(const Key('archive-card-alice')), findsNothing);
   });
 
+  testWidgets('neutral dark archive avatar and add action stay visible', (
+    tester,
+  ) async {
+    final theme = AppTheme.dark(ThemeSeed.neutral);
+    final colors = theme.colorScheme;
+    final repository = _MemoryArchiveRepository([_archive('alice', 'Alice')]);
+
+    await tester.pumpWidget(
+      _testApp(
+        repository,
+        brightness: Brightness.dark,
+        seed: ThemeSeed.neutral,
+        page: ArchivesPage(onAddArchive: () async => false),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final avatarFinder = find.byKey(const Key('archive-avatar-alice'));
+    final avatar = tester.widget<Container>(avatarFinder);
+    expect(
+      (avatar.decoration! as BoxDecoration).color,
+      colors.secondaryContainer,
+    );
+    final avatarText = tester.widget<Text>(
+      find.descendant(of: avatarFinder, matching: find.text('A')),
+    );
+    expect(avatarText.style?.color, colors.onSecondaryContainer);
+
+    final addButton = find.byKey(const Key('archives-add-button'));
+    final addIcon = find.descendant(
+      of: addButton,
+      matching: find.byIcon(Icons.add_rounded),
+    );
+    final buttonMaterial = tester
+        .element(addIcon)
+        .findAncestorWidgetOfExactType<Material>();
+    expect(buttonMaterial?.color, colors.primaryContainer);
+    expect(
+      IconTheme.of(tester.element(addIcon)).color,
+      colors.onPrimaryContainer,
+    );
+    expect(colors.primaryContainer, isNot(Colors.black));
+  });
+
   testWidgets('shows the localized empty and retry states', (tester) async {
     final emptyRepository = _MemoryArchiveRepository(const []);
     await tester.pumpWidget(
@@ -151,6 +195,7 @@ Widget _testApp(
   ArchiveImageService? imageService,
   Locale locale = const Locale('en'),
   Brightness brightness = Brightness.light,
+  ThemeSeed seed = ThemeSeed.indigo,
 }) {
   return ProviderScope(
     overrides: [
@@ -161,8 +206,8 @@ Widget _testApp(
     child: MaterialApp(
       locale: locale,
       theme: brightness == Brightness.light
-          ? AppTheme.light(ThemeSeed.indigo)
-          : AppTheme.dark(ThemeSeed.indigo),
+          ? AppTheme.light(seed)
+          : AppTheme.dark(seed),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
