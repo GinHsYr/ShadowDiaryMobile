@@ -404,6 +404,12 @@ abstract class AppLocalizations {
   /// **'验证身份以开启影迹的系统解锁'**
   String get appLockEnableReason;
 
+  /// No description provided for @appLockDisableReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证身份以关闭影迹的系统解锁'**
+  String get appLockDisableReason;
+
   /// No description provided for @appLockAuthenticateReason.
   ///
   /// In zh, this message translates to:

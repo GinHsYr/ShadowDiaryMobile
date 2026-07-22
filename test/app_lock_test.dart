@@ -14,50 +14,75 @@ import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
 
 void main() {
-  testWidgets('enables system unlock only after successful authentication', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'enables and disables system unlock only after successful authentication',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final repository = MemorySettingsRepository(
-      const AppSettings(localePreference: AppLocalePreference.en),
-    );
-    final authentication = FakeDeviceAuthenticationService(
-      results: [DeviceAuthenticationResult.success],
-    );
-    await tester.pumpWidget(_testApp(repository, authentication));
-    await tester.pumpAndSettle();
+      final repository = MemorySettingsRepository(
+        const AppSettings(localePreference: AppLocalePreference.en),
+      );
+      final authentication = FakeDeviceAuthenticationService(
+        results: [
+          DeviceAuthenticationResult.success,
+          DeviceAuthenticationResult.canceled,
+          DeviceAuthenticationResult.success,
+        ],
+      );
+      await tester.pumpWidget(_testApp(repository, authentication));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('System unlock'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('System unlock'), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
-    await tester.tap(find.byKey(const Key('app-lock-toggle')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('app-lock-toggle')));
+      await tester.pumpAndSettle();
 
-    expect(authentication.reasons, [
-      'Authenticate to turn on system unlock for ShadowDiary',
-    ]);
-    expect(repository.settings.appLockEnabled, isTrue);
-    expect(
-      tester
-          .widget<SwitchListTile>(find.byKey(const Key('app-lock-toggle')))
-          .value,
-      isTrue,
-    );
-    expect(find.byKey(const Key('app-lock-screen')), findsNothing);
+      expect(authentication.reasons, [
+        'Authenticate to turn on system unlock for ShadowDiary',
+      ]);
+      expect(repository.settings.appLockEnabled, isTrue);
+      expect(
+        tester
+            .widget<SwitchListTile>(find.byKey(const Key('app-lock-toggle')))
+            .value,
+        isTrue,
+      );
+      expect(find.byKey(const Key('app-lock-screen')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('app-lock-toggle')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('app-lock-toggle')));
+      await tester.pumpAndSettle();
 
-    expect(repository.settings.appLockEnabled, isFalse);
-    expect(authentication.reasons, hasLength(1));
-    expect(tester.takeException(), isNull);
-  });
+      expect(repository.settings.appLockEnabled, isTrue);
+      expect(authentication.reasons, [
+        'Authenticate to turn on system unlock for ShadowDiary',
+        'Authenticate to turn off system unlock for ShadowDiary',
+      ]);
+      expect(
+        tester
+            .widget<SwitchListTile>(find.byKey(const Key('app-lock-toggle')))
+            .value,
+        isTrue,
+      );
+      expect(find.text('Authentication was not completed.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('app-lock-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(repository.settings.appLockEnabled, isFalse);
+      expect(authentication.reasons, [
+        'Authenticate to turn on system unlock for ShadowDiary',
+        'Authenticate to turn off system unlock for ShadowDiary',
+        'Authenticate to turn off system unlock for ShadowDiary',
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('does not enable app lock when system unlock is unavailable', (
     tester,

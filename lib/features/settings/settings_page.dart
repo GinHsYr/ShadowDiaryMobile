@@ -113,7 +113,7 @@ class SettingsPage extends ConsumerWidget {
     final controller = ref.read(appLockControllerProvider.notifier);
     final result = enabled
         ? await controller.enable(l10n.appLockEnableReason)
-        : await controller.disable();
+        : await controller.disable(l10n.appLockDisableReason);
     if (!context.mounted || result == AppLockResult.success) {
       return;
     }

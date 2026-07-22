@@ -57,6 +57,7 @@
   "appLockDisabledDescription": "使用指纹、人脸、虹膜或锁屏凭据保护日记",
   "appLockEnabledDescription": "每次打开或返回应用时需要验证",
   "appLockEnableReason": "验证身份以开启影迹的系统解锁",
+  "appLockDisableReason": "验证身份以关闭影迹的系统解锁",
   "appLockAuthenticateReason": "解锁影迹以查看日记",
   "appLockLockedTitle": "影迹已锁定",
   "appLockLockedDescription": "请使用生物特征或 PIN、图案、密码继续",

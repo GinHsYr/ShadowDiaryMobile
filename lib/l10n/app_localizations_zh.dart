@@ -164,6 +164,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLockEnableReason => '验证身份以开启影迹的系统解锁';
 
   @override
+  String get appLockDisableReason => '验证身份以关闭影迹的系统解锁';
+
+  @override
   String get appLockAuthenticateReason => '解锁影迹以查看日记';
 
   @override

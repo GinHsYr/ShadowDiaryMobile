@@ -83,9 +83,14 @@ class AppLockController extends Notifier<AppLockState> {
     }
   }
 
-  Future<AppLockResult> disable() async {
+  Future<AppLockResult> disable(String localizedReason) async {
     if (!state.enabled) {
       return AppLockResult.success;
+    }
+
+    final result = await _authenticate(localizedReason);
+    if (result != AppLockResult.success) {
+      return result;
     }
 
     try {

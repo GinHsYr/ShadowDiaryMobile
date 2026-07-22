@@ -170,6 +170,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Authenticate to turn on system unlock for ShadowDiary';
 
   @override
+  String get appLockDisableReason =>
+      'Authenticate to turn off system unlock for ShadowDiary';
+
+  @override
   String get appLockAuthenticateReason =>
       'Unlock ShadowDiary to view your diaries';
 

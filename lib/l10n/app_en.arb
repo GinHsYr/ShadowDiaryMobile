@@ -57,6 +57,7 @@
   "appLockDisabledDescription": "Protect diaries with biometrics or your screen lock",
   "appLockEnabledDescription": "Authenticate whenever you open or return to the app",
   "appLockEnableReason": "Authenticate to turn on system unlock for ShadowDiary",
+  "appLockDisableReason": "Authenticate to turn off system unlock for ShadowDiary",
   "appLockAuthenticateReason": "Unlock ShadowDiary to view your diaries",
   "appLockLockedTitle": "ShadowDiary is locked",
   "appLockLockedDescription": "Use biometrics, a PIN, pattern, or password to continue",
