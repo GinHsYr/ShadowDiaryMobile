@@ -8,6 +8,7 @@ import 'package:shadow_diary_mobile/app/router.dart';
 import 'package:shadow_diary_mobile/app/shell.dart';
 import 'package:shadow_diary_mobile/core/archives/archive.dart';
 import 'package:shadow_diary_mobile/core/archives/archive_repository.dart';
+import 'package:shadow_diary_mobile/core/backup/backup_import_service.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
@@ -179,6 +180,131 @@ void main() {
     expect(find.text('Settings'), findsWidgets);
   });
 
+  testWidgets(
+    'previews backup details and waits for incremental confirmation',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final repository = MemorySettingsRepository(
+        const AppSettings(localePreference: AppLocalePreference.en),
+      );
+      final backupService = RecordingBackupImportService();
+      await tester.pumpWidget(
+        _testApp(repository, backupImportService: backupService),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      final pageScrollable = find
+          .descendant(
+            of: find.byType(AppPage),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.drag(pageScrollable, const Offset(0, -380));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('backup-import-tile')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('backup-preview-sheet')), findsOneWidget);
+      expect(find.text('Backup details'), findsOneWidget);
+      expect(find.text('ShadowDiary 1.8.2'), findsOneWidget);
+      expect(find.text('Diary entries'), findsOneWidget);
+      expect(find.text('Archives'), findsWidgets);
+      expect(backupService.importModes, isEmpty);
+      expect(
+        tester
+            .widget<SegmentedButton<BackupImportMode>>(
+              find.byKey(const Key('backup-import-mode')),
+            )
+            .selected,
+        {BackupImportMode.overwrite},
+      );
+
+      final sheetScrollable = find
+          .descendant(
+            of: find.byKey(const Key('backup-preview-sheet')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.drag(sheetScrollable, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Incremental'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Conflicting diaries: 2 will not be imported'),
+        findsOneWidget,
+      );
+      expect(backupService.importModes, isEmpty);
+      expect(tester.takeException(), isNull);
+
+      await tester.drag(sheetScrollable, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('backup-import-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(backupService.importModes, [BackupImportMode.incremental]);
+      expect(
+        find.text('Imported 3 diaries and skipped 2 conflicts.'),
+        findsOneWidget,
+      );
+      expect(backupService.discardCount, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('localizes backup preview and discards it when canceled', (
+    tester,
+  ) async {
+    final repository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.zh),
+    );
+    final backupService = RecordingBackupImportService();
+    await tester.pumpWidget(
+      _testApp(repository, backupImportService: backupService),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('backup-import-tile')),
+      240,
+      scrollable: find
+          .descendant(
+            of: find.byType(AppPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(const Key('backup-import-tile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('备份信息'), findsOneWidget);
+    expect(find.text('导出版本'), findsOneWidget);
+    expect(find.text('日记篇数'), findsOneWidget);
+    expect(find.text('档案数'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('backup-import-cancel')),
+      180,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('backup-preview-sheet')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(find.byKey(const Key('backup-import-cancel')));
+    await tester.pumpAndSettle();
+
+    expect(backupService.importModes, isEmpty);
+    expect(backupService.discardCount, 1);
+  });
+
   testWidgets('uses a frosted navigation bar without narrow-screen overflow', (
     tester,
   ) async {
@@ -237,6 +363,7 @@ Widget _testApp(
   MemorySettingsRepository repository, {
   DiaryRepository? diaryRepository,
   ArchiveRepository? archiveRepository,
+  BackupImportService? backupImportService,
 }) {
   return ProviderScope(
     overrides: [
@@ -247,6 +374,9 @@ Widget _testApp(
       ),
       archiveRepositoryProvider.overrideWithValue(
         archiveRepository ?? EmptyArchiveRepository(),
+      ),
+      backupImportServiceProvider.overrideWithValue(
+        backupImportService ?? const UnavailableBackupImportService(),
       ),
     ],
     child: const ShadowDiaryApp(),
@@ -317,6 +447,46 @@ class RecordingDiaryRepository extends EmptyDiaryRepository {
   Future<DiaryEntry?> findByDate(DateTime date) async {
     requestedDates.add(date);
     return null;
+  }
+}
+
+class RecordingBackupImportService implements BackupImportService {
+  static final preview = BackupImportPreview(
+    sessionId: 'preview-session',
+    fileName: 'shadow-diary-backup-20260722-143025.zip',
+    appName: 'ShadowDiary',
+    appVersion: '1.8.2',
+    exportedAt: DateTime.utc(2026, 7, 22, 6, 30, 25),
+    formatVersion: backupFormatVersion,
+    diaryCount: 5,
+    archiveCount: 2,
+    attachmentCount: 1,
+    mediaFileCount: 4,
+    conflictDiaryCount: 2,
+  );
+
+  final List<BackupImportMode> importModes = [];
+  int discardCount = 0;
+
+  @override
+  Future<BackupImportPreview?> selectBackup() async => preview;
+
+  @override
+  Future<BackupImportResult> importBackup(
+    BackupImportPreview preview,
+    BackupImportMode mode,
+  ) async {
+    importModes.add(mode);
+    return const BackupImportResult(
+      importedDiaryCount: 3,
+      importedArchiveCount: 2,
+      skippedDiaryCount: 2,
+    );
+  }
+
+  @override
+  Future<void> discardPreview(BackupImportPreview preview) async {
+    discardCount++;
   }
 }
 

@@ -119,7 +119,55 @@
   "settingsThemeColor": "Theme color",
   "settingsLanguage": "Language",
   "settingsSecurity": "Security",
+  "settingsData": "Data",
   "settingsServices": "Services",
+  "backupImport": "Import backup",
+  "backupImportDescription": "Restore diaries and archives from a ShadowDiary ZIP backup",
+  "backupReading": "Reading backup...",
+  "backupPreviewTitle": "Backup details",
+  "backupFileName": "File",
+  "backupAppVersion": "Exported by",
+  "backupExportedAt": "Exported at",
+  "backupFormatVersion": "Format version",
+  "backupDiaryCount": "Diary entries",
+  "backupArchiveCount": "Archives",
+  "backupAttachmentCount": "Attachments",
+  "backupMediaCount": "Media files",
+  "backupImportMode": "Import mode",
+  "backupOverwrite": "Overwrite",
+  "backupOverwriteDescription": "Remove current diaries and archives, then restore this backup. Current app settings stay unchanged.",
+  "backupIncremental": "Incremental",
+  "backupIncrementalDescription": "Import only dates without a local diary, keeping current diaries, archives, and settings.",
+  "backupConflictCount": "Conflicting diaries",
+  "backupConflictDiaryCount": "{count} will not be imported",
+  "@backupConflictDiaryCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "backupStartImport": "Start import",
+  "backupImporting": "Importing backup...",
+  "backupOverwriteSuccess": "Imported {diaryCount} diaries and {archiveCount} archives.",
+  "@backupOverwriteSuccess": {
+    "placeholders": {
+      "diaryCount": {"type": "int"},
+      "archiveCount": {"type": "int"}
+    }
+  },
+  "backupIncrementalSuccess": "Imported {diaryCount} diaries and skipped {skippedCount} conflicts.",
+  "@backupIncrementalSuccess": {
+    "placeholders": {
+      "diaryCount": {"type": "int"},
+      "skippedCount": {"type": "int"}
+    }
+  },
+  "backupUnavailable": "Backup import is not available on this device.",
+  "backupInvalid": "This is not a valid ShadowDiary backup.",
+  "backupUnsupportedFormat": "This backup format version is not supported.",
+  "backupMissingKey": "The database key file is missing from the backup.",
+  "backupUnreadable": "The selected file could not be read.",
+  "backupTransferBusy": "Another backup operation is already running.",
+  "backupImportFailed": "Import failed. Current data was not changed.",
   "themeSystem": "System",
   "themeLight": "Light",
   "themeDark": "Dark",

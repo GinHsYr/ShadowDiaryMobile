@@ -279,7 +279,106 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSecurity => '安全';
 
   @override
+  String get settingsData => '数据';
+
+  @override
   String get settingsServices => '服务';
+
+  @override
+  String get backupImport => '导入备份';
+
+  @override
+  String get backupImportDescription => '从 ShadowDiary ZIP 备份恢复日记和档案';
+
+  @override
+  String get backupReading => '正在读取备份…';
+
+  @override
+  String get backupPreviewTitle => '备份信息';
+
+  @override
+  String get backupFileName => '文件';
+
+  @override
+  String get backupAppVersion => '导出版本';
+
+  @override
+  String get backupExportedAt => '导出时间';
+
+  @override
+  String get backupFormatVersion => '格式版本';
+
+  @override
+  String get backupDiaryCount => '日记篇数';
+
+  @override
+  String get backupArchiveCount => '档案数';
+
+  @override
+  String get backupAttachmentCount => '附件数';
+
+  @override
+  String get backupMediaCount => '媒体文件数';
+
+  @override
+  String get backupImportMode => '导入方式';
+
+  @override
+  String get backupOverwrite => '覆盖导入';
+
+  @override
+  String get backupOverwriteDescription => '清除当前日记和档案，再恢复这份备份。当前应用设置不会改变。';
+
+  @override
+  String get backupIncremental => '增量导入';
+
+  @override
+  String get backupIncrementalDescription => '只导入本机尚未写过日记的日期，保留现有日记、档案和设置。';
+
+  @override
+  String get backupConflictCount => '冲突日记';
+
+  @override
+  String backupConflictDiaryCount(int count) {
+    return '$count 篇不会导入';
+  }
+
+  @override
+  String get backupStartImport => '开始导入';
+
+  @override
+  String get backupImporting => '正在导入备份…';
+
+  @override
+  String backupOverwriteSuccess(int diaryCount, int archiveCount) {
+    return '已导入 $diaryCount 篇日记和 $archiveCount 个档案。';
+  }
+
+  @override
+  String backupIncrementalSuccess(int diaryCount, int skippedCount) {
+    return '已导入 $diaryCount 篇日记，跳过 $skippedCount 篇冲突日记。';
+  }
+
+  @override
+  String get backupUnavailable => '此设备暂不支持导入备份。';
+
+  @override
+  String get backupInvalid => '这不是有效的 ShadowDiary 备份文件。';
+
+  @override
+  String get backupUnsupportedFormat => '此备份格式版本不受支持。';
+
+  @override
+  String get backupMissingKey => '备份中缺少数据库密钥文件。';
+
+  @override
+  String get backupUnreadable => '无法读取所选文件。';
+
+  @override
+  String get backupTransferBusy => '已有备份任务正在进行。';
+
+  @override
+  String get backupImportFailed => '导入失败，当前数据未被修改。';
 
   @override
   String get themeSystem => '跟随系统';

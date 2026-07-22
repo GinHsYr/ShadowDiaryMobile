@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'core/archives/archive_repository.dart';
+import 'core/backup/backup_import_service.dart';
 import 'core/database/app_database.dart';
 import 'core/diary/diary_repository.dart';
 import 'core/settings/app_settings_controller.dart';
@@ -16,6 +17,7 @@ Future<void> main() async {
     final settingsRepository = SqliteAppSettingsRepository(database);
     final diaryRepository = SqliteDiaryRepository(database);
     final archiveRepository = SqliteArchiveRepository(database);
+    final backupImportService = DeviceBackupImportService(database);
     final initialSettings = await settingsRepository.load();
 
     runApp(
@@ -23,6 +25,7 @@ Future<void> main() async {
         overrides: [
           appSettingsRepositoryProvider.overrideWithValue(settingsRepository),
           initialAppSettingsProvider.overrideWithValue(initialSettings),
+          backupImportServiceProvider.overrideWithValue(backupImportService),
           diaryRepositoryProvider.overrideWithValue(diaryRepository),
           archiveRepositoryProvider.overrideWithValue(archiveRepository),
         ],

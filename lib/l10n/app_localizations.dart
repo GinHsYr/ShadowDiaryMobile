@@ -614,11 +614,197 @@ abstract class AppLocalizations {
   /// **'安全'**
   String get settingsSecurity;
 
+  /// No description provided for @settingsData.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据'**
+  String get settingsData;
+
   /// No description provided for @settingsServices.
   ///
   /// In zh, this message translates to:
   /// **'服务'**
   String get settingsServices;
+
+  /// No description provided for @backupImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入备份'**
+  String get backupImport;
+
+  /// No description provided for @backupImportDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'从 ShadowDiary ZIP 备份恢复日记和档案'**
+  String get backupImportDescription;
+
+  /// No description provided for @backupReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在读取备份…'**
+  String get backupReading;
+
+  /// No description provided for @backupPreviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份信息'**
+  String get backupPreviewTitle;
+
+  /// No description provided for @backupFileName.
+  ///
+  /// In zh, this message translates to:
+  /// **'文件'**
+  String get backupFileName;
+
+  /// No description provided for @backupAppVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出版本'**
+  String get backupAppVersion;
+
+  /// No description provided for @backupExportedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出时间'**
+  String get backupExportedAt;
+
+  /// No description provided for @backupFormatVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'格式版本'**
+  String get backupFormatVersion;
+
+  /// No description provided for @backupDiaryCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'日记篇数'**
+  String get backupDiaryCount;
+
+  /// No description provided for @backupArchiveCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'档案数'**
+  String get backupArchiveCount;
+
+  /// No description provided for @backupAttachmentCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'附件数'**
+  String get backupAttachmentCount;
+
+  /// No description provided for @backupMediaCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'媒体文件数'**
+  String get backupMediaCount;
+
+  /// No description provided for @backupImportMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入方式'**
+  String get backupImportMode;
+
+  /// No description provided for @backupOverwrite.
+  ///
+  /// In zh, this message translates to:
+  /// **'覆盖导入'**
+  String get backupOverwrite;
+
+  /// No description provided for @backupOverwriteDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除当前日记和档案，再恢复这份备份。当前应用设置不会改变。'**
+  String get backupOverwriteDescription;
+
+  /// No description provided for @backupIncremental.
+  ///
+  /// In zh, this message translates to:
+  /// **'增量导入'**
+  String get backupIncremental;
+
+  /// No description provided for @backupIncrementalDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'只导入本机尚未写过日记的日期，保留现有日记、档案和设置。'**
+  String get backupIncrementalDescription;
+
+  /// No description provided for @backupConflictCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲突日记'**
+  String get backupConflictCount;
+
+  /// No description provided for @backupConflictDiaryCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 篇不会导入'**
+  String backupConflictDiaryCount(int count);
+
+  /// No description provided for @backupStartImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始导入'**
+  String get backupStartImport;
+
+  /// No description provided for @backupImporting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在导入备份…'**
+  String get backupImporting;
+
+  /// No description provided for @backupOverwriteSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {diaryCount} 篇日记和 {archiveCount} 个档案。'**
+  String backupOverwriteSuccess(int diaryCount, int archiveCount);
+
+  /// No description provided for @backupIncrementalSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {diaryCount} 篇日记，跳过 {skippedCount} 篇冲突日记。'**
+  String backupIncrementalSuccess(int diaryCount, int skippedCount);
+
+  /// No description provided for @backupUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'此设备暂不支持导入备份。'**
+  String get backupUnavailable;
+
+  /// No description provided for @backupInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'这不是有效的 ShadowDiary 备份文件。'**
+  String get backupInvalid;
+
+  /// No description provided for @backupUnsupportedFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'此备份格式版本不受支持。'**
+  String get backupUnsupportedFormat;
+
+  /// No description provided for @backupMissingKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份中缺少数据库密钥文件。'**
+  String get backupMissingKey;
+
+  /// No description provided for @backupUnreadable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法读取所选文件。'**
+  String get backupUnreadable;
+
+  /// No description provided for @backupTransferBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有备份任务正在进行。'**
+  String get backupTransferBusy;
+
+  /// No description provided for @backupImportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入失败，当前数据未被修改。'**
+  String get backupImportFailed;
 
   /// No description provided for @themeSystem.
   ///

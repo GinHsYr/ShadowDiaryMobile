@@ -283,7 +283,114 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSecurity => 'Security';
 
   @override
+  String get settingsData => 'Data';
+
+  @override
   String get settingsServices => 'Services';
+
+  @override
+  String get backupImport => 'Import backup';
+
+  @override
+  String get backupImportDescription =>
+      'Restore diaries and archives from a ShadowDiary ZIP backup';
+
+  @override
+  String get backupReading => 'Reading backup...';
+
+  @override
+  String get backupPreviewTitle => 'Backup details';
+
+  @override
+  String get backupFileName => 'File';
+
+  @override
+  String get backupAppVersion => 'Exported by';
+
+  @override
+  String get backupExportedAt => 'Exported at';
+
+  @override
+  String get backupFormatVersion => 'Format version';
+
+  @override
+  String get backupDiaryCount => 'Diary entries';
+
+  @override
+  String get backupArchiveCount => 'Archives';
+
+  @override
+  String get backupAttachmentCount => 'Attachments';
+
+  @override
+  String get backupMediaCount => 'Media files';
+
+  @override
+  String get backupImportMode => 'Import mode';
+
+  @override
+  String get backupOverwrite => 'Overwrite';
+
+  @override
+  String get backupOverwriteDescription =>
+      'Remove current diaries and archives, then restore this backup. Current app settings stay unchanged.';
+
+  @override
+  String get backupIncremental => 'Incremental';
+
+  @override
+  String get backupIncrementalDescription =>
+      'Import only dates without a local diary, keeping current diaries, archives, and settings.';
+
+  @override
+  String get backupConflictCount => 'Conflicting diaries';
+
+  @override
+  String backupConflictDiaryCount(int count) {
+    return '$count will not be imported';
+  }
+
+  @override
+  String get backupStartImport => 'Start import';
+
+  @override
+  String get backupImporting => 'Importing backup...';
+
+  @override
+  String backupOverwriteSuccess(int diaryCount, int archiveCount) {
+    return 'Imported $diaryCount diaries and $archiveCount archives.';
+  }
+
+  @override
+  String backupIncrementalSuccess(int diaryCount, int skippedCount) {
+    return 'Imported $diaryCount diaries and skipped $skippedCount conflicts.';
+  }
+
+  @override
+  String get backupUnavailable =>
+      'Backup import is not available on this device.';
+
+  @override
+  String get backupInvalid => 'This is not a valid ShadowDiary backup.';
+
+  @override
+  String get backupUnsupportedFormat =>
+      'This backup format version is not supported.';
+
+  @override
+  String get backupMissingKey =>
+      'The database key file is missing from the backup.';
+
+  @override
+  String get backupUnreadable => 'The selected file could not be read.';
+
+  @override
+  String get backupTransferBusy =>
+      'Another backup operation is already running.';
+
+  @override
+  String get backupImportFailed =>
+      'Import failed. Current data was not changed.';
 
   @override
   String get themeSystem => 'System';

@@ -1,6 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/archives/archive_repository.dart';
+import '../../core/backup/backup_import_service.dart';
+import '../../core/diary/diary_repository.dart';
+import '../../core/media/media_library.dart';
 import '../../core/security/app_lock_controller.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/settings/app_settings_controller.dart';
@@ -8,11 +15,18 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
-class SettingsPage extends ConsumerWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends ConsumerState<SettingsPage> {
+  bool _isInspectingBackup = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final settings = ref.watch(appSettingsControllerProvider);
     final controller = ref.read(appSettingsControllerProvider.notifier);
@@ -85,6 +99,29 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          _SectionTitle(l10n.settingsData),
+          Card(
+            child: ListTile(
+              key: const Key('backup-import-tile'),
+              leading: const Icon(Icons.settings_backup_restore_rounded),
+              title: Text(l10n.backupImport),
+              subtitle: Text(
+                _isInspectingBackup
+                    ? l10n.backupReading
+                    : l10n.backupImportDescription,
+              ),
+              trailing: _isInspectingBackup
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  : const Icon(Icons.chevron_right_rounded),
+              onTap: _isInspectingBackup
+                  ? null
+                  : () => unawaited(_selectBackup()),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           _SectionTitle(l10n.settingsServices),
           Card(
             child: Column(
@@ -102,6 +139,115 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _selectBackup() async {
+    final service = ref.read(backupImportServiceProvider);
+    setState(() => _isInspectingBackup = true);
+    BackupImportPreview? preview;
+    try {
+      preview = await service.selectBackup();
+    } on Object catch (error) {
+      if (mounted) _showBackupError(error);
+      return;
+    } finally {
+      if (mounted) setState(() => _isInspectingBackup = false);
+    }
+    if (!mounted || preview == null) return;
+
+    final mode = await showModalBottomSheet<BackupImportMode>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _BackupImportSheet(preview: preview!),
+    );
+    if (!mounted) return;
+    if (mode == null) {
+      await service.discardPreview(preview);
+      return;
+    }
+    await _performImport(service, preview, mode);
+  }
+
+  Future<void> _performImport(
+    BackupImportService service,
+    BackupImportPreview preview,
+    BackupImportMode mode,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            key: const Key('backup-import-progress'),
+            content: Row(
+              children: [
+                const SizedBox.square(
+                  dimension: 26,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: Text(l10n.backupImporting)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    try {
+      final result = await service.importBackup(preview, mode);
+      if (!mounted) return;
+      ref
+        ..invalidate(diaryOverviewProvider)
+        ..invalidate(diaryEntryListProvider)
+        ..invalidate(archiveListProvider)
+        ..invalidate(mediaLibraryProvider);
+      final message = mode == BackupImportMode.overwrite
+          ? l10n.backupOverwriteSuccess(
+              result.importedDiaryCount,
+              result.importedArchiveCount,
+            )
+          : l10n.backupIncrementalSuccess(
+              result.importedDiaryCount,
+              result.skippedDiaryCount,
+            );
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+    } on Object catch (error) {
+      if (mounted) _showBackupError(error);
+      await service.discardPreview(preview);
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
+  void _showBackupError(Object error) {
+    final l10n = AppLocalizations.of(context);
+    final message = error is BackupImportException
+        ? switch (error.code) {
+            BackupImportErrorCode.unavailable => l10n.backupUnavailable,
+            BackupImportErrorCode.invalidBackup => l10n.backupInvalid,
+            BackupImportErrorCode.unsupportedBackupFormat =>
+              l10n.backupUnsupportedFormat,
+            BackupImportErrorCode.missingKeyFile => l10n.backupMissingKey,
+            BackupImportErrorCode.unreadableFile => l10n.backupUnreadable,
+            BackupImportErrorCode.transferInProgress => l10n.backupTransferBusy,
+            BackupImportErrorCode.importFailed => l10n.backupImportFailed,
+          }
+        : l10n.backupImportFailed;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _setAppLock(
@@ -137,6 +283,280 @@ class SettingsPage extends ConsumerWidget {
       ThemeSeed.rose => l10n.colorRose,
       ThemeSeed.monet => l10n.colorMonet,
     };
+  }
+}
+
+class _BackupImportSheet extends StatefulWidget {
+  const _BackupImportSheet({required this.preview});
+
+  final BackupImportPreview preview;
+
+  @override
+  State<_BackupImportSheet> createState() => _BackupImportSheetState();
+}
+
+class _BackupImportSheetState extends State<_BackupImportSheet> {
+  BackupImportMode _mode = BackupImportMode.overwrite;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final exportedAt = DateFormat.yMd(
+      locale,
+    ).add_Hm().format(widget.preview.exportedAt.toLocal());
+
+    return ConstrainedBox(
+      key: const Key('backup-preview-sheet'),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: colors.secondaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: colors.onSecondaryContainer,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.backupPreviewTitle,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        widget.preview.fileName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  children: [
+                    _BackupInfoRow(
+                      label: l10n.backupFileName,
+                      value: widget.preview.fileName,
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupAppVersion,
+                      value:
+                          '${widget.preview.appName} ${widget.preview.appVersion}',
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupExportedAt,
+                      value: exportedAt,
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupFormatVersion,
+                      value: widget.preview.formatVersion.toString(),
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupDiaryCount,
+                      value: widget.preview.diaryCount.toString(),
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupArchiveCount,
+                      value: widget.preview.archiveCount.toString(),
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupAttachmentCount,
+                      value: widget.preview.attachmentCount.toString(),
+                    ),
+                    _BackupInfoRow(
+                      label: l10n.backupMediaCount,
+                      value: widget.preview.mediaFileCount.toString(),
+                      showDivider: false,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(l10n.backupImportMode, style: theme.textTheme.labelLarge),
+            const SizedBox(height: AppSpacing.sm),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isVertical = constraints.maxWidth < 340;
+                return SegmentedButton<BackupImportMode>(
+                  key: const Key('backup-import-mode'),
+                  direction: isVertical ? Axis.vertical : Axis.horizontal,
+                  expandedInsets: isVertical ? null : EdgeInsets.zero,
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: BackupImportMode.overwrite,
+                      icon: const Icon(Icons.restore_rounded),
+                      label: Text(l10n.backupOverwrite),
+                    ),
+                    ButtonSegment(
+                      value: BackupImportMode.incremental,
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      label: Text(l10n.backupIncremental),
+                    ),
+                  ],
+                  selected: {_mode},
+                  onSelectionChanged: (selection) {
+                    setState(() => _mode = selection.single);
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _mode == BackupImportMode.overwrite
+                  ? l10n.backupOverwriteDescription
+                  : l10n.backupIncrementalDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            if (_mode == BackupImportMode.incremental) ...[
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                key: const Key('backup-conflict-count'),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.event_busy_outlined,
+                      color: colors.onTertiaryContainer,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        '${l10n.backupConflictCount}: '
+                        '${l10n.backupConflictDiaryCount(widget.preview.conflictDiaryCount)}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.onTertiaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                TextButton(
+                  key: const Key('backup-import-cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton.icon(
+                  key: const Key('backup-import-confirm'),
+                  onPressed: () => Navigator.of(context).pop(_mode),
+                  icon: const Icon(Icons.file_download_outlined),
+                  label: Text(l10n.backupStartImport),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackupInfoRow extends StatelessWidget {
+  const _BackupInfoRow({
+    required this.label,
+    required this.value,
+    this.showDivider = true,
+  });
+
+  final String label;
+  final String value;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (showDivider) const Divider(height: 1),
+      ],
+    );
   }
 }
 
