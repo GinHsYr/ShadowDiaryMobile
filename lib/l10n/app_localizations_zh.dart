@@ -92,6 +92,143 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archivesEmptyBody => '人物与其他档案会在这里集中整理。';
 
   @override
+  String get archiveAdd => '添加档案';
+
+  @override
+  String get archiveTypePerson => '人物';
+
+  @override
+  String get archiveTypeOther => '其他';
+
+  @override
+  String get save => '保存';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get delete => '删除';
+
+  @override
+  String get retry => '重试';
+
+  @override
+  String get archiveDeleteTitle => '删除档案？';
+
+  @override
+  String archiveDeleteMessage(String name) {
+    return '确定删除“$name”吗？此操作无法撤销。';
+  }
+
+  @override
+  String get archiveDeleteAction => '删除这个档案';
+
+  @override
+  String get archiveDeleteError => '无法删除档案，请重试。';
+
+  @override
+  String get archiveLoadError => '无法加载档案，请重试。';
+
+  @override
+  String get archiveEditorNewTitle => '添加档案';
+
+  @override
+  String get archiveEditorEditTitle => '编辑档案';
+
+  @override
+  String get archiveSaving => '保存中';
+
+  @override
+  String get archiveSaveError => '无法保存档案，请重试。';
+
+  @override
+  String get archiveMainImage => '主图';
+
+  @override
+  String get archiveChooseMainImage => '选择主图';
+
+  @override
+  String get archiveChangeMainImage => '更换主图';
+
+  @override
+  String get archiveName => '名称';
+
+  @override
+  String get archiveNameHint => '输入档案名称';
+
+  @override
+  String get archiveNameRequired => '请输入档案名称';
+
+  @override
+  String get archiveAlias => '别名';
+
+  @override
+  String get archiveAliasHint => '输入一个别名';
+
+  @override
+  String get archiveAddAlias => '添加别名';
+
+  @override
+  String get archiveAddAliasAction => '添加';
+
+  @override
+  String get archiveRemoveAlias => '移除别名';
+
+  @override
+  String get archiveAliasDuplicate => '这个别名已经存在';
+
+  @override
+  String get archiveType => '档案类型';
+
+  @override
+  String get archiveDescription => '描述';
+
+  @override
+  String get archiveDescriptionHint => '记录与这个档案有关的信息';
+
+  @override
+  String get archiveGallery => '图库';
+
+  @override
+  String archiveImageCount(int count, int max) {
+    return '$count / $max';
+  }
+
+  @override
+  String get archiveAddImages => '添加图片';
+
+  @override
+  String get archiveRemoveImage => '移除图片';
+
+  @override
+  String archiveImageLimit(int maxImages) {
+    return '每个档案最多保存 $maxImages 张图片（含主图）。';
+  }
+
+  @override
+  String get archiveImageAddError => '添加图片失败，请重试。';
+
+  @override
+  String get archiveImageMissing => '图片不可用';
+
+  @override
+  String archiveImagePosition(int index, int total) {
+    return '第 $index 张，共 $total 张';
+  }
+
+  @override
+  String get archiveDiscardTitle => '放弃修改？';
+
+  @override
+  String get archiveDiscardMessage => '尚未保存的修改和新添加的图片将会丢失。';
+
+  @override
+  String get archiveContinueEditing => '继续编辑';
+
+  @override
+  String get archiveDiscardAction => '放弃修改';
+
+  @override
   String get mediaEmptyTitle => '还没有媒体';
 
   @override

@@ -6,6 +6,8 @@ import 'package:shadow_diary_mobile/app/app.dart';
 import 'package:shadow_diary_mobile/app/app_ionicons.dart';
 import 'package:shadow_diary_mobile/app/router.dart';
 import 'package:shadow_diary_mobile/app/shell.dart';
+import 'package:shadow_diary_mobile/core/archives/archive.dart';
+import 'package:shadow_diary_mobile/core/archives/archive_repository.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
@@ -76,6 +78,40 @@ void main() {
 
     expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
     expect(diaryRepository.requestedDates, <DateTime>[selectedDate]);
+  });
+
+  testWidgets('creates an archive through the configured archive routes', (
+    tester,
+  ) async {
+    final settingsRepository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.en),
+    );
+    final archiveRepository = RecordingArchiveRepository();
+    await tester.pumpWidget(
+      _testApp(settingsRepository, archiveRepository: archiveRepository),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Archives'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('archives-add-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('archive-editor-form')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('archive-name-field')),
+      'Alice',
+    );
+    await tester.tap(find.byKey(const Key('archive-save-button')));
+    await tester.pumpAndSettle();
+
+    expect(archiveRepository.archives, hasLength(1));
+    expect(find.byKey(const Key('archive-editor-form')), findsNothing);
+    expect(find.text('Alice'), findsOneWidget);
+    expect(
+      find.byKey(Key('archive-card-${archiveRepository.archives.single.id}')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('changes and persists theme and locale preferences', (
@@ -200,6 +236,7 @@ void main() {
 Widget _testApp(
   MemorySettingsRepository repository, {
   DiaryRepository? diaryRepository,
+  ArchiveRepository? archiveRepository,
 }) {
   return ProviderScope(
     overrides: [
@@ -208,9 +245,52 @@ Widget _testApp(
       diaryRepositoryProvider.overrideWithValue(
         diaryRepository ?? EmptyDiaryRepository(),
       ),
+      archiveRepositoryProvider.overrideWithValue(
+        archiveRepository ?? EmptyArchiveRepository(),
+      ),
     ],
     child: const ShadowDiaryApp(),
   );
+}
+
+class EmptyArchiveRepository implements ArchiveRepository {
+  @override
+  Future<void> delete(String id) async {}
+
+  @override
+  Future<Archive?> findById(String id) async => null;
+
+  @override
+  Future<List<Archive>> listArchives() async => const [];
+
+  @override
+  Future<void> save(Archive archive) async {}
+}
+
+class RecordingArchiveRepository extends EmptyArchiveRepository {
+  final List<Archive> archives = [];
+
+  @override
+  Future<void> delete(String id) async {
+    archives.removeWhere((archive) => archive.id == id);
+  }
+
+  @override
+  Future<Archive?> findById(String id) async {
+    for (final archive in archives) {
+      if (archive.id == id) return archive;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<Archive>> listArchives() async => List.unmodifiable(archives);
+
+  @override
+  Future<void> save(Archive archive) async {
+    archives.removeWhere((value) => value.id == archive.id);
+    archives.add(archive);
+  }
 }
 
 class EmptyDiaryRepository implements DiaryRepository {

@@ -260,6 +260,264 @@ abstract class AppLocalizations {
   /// **'人物与其他档案会在这里集中整理。'**
   String get archivesEmptyBody;
 
+  /// No description provided for @archiveAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加档案'**
+  String get archiveAdd;
+
+  /// No description provided for @archiveTypePerson.
+  ///
+  /// In zh, this message translates to:
+  /// **'人物'**
+  String get archiveTypePerson;
+
+  /// No description provided for @archiveTypeOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get archiveTypeOther;
+
+  /// No description provided for @save.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get save;
+
+  /// No description provided for @cancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get cancel;
+
+  /// No description provided for @delete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get delete;
+
+  /// No description provided for @retry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get retry;
+
+  /// No description provided for @archiveDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除档案？'**
+  String get archiveDeleteTitle;
+
+  /// No description provided for @archiveDeleteMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定删除“{name}”吗？此操作无法撤销。'**
+  String archiveDeleteMessage(String name);
+
+  /// No description provided for @archiveDeleteAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这个档案'**
+  String get archiveDeleteAction;
+
+  /// No description provided for @archiveDeleteError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法删除档案，请重试。'**
+  String get archiveDeleteError;
+
+  /// No description provided for @archiveLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载档案，请重试。'**
+  String get archiveLoadError;
+
+  /// No description provided for @archiveEditorNewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加档案'**
+  String get archiveEditorNewTitle;
+
+  /// No description provided for @archiveEditorEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑档案'**
+  String get archiveEditorEditTitle;
+
+  /// No description provided for @archiveSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存中'**
+  String get archiveSaving;
+
+  /// No description provided for @archiveSaveError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法保存档案，请重试。'**
+  String get archiveSaveError;
+
+  /// No description provided for @archiveMainImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'主图'**
+  String get archiveMainImage;
+
+  /// No description provided for @archiveChooseMainImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择主图'**
+  String get archiveChooseMainImage;
+
+  /// No description provided for @archiveChangeMainImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'更换主图'**
+  String get archiveChangeMainImage;
+
+  /// No description provided for @archiveName.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称'**
+  String get archiveName;
+
+  /// No description provided for @archiveNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入档案名称'**
+  String get archiveNameHint;
+
+  /// No description provided for @archiveNameRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入档案名称'**
+  String get archiveNameRequired;
+
+  /// No description provided for @archiveAlias.
+  ///
+  /// In zh, this message translates to:
+  /// **'别名'**
+  String get archiveAlias;
+
+  /// No description provided for @archiveAliasHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入一个别名'**
+  String get archiveAliasHint;
+
+  /// No description provided for @archiveAddAlias.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加别名'**
+  String get archiveAddAlias;
+
+  /// No description provided for @archiveAddAliasAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加'**
+  String get archiveAddAliasAction;
+
+  /// No description provided for @archiveRemoveAlias.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除别名'**
+  String get archiveRemoveAlias;
+
+  /// No description provided for @archiveAliasDuplicate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个别名已经存在'**
+  String get archiveAliasDuplicate;
+
+  /// No description provided for @archiveType.
+  ///
+  /// In zh, this message translates to:
+  /// **'档案类型'**
+  String get archiveType;
+
+  /// No description provided for @archiveDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get archiveDescription;
+
+  /// No description provided for @archiveDescriptionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录与这个档案有关的信息'**
+  String get archiveDescriptionHint;
+
+  /// No description provided for @archiveGallery.
+  ///
+  /// In zh, this message translates to:
+  /// **'图库'**
+  String get archiveGallery;
+
+  /// No description provided for @archiveImageCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} / {max}'**
+  String archiveImageCount(int count, int max);
+
+  /// No description provided for @archiveAddImages.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片'**
+  String get archiveAddImages;
+
+  /// No description provided for @archiveRemoveImage.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除图片'**
+  String get archiveRemoveImage;
+
+  /// No description provided for @archiveImageLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'每个档案最多保存 {maxImages} 张图片（含主图）。'**
+  String archiveImageLimit(int maxImages);
+
+  /// No description provided for @archiveImageAddError.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加图片失败，请重试。'**
+  String get archiveImageAddError;
+
+  /// No description provided for @archiveImageMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片不可用'**
+  String get archiveImageMissing;
+
+  /// No description provided for @archiveImagePosition.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {index} 张，共 {total} 张'**
+  String archiveImagePosition(int index, int total);
+
+  /// No description provided for @archiveDiscardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃修改？'**
+  String get archiveDiscardTitle;
+
+  /// No description provided for @archiveDiscardMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未保存的修改和新添加的图片将会丢失。'**
+  String get archiveDiscardMessage;
+
+  /// No description provided for @archiveContinueEditing.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续编辑'**
+  String get archiveContinueEditing;
+
+  /// No description provided for @archiveDiscardAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃修改'**
+  String get archiveDiscardAction;
+
   /// No description provided for @mediaEmptyTitle.
   ///
   /// In zh, this message translates to:

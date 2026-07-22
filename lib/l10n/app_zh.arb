@@ -33,6 +33,71 @@
   },
   "archivesEmptyTitle": "还没有档案",
   "archivesEmptyBody": "人物与其他档案会在这里集中整理。",
+  "archiveAdd": "添加档案",
+  "archiveTypePerson": "人物",
+  "archiveTypeOther": "其他",
+  "save": "保存",
+  "cancel": "取消",
+  "delete": "删除",
+  "retry": "重试",
+  "archiveDeleteTitle": "删除档案？",
+  "archiveDeleteMessage": "确定删除“{name}”吗？此操作无法撤销。",
+  "@archiveDeleteMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "archiveDeleteAction": "删除这个档案",
+  "archiveDeleteError": "无法删除档案，请重试。",
+  "archiveLoadError": "无法加载档案，请重试。",
+  "archiveEditorNewTitle": "添加档案",
+  "archiveEditorEditTitle": "编辑档案",
+  "archiveSaving": "保存中",
+  "archiveSaveError": "无法保存档案，请重试。",
+  "archiveMainImage": "主图",
+  "archiveChooseMainImage": "选择主图",
+  "archiveChangeMainImage": "更换主图",
+  "archiveName": "名称",
+  "archiveNameHint": "输入档案名称",
+  "archiveNameRequired": "请输入档案名称",
+  "archiveAlias": "别名",
+  "archiveAliasHint": "输入一个别名",
+  "archiveAddAlias": "添加别名",
+  "archiveAddAliasAction": "添加",
+  "archiveRemoveAlias": "移除别名",
+  "archiveAliasDuplicate": "这个别名已经存在",
+  "archiveType": "档案类型",
+  "archiveDescription": "描述",
+  "archiveDescriptionHint": "记录与这个档案有关的信息",
+  "archiveGallery": "图库",
+  "archiveImageCount": "{count} / {max}",
+  "@archiveImageCount": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "archiveAddImages": "添加图片",
+  "archiveRemoveImage": "移除图片",
+  "archiveImageLimit": "每个档案最多保存 {maxImages} 张图片（含主图）。",
+  "@archiveImageLimit": {
+    "placeholders": {
+      "maxImages": {"type": "int"}
+    }
+  },
+  "archiveImageAddError": "添加图片失败，请重试。",
+  "archiveImageMissing": "图片不可用",
+  "archiveImagePosition": "第 {index} 张，共 {total} 张",
+  "@archiveImagePosition": {
+    "placeholders": {
+      "index": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "archiveDiscardTitle": "放弃修改？",
+  "archiveDiscardMessage": "尚未保存的修改和新添加的图片将会丢失。",
+  "archiveContinueEditing": "继续编辑",
+  "archiveDiscardAction": "放弃修改",
   "mediaEmptyTitle": "还没有媒体",
   "mediaEmptyBody": "日记和档案中的图片会汇集到这里。",
   "settingsAppearance": "外观",

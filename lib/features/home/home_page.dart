@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -735,8 +737,109 @@ class _WheelSliderField extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        child,
+        _WheelEdgeBlur(child: child),
       ],
+    );
+  }
+}
+
+class _WheelEdgeBlur extends StatelessWidget {
+  const _WheelEdgeBlur({required this.child});
+
+  static const _edgeHeight = 64.0;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.hardEdge,
+      children: [
+        child,
+        const Positioned(
+          left: 0,
+          top: 0,
+          right: 0,
+          height: _edgeHeight,
+          child: _WheelEdgeBlurOverlay(
+            key: Key('calendar-wheel-top-edge-blur'),
+            edge: Alignment.topCenter,
+          ),
+        ),
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: _edgeHeight,
+          child: _WheelEdgeBlurOverlay(
+            key: Key('calendar-wheel-bottom-edge-blur'),
+            edge: Alignment.bottomCenter,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WheelEdgeBlurOverlay extends StatelessWidget {
+  const _WheelEdgeBlurOverlay({required this.edge, super.key});
+
+  static const _blurStrengths = <double>[1.4, 1.2, 1.0, 0.8, 0.6];
+
+  final Alignment edge;
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceColor = Theme.of(context).colorScheme.surfaceContainerLow;
+    final isTopEdge = edge.y < 0;
+
+    return IgnorePointer(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bandHeight = constraints.maxHeight / _blurStrengths.length;
+
+          return Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              for (var index = 0; index < _blurStrengths.length; index++)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: isTopEdge ? index * bandHeight : null,
+                  bottom: isTopEdge ? null : index * bandHeight,
+                  height: bandHeight,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      key: Key('calendar-wheel-edge-blur-band-$index'),
+                      filter: ui.ImageFilter.blur(
+                        sigmaX: _blurStrengths[index],
+                        sigmaY: _blurStrengths[index],
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                ),
+              DecoratedBox(
+                key: const Key('calendar-wheel-edge-fade'),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: edge,
+                    end: -edge,
+                    stops: const [0, 0.55, 1],
+                    colors: [
+                      surfaceColor.withValues(alpha: 0.82),
+                      surfaceColor.withValues(alpha: 0.28),
+                      surfaceColor.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

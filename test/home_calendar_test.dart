@@ -74,6 +74,72 @@ void main() {
       expect(yearWheel.selectedNumberStyle?.color, Colors.black);
       expect(yearWheel.horizontal, isFalse);
       expect(monthWheel.horizontal, isFalse);
+      for (final fieldKey in const [
+        Key('calendar-year-wheel-field'),
+        Key('calendar-month-wheel-field'),
+      ]) {
+        final field = find.byKey(fieldKey);
+        final wheel = find.descendant(
+          of: field,
+          matching: find.byType(WheelSlider),
+        );
+        final topBlur = find.descendant(
+          of: field,
+          matching: find.byKey(const Key('calendar-wheel-top-edge-blur')),
+        );
+        final bottomBlur = find.descendant(
+          of: field,
+          matching: find.byKey(const Key('calendar-wheel-bottom-edge-blur')),
+        );
+
+        expect(topBlur, findsOneWidget);
+        expect(bottomBlur, findsOneWidget);
+        expect(
+          find.descendant(of: topBlur, matching: find.byType(BackdropFilter)),
+          findsNWidgets(5),
+        );
+        expect(
+          find.descendant(
+            of: bottomBlur,
+            matching: find.byType(BackdropFilter),
+          ),
+          findsNWidgets(5),
+        );
+        for (final blur in [topBlur, bottomBlur]) {
+          for (var index = 0; index < 5; index++) {
+            expect(
+              find.descendant(
+                of: blur,
+                matching: find.byKey(
+                  Key('calendar-wheel-edge-blur-band-$index'),
+                ),
+              ),
+              findsOneWidget,
+            );
+          }
+          expect(
+            find.descendant(of: blur, matching: find.byType(ShaderMask)),
+            findsNothing,
+          );
+          final fade = tester.widget<DecoratedBox>(
+            find.descendant(
+              of: blur,
+              matching: find.byKey(const Key('calendar-wheel-edge-fade')),
+            ),
+          );
+          final gradient = (fade.decoration as BoxDecoration).gradient;
+          expect(gradient, isA<LinearGradient>());
+          final colors = (gradient! as LinearGradient).colors;
+          expect(colors.first.a, greaterThan(0));
+          expect(colors.last.a, 0);
+          expect(tester.getSize(blur).height, 64);
+        }
+        expect(tester.getTopLeft(topBlur).dy, tester.getTopLeft(wheel).dy);
+        expect(
+          tester.getBottomRight(bottomBlur).dy,
+          tester.getBottomRight(wheel).dy,
+        );
+      }
       expect(
         tester.getCenter(find.text('年份')).dx,
         closeTo(

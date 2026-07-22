@@ -33,6 +33,71 @@
   },
   "archivesEmptyTitle": "No archives yet",
   "archivesEmptyBody": "People and other archives will be organized here.",
+  "archiveAdd": "Add archive",
+  "archiveTypePerson": "Person",
+  "archiveTypeOther": "Other",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "retry": "Retry",
+  "archiveDeleteTitle": "Delete archive?",
+  "archiveDeleteMessage": "Delete “{name}”? This cannot be undone.",
+  "@archiveDeleteMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "archiveDeleteAction": "Delete this archive",
+  "archiveDeleteError": "Could not delete the archive. Try again.",
+  "archiveLoadError": "Could not load archives. Try again.",
+  "archiveEditorNewTitle": "Add archive",
+  "archiveEditorEditTitle": "Edit archive",
+  "archiveSaving": "Saving",
+  "archiveSaveError": "Could not save the archive. Try again.",
+  "archiveMainImage": "Main image",
+  "archiveChooseMainImage": "Choose main image",
+  "archiveChangeMainImage": "Change main image",
+  "archiveName": "Name",
+  "archiveNameHint": "Enter an archive name",
+  "archiveNameRequired": "Enter an archive name",
+  "archiveAlias": "Aliases",
+  "archiveAliasHint": "Enter one alias",
+  "archiveAddAlias": "Add alias",
+  "archiveAddAliasAction": "Add",
+  "archiveRemoveAlias": "Remove alias",
+  "archiveAliasDuplicate": "This alias already exists",
+  "archiveType": "Archive type",
+  "archiveDescription": "Description",
+  "archiveDescriptionHint": "Record information about this archive",
+  "archiveGallery": "Gallery",
+  "archiveImageCount": "{count} / {max}",
+  "@archiveImageCount": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "archiveAddImages": "Add images",
+  "archiveRemoveImage": "Remove image",
+  "archiveImageLimit": "An archive can contain up to {maxImages} images, including its main image.",
+  "@archiveImageLimit": {
+    "placeholders": {
+      "maxImages": {"type": "int"}
+    }
+  },
+  "archiveImageAddError": "Could not add the images. Try again.",
+  "archiveImageMissing": "Image unavailable",
+  "archiveImagePosition": "Image {index} of {total}",
+  "@archiveImagePosition": {
+    "placeholders": {
+      "index": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "archiveDiscardTitle": "Discard changes?",
+  "archiveDiscardMessage": "Unsaved changes and newly added images will be lost.",
+  "archiveContinueEditing": "Keep editing",
+  "archiveDiscardAction": "Discard changes",
   "mediaEmptyTitle": "No media yet",
   "mediaEmptyBody": "Images from diaries and archives will be collected here.",
   "settingsAppearance": "Appearance",

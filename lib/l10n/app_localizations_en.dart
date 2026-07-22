@@ -94,6 +94,144 @@ class AppLocalizationsEn extends AppLocalizations {
       'People and other archives will be organized here.';
 
   @override
+  String get archiveAdd => 'Add archive';
+
+  @override
+  String get archiveTypePerson => 'Person';
+
+  @override
+  String get archiveTypeOther => 'Other';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get archiveDeleteTitle => 'Delete archive?';
+
+  @override
+  String archiveDeleteMessage(String name) {
+    return 'Delete “$name”? This cannot be undone.';
+  }
+
+  @override
+  String get archiveDeleteAction => 'Delete this archive';
+
+  @override
+  String get archiveDeleteError => 'Could not delete the archive. Try again.';
+
+  @override
+  String get archiveLoadError => 'Could not load archives. Try again.';
+
+  @override
+  String get archiveEditorNewTitle => 'Add archive';
+
+  @override
+  String get archiveEditorEditTitle => 'Edit archive';
+
+  @override
+  String get archiveSaving => 'Saving';
+
+  @override
+  String get archiveSaveError => 'Could not save the archive. Try again.';
+
+  @override
+  String get archiveMainImage => 'Main image';
+
+  @override
+  String get archiveChooseMainImage => 'Choose main image';
+
+  @override
+  String get archiveChangeMainImage => 'Change main image';
+
+  @override
+  String get archiveName => 'Name';
+
+  @override
+  String get archiveNameHint => 'Enter an archive name';
+
+  @override
+  String get archiveNameRequired => 'Enter an archive name';
+
+  @override
+  String get archiveAlias => 'Aliases';
+
+  @override
+  String get archiveAliasHint => 'Enter one alias';
+
+  @override
+  String get archiveAddAlias => 'Add alias';
+
+  @override
+  String get archiveAddAliasAction => 'Add';
+
+  @override
+  String get archiveRemoveAlias => 'Remove alias';
+
+  @override
+  String get archiveAliasDuplicate => 'This alias already exists';
+
+  @override
+  String get archiveType => 'Archive type';
+
+  @override
+  String get archiveDescription => 'Description';
+
+  @override
+  String get archiveDescriptionHint => 'Record information about this archive';
+
+  @override
+  String get archiveGallery => 'Gallery';
+
+  @override
+  String archiveImageCount(int count, int max) {
+    return '$count / $max';
+  }
+
+  @override
+  String get archiveAddImages => 'Add images';
+
+  @override
+  String get archiveRemoveImage => 'Remove image';
+
+  @override
+  String archiveImageLimit(int maxImages) {
+    return 'An archive can contain up to $maxImages images, including its main image.';
+  }
+
+  @override
+  String get archiveImageAddError => 'Could not add the images. Try again.';
+
+  @override
+  String get archiveImageMissing => 'Image unavailable';
+
+  @override
+  String archiveImagePosition(int index, int total) {
+    return 'Image $index of $total';
+  }
+
+  @override
+  String get archiveDiscardTitle => 'Discard changes?';
+
+  @override
+  String get archiveDiscardMessage =>
+      'Unsaved changes and newly added images will be lost.';
+
+  @override
+  String get archiveContinueEditing => 'Keep editing';
+
+  @override
+  String get archiveDiscardAction => 'Discard changes';
+
+  @override
   String get mediaEmptyTitle => 'No media yet';
 
   @override
