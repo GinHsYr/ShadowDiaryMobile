@@ -100,6 +100,20 @@
   "archiveDiscardAction": "Discard changes",
   "mediaEmptyTitle": "No media yet",
   "mediaEmptyBody": "Images from diaries and archives will be collected here.",
+  "mediaImageTotal": "{count} images",
+  "@mediaImageTotal": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "mediaFilterAll": "All",
+  "mediaFilterDiary": "Diaries",
+  "mediaFilterArchive": "Archives",
+  "mediaFilteredEmpty": "No images in this category yet",
+  "mediaLoadError": "Could not load media. Try again.",
+  "mediaImageMissing": "Image unavailable",
+  "mediaUntitledDiary": "Untitled diary",
+  "mediaViewSource": "View source",
   "settingsAppearance": "Appearance",
   "settingsThemeMode": "Display mode",
   "settingsThemeColor": "Theme color",

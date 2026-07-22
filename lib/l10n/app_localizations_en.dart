@@ -239,6 +239,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Images from diaries and archives will be collected here.';
 
   @override
+  String mediaImageTotal(int count) {
+    return '$count images';
+  }
+
+  @override
+  String get mediaFilterAll => 'All';
+
+  @override
+  String get mediaFilterDiary => 'Diaries';
+
+  @override
+  String get mediaFilterArchive => 'Archives';
+
+  @override
+  String get mediaFilteredEmpty => 'No images in this category yet';
+
+  @override
+  String get mediaLoadError => 'Could not load media. Try again.';
+
+  @override
+  String get mediaImageMissing => 'Image unavailable';
+
+  @override
+  String get mediaUntitledDiary => 'Untitled diary';
+
+  @override
+  String get mediaViewSource => 'View source';
+
+  @override
   String get settingsAppearance => 'Appearance';
 
   @override

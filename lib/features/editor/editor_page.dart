@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/diary/diary_content_images.dart';
 import '../../core/diary/diary_entry.dart';
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
@@ -19,10 +21,18 @@ import 'diary_document_codec.dart';
 import 'diary_image_embed.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
-  const EditorPage({this.entryId, this.initialDate, super.key});
+  const EditorPage({
+    this.entryId,
+    this.initialDate,
+    this.initialImageSource,
+    this.initialImageIndex,
+    super.key,
+  });
 
   final String? entryId;
   final DateTime? initialDate;
+  final String? initialImageSource;
+  final int? initialImageIndex;
 
   @override
   ConsumerState<EditorPage> createState() => _EditorPageState();
@@ -39,6 +49,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   final _titleController = TextEditingController();
   final _editorFocusNode = FocusNode();
   final _editorScrollController = ScrollController();
+  final _sourceImageKey = GlobalKey();
   final _datePickerController = EasyDatePickerController();
   final _uuid = const Uuid();
 
@@ -62,13 +73,17 @@ class _EditorPageState extends ConsumerState<EditorPage>
   bool _isExiting = false;
   bool _allowPop = false;
   bool _lastSaveSucceeded = true;
+  bool _didRevealSourceImage = false;
+  int _sourceImageRevealAttempts = 0;
   Object? _loadError;
+  int? _sourceImageOffset;
 
   @override
   void initState() {
     super.initState();
     _repository = ref.read(diaryRepositoryProvider);
     _selectedDate = DateUtils.dateOnly(widget.initialDate ?? DateTime.now());
+    _datePickerExpanded = widget.initialImageSource == null;
     _quillController = QuillController.basic();
     WidgetsBinding.instance.addObserver(this);
     _listenToDocument();
@@ -88,7 +103,14 @@ class _EditorPageState extends ConsumerState<EditorPage>
     } on Object catch (error) {
       if (mounted) setState(() => _loadError = error);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (_sourceImageOffset != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            unawaited(_revealSourceImage());
+          });
+        }
+      }
     }
   }
 
@@ -97,10 +119,81 @@ class _EditorPageState extends ConsumerState<EditorPage>
     _titleController.text = entry?.title ?? '';
     _mood = entry?.mood.isNotEmpty == true ? entry!.mood : _defaultMood;
     _quillController.document = _documentFromEntry(entry);
+    _sourceImageOffset = _findSourceImageOffset();
     _listenToDocument();
     _hasChanges = false;
     _lastSaveSucceeded = true;
     _isApplyingEntry = false;
+  }
+
+  int? _findSourceImageOffset() {
+    final source = widget.initialImageSource;
+    if (source == null) return null;
+    final references = diaryImageReferencesFromDelta(
+      _quillController.document.toDelta(),
+    );
+    final requestedIndex = widget.initialImageIndex;
+    if (requestedIndex != null &&
+        requestedIndex >= 0 &&
+        requestedIndex < references.length) {
+      final requested = references[requestedIndex];
+      if (requested.source == source) return requested.documentOffset;
+    }
+    for (final reference in references) {
+      if (reference.source == source) return reference.documentOffset;
+    }
+    return null;
+  }
+
+  Future<void> _revealSourceImage() async {
+    if (!mounted || _didRevealSourceImage) return;
+    final targetContext = _sourceImageKey.currentContext;
+    final offset = _sourceImageOffset;
+    if (offset == null) return;
+    if (targetContext == null) {
+      if (_sourceImageRevealAttempts++ < 4) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          unawaited(_revealSourceImage());
+        });
+        WidgetsBinding.instance.scheduleFrame();
+      }
+      return;
+    }
+    _didRevealSourceImage = true;
+    _quillController.updateSelection(
+      TextSelection.collapsed(offset: offset),
+      ChangeSource.local,
+    );
+    final renderObject = targetContext.findRenderObject();
+    final viewport = RenderAbstractViewport.maybeOf(renderObject);
+    if (renderObject != null &&
+        viewport != null &&
+        _editorScrollController.hasClients) {
+      final revealOffset = viewport
+          .getOffsetToReveal(renderObject, 0.32)
+          .offset
+          .clamp(
+            _editorScrollController.position.minScrollExtent,
+            _editorScrollController.position.maxScrollExtent,
+          )
+          .toDouble();
+      await _editorScrollController.animateTo(
+        revealOffset,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      alignment: 0.32,
+    );
   }
 
   Document _documentFromEntry(DiaryEntry? entry) {
@@ -200,7 +293,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
       try {
         await _repository.save(entry);
         _lastSaveSucceeded = true;
-        if (mounted) ref.invalidate(diaryOverviewProvider);
+        if (mounted) {
+          ref.invalidate(diaryOverviewProvider);
+          ref.invalidate(diaryEntryListProvider);
+        }
         if (date == _selectedDate && revision == _changeRevision) {
           _hasChanges = false;
         }
@@ -458,7 +554,15 @@ class _EditorPageState extends ConsumerState<EditorPage>
                           config: QuillEditorConfig(
                             placeholder: l10n.editorBodyPlaceholder,
                             padding: const EdgeInsets.all(AppSpacing.md),
-                            embedBuilders: const [DiaryImageEmbedBuilder()],
+                            embedBuilders: [
+                              DiaryImageEmbedBuilder(
+                                targetOffset: _sourceImageOffset,
+                                targetKey: _sourceImageKey,
+                                onTargetReady: () {
+                                  unawaited(_revealSourceImage());
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ),

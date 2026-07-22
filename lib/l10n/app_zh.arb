@@ -100,6 +100,20 @@
   "archiveDiscardAction": "放弃修改",
   "mediaEmptyTitle": "还没有媒体",
   "mediaEmptyBody": "日记和档案中的图片会汇集到这里。",
+  "mediaImageTotal": "共 {count} 张图片",
+  "@mediaImageTotal": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "mediaFilterAll": "全部",
+  "mediaFilterDiary": "日记",
+  "mediaFilterArchive": "档案",
+  "mediaFilteredEmpty": "这个分类中还没有图片",
+  "mediaLoadError": "无法加载媒体，请重试。",
+  "mediaImageMissing": "图片不可用",
+  "mediaUntitledDiary": "未命名日记",
+  "mediaViewSource": "查看出处",
   "settingsAppearance": "外观",
   "settingsThemeMode": "显示模式",
   "settingsThemeColor": "主题色",

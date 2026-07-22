@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/media/media_library.dart';
 import '../features/archives/archive_editor_page.dart';
 import '../features/archives/archives_page.dart';
 import '../features/editor/editor_page.dart';
@@ -26,10 +27,25 @@ abstract final class AppRoutes {
     ).toString();
   }
 
-  static String editEntry(String id) => '/entries/$id/edit';
+  static String editEntry(String id, {String? imageSource, int? imageIndex}) {
+    return _locationWithQuery('/entries/${Uri.encodeComponent(id)}/edit', {
+      'image': ?imageSource,
+      'imageIndex': ?imageIndex?.toString(),
+    });
+  }
 
-  static String editArchive(String id) {
-    return '/archives/${Uri.encodeComponent(id)}/edit';
+  static String editArchive(String id, {String? imagePath}) {
+    return _locationWithQuery('/archives/${Uri.encodeComponent(id)}/edit', {
+      'image': ?imagePath,
+    });
+  }
+
+  static String _locationWithQuery(
+    String path,
+    Map<String, String> queryParameters,
+  ) {
+    if (queryParameters.isEmpty) return path;
+    return '$path?${Uri(queryParameters: queryParameters).query}';
   }
 }
 
@@ -71,7 +87,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.media,
-                builder: (context, state) => const MediaPage(),
+                builder: (context, state) => MediaPage(
+                  onOpenSource: (item) {
+                    final location = switch (item.sourceType) {
+                      MediaSourceType.diary => AppRoutes.editEntry(
+                        item.sourceId,
+                        imageSource: item.imageSource,
+                        imageIndex: item.sourceImageIndex,
+                      ),
+                      MediaSourceType.archive => AppRoutes.editArchive(
+                        item.sourceId,
+                        imagePath: item.imageSource,
+                      ),
+                    };
+                    return context.push<Object?>(location);
+                  },
+                ),
               ),
             ],
           ),
@@ -97,7 +128,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/entries/:id/edit',
         builder: (context, state) {
-          return EditorPage(entryId: state.pathParameters['id']);
+          return EditorPage(
+            entryId: state.pathParameters['id'],
+            initialImageSource: state.uri.queryParameters['image'],
+            initialImageIndex: int.tryParse(
+              state.uri.queryParameters['imageIndex'] ?? '',
+            ),
+          );
         },
       ),
       GoRoute(
@@ -114,7 +151,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           return _archiveEditorPage(
             state: state,
-            child: ArchiveEditorPage(archiveId: state.pathParameters['id']),
+            child: ArchiveEditorPage(
+              archiveId: state.pathParameters['id'],
+              initialImagePath: state.uri.queryParameters['image'],
+            ),
           );
         },
       ),

@@ -203,6 +203,7 @@ void main() {
     expect(await repository.findByDate(DateTime(2026, 7, 19)), isNull);
     expect(await repository.findByDate(DateTime(2026, 7, 21)), isNull);
     expect((await repository.findById(entry.id))?.content, entry.content);
+    expect((await repository.listEntries()).single.id, entry.id);
   });
 
   test('loads diary dates and real home statistics', () async {

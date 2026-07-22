@@ -12,7 +12,13 @@ final diaryOverviewProvider = FutureProvider<DiaryOverview>((ref) {
   return ref.watch(diaryRepositoryProvider).loadOverview();
 });
 
+final diaryEntryListProvider = FutureProvider<List<DiaryEntry>>((ref) {
+  return ref.watch(diaryRepositoryProvider).listEntries();
+});
+
 abstract interface class DiaryRepository {
+  Future<List<DiaryEntry>> listEntries();
+
   Future<DiaryEntry?> findById(String id);
 
   Future<DiaryEntry?> findByDate(DateTime date);
@@ -28,6 +34,15 @@ class SqliteDiaryRepository implements DiaryRepository {
 
   final AppDatabase _appDatabase;
   final DateTime Function() _now;
+
+  @override
+  Future<List<DiaryEntry>> listEntries() async {
+    final rows = await _appDatabase.database.query(
+      'diary_entries',
+      orderBy: 'updated_at DESC',
+    );
+    return rows.map(_fromRow).toList(growable: false);
+  }
 
   @override
   Future<DiaryEntry?> findById(String id) async {

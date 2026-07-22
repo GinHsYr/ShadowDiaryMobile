@@ -285,6 +285,32 @@ void main() {
     expect(find.byType(MasonryGridView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('reveals the archive image targeted from media', (tester) async {
+    const targetPath = 'missing-target.webp';
+    final archive = _archive(
+      images: const ['first.webp', targetPath, 'third.webp'],
+    );
+    await tester.pumpWidget(
+      _testApp(
+        _MemoryArchiveRepository(archive),
+        archiveId: archive.id,
+        initialImagePath: targetPath,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open-archive-editor')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('archive-source-image-target')),
+      findsOneWidget,
+    );
+    final targetCenter = tester.getCenter(
+      find.byKey(const Key('archive-source-image-target')),
+    );
+    expect(targetCenter.dy, inInclusiveRange(0, 600));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _scrollToEditorWidget(WidgetTester tester, Finder target) async {
@@ -313,6 +339,7 @@ Future<void> _addAlias(WidgetTester tester, String alias) async {
 Widget _testApp(
   _MemoryArchiveRepository repository, {
   String? archiveId,
+  String? initialImagePath,
   ArchiveImageService? imageService,
   Brightness brightness = Brightness.light,
   ThemeSeed seed = ThemeSeed.teal,
@@ -335,15 +362,22 @@ Widget _testApp(
         GlobalWidgetsLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: _EditorLauncher(archiveId: archiveId),
+      home: _EditorLauncher(
+        archiveId: archiveId,
+        initialImagePath: initialImagePath,
+      ),
     ),
   );
 }
 
 class _EditorLauncher extends StatefulWidget {
-  const _EditorLauncher({required this.archiveId});
+  const _EditorLauncher({
+    required this.archiveId,
+    required this.initialImagePath,
+  });
 
   final String? archiveId;
+  final String? initialImagePath;
 
   @override
   State<_EditorLauncher> createState() => _EditorLauncherState();
@@ -365,8 +399,10 @@ class _EditorLauncherState extends State<_EditorLauncher> {
               onPressed: () async {
                 final result = await Navigator.of(context).push<Object?>(
                   MaterialPageRoute<Object?>(
-                    builder: (context) =>
-                        ArchiveEditorPage(archiveId: widget.archiveId),
+                    builder: (context) => ArchiveEditorPage(
+                      archiveId: widget.archiveId,
+                      initialImagePath: widget.initialImagePath,
+                    ),
                   ),
                 );
                 if (mounted) {

@@ -217,6 +217,9 @@ class MemorySettingsRepository implements AppSettingsRepository {
 
 class EmptyDiaryRepository implements DiaryRepository {
   @override
+  Future<List<DiaryEntry>> listEntries() async => const [];
+
+  @override
   Future<DiaryEntry?> findByDate(DateTime date) async => null;
 
   @override

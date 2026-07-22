@@ -235,6 +235,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaEmptyBody => '日记和档案中的图片会汇集到这里。';
 
   @override
+  String mediaImageTotal(int count) {
+    return '共 $count 张图片';
+  }
+
+  @override
+  String get mediaFilterAll => '全部';
+
+  @override
+  String get mediaFilterDiary => '日记';
+
+  @override
+  String get mediaFilterArchive => '档案';
+
+  @override
+  String get mediaFilteredEmpty => '这个分类中还没有图片';
+
+  @override
+  String get mediaLoadError => '无法加载媒体，请重试。';
+
+  @override
+  String get mediaImageMissing => '图片不可用';
+
+  @override
+  String get mediaUntitledDiary => '未命名日记';
+
+  @override
+  String get mediaViewSource => '查看出处';
+
+  @override
   String get settingsAppearance => '外观';
 
   @override

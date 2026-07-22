@@ -361,11 +361,47 @@ void main() {
     expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('reveals the diary image targeted from media', (tester) async {
+    const source = 'file:///missing-target-image.webp';
+    final date = DateTime(2026, 7, 22);
+    final repository = MemoryDiaryRepository([
+      _entry(
+        'target-entry',
+        date,
+        'Target diary',
+        '<p>${List.filled(30, 'A line').join('<br>')}</p>'
+            '<p><img src="$source"></p>',
+        List.filled(30, 'A line').join('\n'),
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      _testApp(
+        repository,
+        entryId: 'target-entry',
+        initialImageSource: source,
+        initialImageIndex: 0,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('diary-source-image-target')), findsOneWidget);
+    expect(find.byType(EasyDateTimeLinePicker), findsNothing);
+    final targetCenter = tester.getCenter(
+      find.byKey(const Key('diary-source-image-target')),
+    );
+    expect(targetCenter.dy, inInclusiveRange(0, 640));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _testApp(
   MemoryDiaryRepository repository, {
   DiaryImageService? imageService,
+  String? entryId,
+  String? initialImageSource,
+  int? initialImageIndex,
 }) {
   return ProviderScope(
     overrides: [
@@ -386,7 +422,11 @@ Widget _testApp(
         EasyDateTimelineLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const EditorPage(),
+      home: EditorPage(
+        entryId: entryId,
+        initialImageSource: initialImageSource,
+        initialImageIndex: initialImageIndex,
+      ),
     ),
   );
 }
@@ -470,6 +510,9 @@ class MemoryDiaryRepository implements DiaryRepository {
     : entries = List<DiaryEntry>.from(initialEntries);
 
   final List<DiaryEntry> entries;
+
+  @override
+  Future<List<DiaryEntry>> listEntries() async => List.unmodifiable(entries);
 
   @override
   Future<DiaryEntry?> findByDate(DateTime date) async {

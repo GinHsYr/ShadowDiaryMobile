@@ -530,6 +530,60 @@ abstract class AppLocalizations {
   /// **'日记和档案中的图片会汇集到这里。'**
   String get mediaEmptyBody;
 
+  /// No description provided for @mediaImageTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 张图片'**
+  String mediaImageTotal(int count);
+
+  /// No description provided for @mediaFilterAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部'**
+  String get mediaFilterAll;
+
+  /// No description provided for @mediaFilterDiary.
+  ///
+  /// In zh, this message translates to:
+  /// **'日记'**
+  String get mediaFilterDiary;
+
+  /// No description provided for @mediaFilterArchive.
+  ///
+  /// In zh, this message translates to:
+  /// **'档案'**
+  String get mediaFilterArchive;
+
+  /// No description provided for @mediaFilteredEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个分类中还没有图片'**
+  String get mediaFilteredEmpty;
+
+  /// No description provided for @mediaLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法加载媒体，请重试。'**
+  String get mediaLoadError;
+
+  /// No description provided for @mediaImageMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片不可用'**
+  String get mediaImageMissing;
+
+  /// No description provided for @mediaUntitledDiary.
+  ///
+  /// In zh, this message translates to:
+  /// **'未命名日记'**
+  String get mediaUntitledDiary;
+
+  /// No description provided for @mediaViewSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看出处'**
+  String get mediaViewSource;
+
   /// No description provided for @settingsAppearance.
   ///
   /// In zh, this message translates to:

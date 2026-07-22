@@ -15,9 +15,10 @@ import '../../l10n/app_localizations.dart';
 import 'archive_image_viewer.dart';
 
 class ArchiveEditorPage extends ConsumerStatefulWidget {
-  const ArchiveEditorPage({this.archiveId, super.key});
+  const ArchiveEditorPage({this.archiveId, this.initialImagePath, super.key});
 
   final String? archiveId;
+  final String? initialImagePath;
 
   @override
   ConsumerState<ArchiveEditorPage> createState() => _ArchiveEditorPageState();
@@ -28,6 +29,8 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
   static const _maxImagesPerSelection = 9;
 
   final _formKey = GlobalKey<FormState>();
+  final _sourceImageKey = GlobalKey();
+  final _formScrollController = ScrollController();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _uuid = const Uuid();
@@ -51,6 +54,8 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
   bool _isSaving = false;
   bool _isAddingImages = false;
   bool _allowPop = false;
+  bool _didRevealSourceImage = false;
+  int _sourceImageRevealAttempts = 0;
 
   bool get _isNew => widget.archiveId == null;
 
@@ -106,6 +111,11 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
         );
       _captureBaseline();
       setState(() => _isLoading = false);
+      if (_containsInitialImage) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          unawaited(_revealSourceImage());
+        });
+      }
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
@@ -124,6 +134,39 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
     _baselineImages = List.unmodifiable(_images);
   }
 
+  bool get _containsInitialImage {
+    final path = widget.initialImagePath;
+    return path != null && (path == _mainImage || _images.contains(path));
+  }
+
+  Future<void> _revealSourceImage() async {
+    if (!mounted || _didRevealSourceImage) return;
+    final targetContext = _sourceImageKey.currentContext;
+    if (targetContext == null) {
+      if (widget.initialImagePath != _mainImage &&
+          _formScrollController.hasClients &&
+          _formScrollController.position.maxScrollExtent > 0) {
+        _formScrollController.jumpTo(
+          _formScrollController.position.maxScrollExtent,
+        );
+      }
+      if (_sourceImageRevealAttempts++ < 6) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          unawaited(_revealSourceImage());
+        });
+        WidgetsBinding.instance.scheduleFrame();
+      }
+      return;
+    }
+    _didRevealSourceImage = true;
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: _motionDuration(context, 280),
+      curve: Curves.easeOutCubic,
+      alignment: 0.28,
+    );
+  }
+
   void _onTextChanged() {
     if (mounted && !_isLoading) setState(() {});
   }
@@ -136,6 +179,7 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
     _descriptionController
       ..removeListener(_onTextChanged)
       ..dispose();
+    _formScrollController.dispose();
     super.dispose();
   }
 
@@ -192,10 +236,16 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
 
   Widget _buildForm(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (_containsInitialImage && !_didRevealSourceImage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_revealSourceImage());
+      });
+    }
     return Form(
       key: _formKey,
       child: ListView(
         key: const ValueKey('archive-editor-form'),
+        controller: _formScrollController,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.md,
@@ -206,13 +256,23 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
         children: [
           _SectionLabel(label: l10n.archiveMainImage),
           const SizedBox(height: AppSpacing.sm),
-          _MainImagePicker(
-            imagePath: _mainImage,
-            onPreview: _mainImage == null ? null : () => _previewMainImage(),
-            onPick: _isSaving ? null : () => unawaited(_pickMainImage()),
-            onRemove: _mainImage == null || _isSaving
-                ? null
-                : () => unawaited(_removeMainImage()),
+          _SourceImageAnchor(
+            key:
+                widget.initialImagePath != null &&
+                    widget.initialImagePath == _mainImage
+                ? _sourceImageKey
+                : null,
+            isTarget:
+                widget.initialImagePath != null &&
+                widget.initialImagePath == _mainImage,
+            child: _MainImagePicker(
+              imagePath: _mainImage,
+              onPreview: _mainImage == null ? null : () => _previewMainImage(),
+              onPick: _isSaving ? null : () => unawaited(_pickMainImage()),
+              onRemove: _mainImage == null || _isSaving
+                  ? null
+                  : () => unawaited(_removeMainImage()),
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
           TextFormField(
@@ -294,6 +354,8 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
           const SizedBox(height: AppSpacing.sm),
           _ArchiveMasonryGallery(
             images: _images,
+            sourceImagePath: widget.initialImagePath,
+            sourceImageKey: _sourceImageKey,
             showAddTile: _imageCount < maxImages,
             isAdding: _isAddingImages,
             onAdd: _isSaving ? null : () => unawaited(_addGalleryImages()),
@@ -780,6 +842,33 @@ class _AddAliasDialogState extends State<_AddAliasDialog> {
   }
 }
 
+class _SourceImageAnchor extends StatelessWidget {
+  const _SourceImageAnchor({
+    required this.isTarget,
+    required this.child,
+    super.key,
+  });
+
+  final bool isTarget;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      key: isTarget ? const Key('archive-source-image-target') : null,
+      duration: _motionDuration(context, 180),
+      padding: EdgeInsets.all(isTarget ? 3 : 0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(17),
+        border: isTarget
+            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 3)
+            : null,
+      ),
+      child: child,
+    );
+  }
+}
+
 class _MainImagePicker extends StatelessWidget {
   const _MainImagePicker({
     required this.imagePath,
@@ -887,6 +976,8 @@ class _MainImagePicker extends StatelessWidget {
 class _ArchiveMasonryGallery extends StatelessWidget {
   const _ArchiveMasonryGallery({
     required this.images,
+    required this.sourceImagePath,
+    required this.sourceImageKey,
     required this.showAddTile,
     required this.isAdding,
     required this.onAdd,
@@ -895,6 +986,8 @@ class _ArchiveMasonryGallery extends StatelessWidget {
   });
 
   final List<String> images;
+  final String? sourceImagePath;
+  final Key sourceImageKey;
   final bool showAddTile;
   final bool isAdding;
   final VoidCallback? onAdd;
@@ -917,12 +1010,17 @@ class _ArchiveMasonryGallery extends StatelessWidget {
           return _GalleryAddTile(isAdding: isAdding, onPressed: onAdd);
         }
         final path = images[index];
-        return _GalleryImageTile(
-          key: Key('archive-gallery-image-$index'),
-          index: index,
-          path: path,
-          onTap: () => onPreview(index),
-          onRemove: onRemove == null ? null : () => onRemove!(path),
+        final isSourceTarget = path == sourceImagePath;
+        return _SourceImageAnchor(
+          key: isSourceTarget ? sourceImageKey : null,
+          isTarget: isSourceTarget,
+          child: _GalleryImageTile(
+            key: Key('archive-gallery-image-$index'),
+            index: index,
+            path: path,
+            onTap: () => onPreview(index),
+            onRemove: onRemove == null ? null : () => onRemove!(path),
+          ),
         );
       },
     );

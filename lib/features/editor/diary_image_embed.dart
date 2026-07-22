@@ -21,7 +21,15 @@ void applyDiaryImageWidth(
 }
 
 class DiaryImageEmbedBuilder extends EmbedBuilder {
-  const DiaryImageEmbedBuilder();
+  const DiaryImageEmbedBuilder({
+    this.targetOffset,
+    this.targetKey,
+    this.onTargetReady,
+  });
+
+  final int? targetOffset;
+  final Key? targetKey;
+  final VoidCallback? onTargetReady;
 
   @override
   String get key => BlockEmbed.imageType;
@@ -31,12 +39,16 @@ class DiaryImageEmbedBuilder extends EmbedBuilder {
     final node = embedContext.node;
     final source = node.value.data as String;
     final width = node.style.attributes[Attribute.width.key]?.value?.toString();
+    final isSourceTarget = node.documentOffset == targetOffset;
     return _DiaryImageEmbed(
+      key: isSourceTarget ? targetKey : null,
       controller: embedContext.controller,
       source: source,
       width: width,
       offset: node.documentOffset,
       readOnly: embedContext.readOnly,
+      isSourceTarget: isSourceTarget,
+      onTargetReady: isSourceTarget ? onTargetReady : null,
     );
   }
 }
@@ -48,6 +60,9 @@ class _DiaryImageEmbed extends StatefulWidget {
     required this.width,
     required this.offset,
     required this.readOnly,
+    required this.isSourceTarget,
+    required this.onTargetReady,
+    super.key,
   });
 
   final QuillController controller;
@@ -55,6 +70,8 @@ class _DiaryImageEmbed extends StatefulWidget {
   final String? width;
   final int offset;
   final bool readOnly;
+  final bool isSourceTarget;
+  final VoidCallback? onTargetReady;
 
   @override
   State<_DiaryImageEmbed> createState() => _DiaryImageEmbedState();
@@ -70,6 +87,12 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
   double? _previewPercentage;
 
   @override
+  void initState() {
+    super.initState();
+    _scheduleTargetReady();
+  }
+
+  @override
   void didUpdateWidget(covariant _DiaryImageEmbed oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source ||
@@ -80,6 +103,16 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
     } else if (!_isDragging && oldWidget.width != widget.width) {
       _previewPercentage = null;
     }
+    if (!oldWidget.isSourceTarget && widget.isSourceTarget) {
+      _scheduleTargetReady();
+    }
+  }
+
+  void _scheduleTargetReady() {
+    if (!widget.isSourceTarget || widget.onTargetReady == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTargetReady?.call();
+    });
   }
 
   @override
@@ -111,8 +144,13 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                 clipBehavior: Clip.none,
                 children: [
                   Container(
+                    key: widget.isSourceTarget
+                        ? const Key('diary-source-image-target')
+                        : null,
                     decoration: BoxDecoration(
-                      border: _isSelected && !widget.readOnly
+                      border: widget.isSourceTarget
+                          ? Border.all(color: colors.primary, width: 3)
+                          : _isSelected && !widget.readOnly
                           ? Border.all(color: colors.primary, width: 2)
                           : null,
                       borderRadius: BorderRadius.circular(8),
