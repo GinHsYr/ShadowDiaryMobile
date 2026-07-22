@@ -21,6 +21,10 @@ void main() {
 
     expect(find.byType(EasyDateTimeLinePicker), findsOneWidget);
     expect(find.byKey(const Key('editor-day-picker')), findsOneWidget);
+    final datePicker = tester.widget<Container>(
+      find.byKey(const Key('editor-day-picker')),
+    );
+    expect((datePicker.decoration! as BoxDecoration).color, isNull);
 
     await tester.tap(find.byKey(const Key('editor-date-picker-toggle')));
     await tester.pumpAndSettle();

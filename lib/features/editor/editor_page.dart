@@ -616,7 +616,6 @@ class _DatePicker extends StatelessWidget {
     return Container(
       key: const Key('editor-day-picker'),
       decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
         border: Border(
           bottom: BorderSide(
             color: colors.outlineVariant.withValues(alpha: .5),
