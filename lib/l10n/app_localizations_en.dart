@@ -97,6 +97,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get archiveAdd => 'Add archive';
 
   @override
+  String get archiveSearch => 'Search archives';
+
+  @override
+  String get archiveSearchClose => 'Close search';
+
+  @override
+  String get archiveSearchHint => 'Search names, aliases, or pinyin';
+
+  @override
+  String get archiveSearchClear => 'Clear search';
+
+  @override
+  String get archiveSearchNoResultsTitle => 'No archives found';
+
+  @override
+  String get archiveSearchNoResultsBody =>
+      'Try a name, alias, pinyin initials, or full pinyin.';
+
+  @override
   String get archiveTypePerson => 'Person';
 
   @override

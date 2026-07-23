@@ -111,6 +111,101 @@ void main() {
     expect(find.byKey(const Key('archive-card-alice')), findsNothing);
   });
 
+  testWidgets(
+    'expands search and filters names and aliases by pinyin on a narrow screen',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 720);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = _MemoryArchiveRepository([
+        _archive('zhang', '张三', alias: '小张'),
+        _archive('li', '李雷', alias: '雷子'),
+        _archive('alice', 'Alice', alias: 'Ally'),
+      ]);
+
+      await tester.pumpWidget(
+        _testApp(
+          repository,
+          locale: const Locale('zh'),
+          page: const ArchivesPage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('archive-search-field')), findsNothing);
+      await tester.tap(find.byKey(const Key('archive-search-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-search-field')), findsOneWidget);
+      expect(find.byKey(const Key('archive-alphabet-rail')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('archive-search-field')),
+        'zhangsan',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-card-zhang')), findsOneWidget);
+      expect(find.byKey(const Key('archive-card-li')), findsNothing);
+      expect(find.byKey(const Key('archive-card-alice')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('archive-search-field')),
+        'xz',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-card-zhang')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('archive-search-field')),
+        'ally',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-card-alice')), findsOneWidget);
+      expect(find.byKey(const Key('archive-card-zhang')), findsNothing);
+
+      final searchFocus = FocusManager.instance.primaryFocus;
+      expect(searchFocus?.hasFocus, isTrue);
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: 'w',
+          selection: TextSelection.collapsed(offset: 1),
+          composing: TextRange(start: 0, end: 1),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('archives-search-empty-state')),
+        findsOneWidget,
+      );
+      expect(find.text('没有找到档案'), findsOneWidget);
+      expect(FocusManager.instance.primaryFocus, same(searchFocus));
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: 'wa',
+          selection: TextSelection.collapsed(offset: 2),
+          composing: TextRange(start: 0, end: 2),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(FocusManager.instance.primaryFocus, same(searchFocus));
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await tester.tap(find.byKey(const Key('archive-search-clear-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-card-zhang')), findsOneWidget);
+      expect(find.byKey(const Key('archive-card-li')), findsOneWidget);
+      expect(find.byKey(const Key('archive-card-alice')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('archive-search-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('archive-search-field')), findsNothing);
+      expect(find.byKey(const Key('archive-alphabet-rail')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('neutral dark archive avatar and add action stay visible', (
     tester,
   ) async {

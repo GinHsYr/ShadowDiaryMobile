@@ -7,6 +7,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
+import '../../core/archives/archive_search.dart';
 import '../../core/archives/archive_sort.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -59,7 +60,16 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
 
   final Set<String> _removingIds = {};
   final Map<String, GlobalKey> _groupKeys = {};
+  final TextEditingController _searchController = TextEditingController();
   String? _selectedInitial;
+  String _searchQuery = '';
+  bool _isSearchExpanded = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +105,10 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
                       child: const _ArchivesEmptyState(),
                     );
                   }
+                  final matches = searchArchives(values, _searchQuery);
                   return _buildArchiveList(
                     context,
-                    groupAndSortArchives(values),
+                    groupAndSortArchives(matches),
                   );
                 },
               ),
@@ -122,14 +133,80 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Text(
-        AppLocalizations.of(context).navigationArchives,
-        style: Theme.of(
-          context,
-        ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.navigationArchives,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            IconButton(
+              key: const Key('archive-search-button'),
+              tooltip: _isSearchExpanded
+                  ? l10n.archiveSearchClose
+                  : l10n.archiveSearch,
+              onPressed: _toggleSearch,
+              icon: AnimatedSwitcher(
+                duration: _motionDuration(context, 160),
+                child: Icon(
+                  _isSearchExpanded
+                      ? Icons.close_rounded
+                      : Icons.search_rounded,
+                  key: ValueKey(_isSearchExpanded),
+                ),
+              ),
+            ),
+          ],
+        ),
+        AnimatedSwitcher(
+          duration: _motionDuration(context, 200),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => SizeTransition(
+            sizeFactor: animation,
+            alignment: Alignment.topCenter,
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: _isSearchExpanded
+              ? Padding(
+                  key: const Key('archive-search-area'),
+                  padding: const EdgeInsets.only(top: AppSpacing.sm),
+                  child: TextField(
+                    key: const Key('archive-search-field'),
+                    controller: _searchController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: InputDecoration(
+                      hintText: l10n.archiveSearchHint,
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: _searchQuery.isEmpty
+                          ? null
+                          : IconButton(
+                              key: const Key('archive-search-clear-button'),
+                              tooltip: l10n.archiveSearchClear,
+                              onPressed: _clearSearch,
+                              icon: const Icon(Icons.cancel_rounded),
+                            ),
+                      filled: true,
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox(key: ValueKey('archive-search-collapsed')),
+        ),
+      ],
     );
   }
 
@@ -138,34 +215,53 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
     _groupKeys.removeWhere(
       (initial, key) => !availableInitials.contains(initial),
     );
-    final selectedInitial = availableInitials.contains(_selectedInitial)
+    final selectedInitial = groups.isEmpty
+        ? null
+        : availableInitials.contains(_selectedInitial)
         ? _selectedInitial!
         : groups.first.initial;
+    final showAlphabetRail = !_isSearchExpanded;
     final children = <Widget>[_buildHeader(context)];
-    for (final group in groups) {
-      final groupKey = _groupKeys.putIfAbsent(group.initial, GlobalKey.new);
-      children.add(_ArchiveGroupHeader(key: groupKey, initial: group.initial));
-      for (final archive in group.archives) {
-        final isRemoving = _removingIds.contains(archive.id);
-        children.add(
-          AnimatedSize(
-            duration: _motionDuration(context, 220),
-            curve: Curves.easeInOutCubic,
-            alignment: Alignment.topCenter,
-            child: isRemoving
-                ? const SizedBox(width: double.infinity)
-                : _ArchiveListRow(
-                    archive: archive,
-                    onTap: widget.onEditArchive == null
-                        ? null
-                        : () => _openEditor(archive.id),
-                    onDelete: () => _confirmAndDelete(archive),
-                  ),
+    if (groups.isEmpty) {
+      children.add(
+        const Padding(
+          padding: EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.lg,
+            96,
+            AppSpacing.lg,
+            112,
           ),
+          child: _ArchiveSearchEmptyState(),
+        ),
+      );
+    } else {
+      for (final group in groups) {
+        final groupKey = _groupKeys.putIfAbsent(group.initial, GlobalKey.new);
+        children.add(
+          _ArchiveGroupHeader(key: groupKey, initial: group.initial),
         );
+        for (final archive in group.archives) {
+          final isRemoving = _removingIds.contains(archive.id);
+          children.add(
+            AnimatedSize(
+              duration: _motionDuration(context, 220),
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.topCenter,
+              child: isRemoving
+                  ? const SizedBox(width: double.infinity)
+                  : _ArchiveListRow(
+                      archive: archive,
+                      onTap: widget.onEditArchive == null
+                          ? null
+                          : () => _openEditor(archive.id),
+                      onDelete: () => _confirmAndDelete(archive),
+                    ),
+            ),
+          );
+        }
       }
+      children.add(const SizedBox(height: 112));
     }
-    children.add(const SizedBox(height: 112));
 
     return Stack(
       key: const ValueKey('archives-data'),
@@ -173,31 +269,51 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
         CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsetsDirectional.fromSTEB(
+              padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.md,
                 AppSpacing.md,
-                46,
+                showAlphabetRail ? 46 : AppSpacing.md,
                 0,
               ),
               sliver: SliverList.list(children: children),
             ),
           ],
         ),
-        PositionedDirectional(
-          top: 72,
-          end: 4,
-          bottom: 112,
-          child: Center(
-            child: _AlphabetRail(
-              alphabet: _alphabet,
-              availableInitials: availableInitials,
-              selectedInitial: selectedInitial,
-              onSelected: _jumpToInitial,
+        if (showAlphabetRail && selectedInitial != null)
+          PositionedDirectional(
+            top: 72,
+            end: 4,
+            bottom: 112,
+            child: Center(
+              child: _AlphabetRail(
+                alphabet: _alphabet,
+                availableInitials: availableInitials,
+                selectedInitial: selectedInitial,
+                onSelected: _jumpToInitial,
+              ),
             ),
           ),
-        ),
       ],
     );
+  }
+
+  void _toggleSearch() {
+    if (_isSearchExpanded) {
+      _searchController.clear();
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() {
+        _isSearchExpanded = false;
+        _searchQuery = '';
+      });
+      return;
+    }
+
+    setState(() => _isSearchExpanded = true);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _searchQuery = '');
   }
 
   Future<void> _jumpToInitial(String initial) async {
@@ -321,6 +437,21 @@ class _ArchivesEmptyState extends StatelessWidget {
       icon: Icons.folder_open_rounded,
       title: l10n.archivesEmptyTitle,
       body: l10n.archivesEmptyBody,
+    );
+  }
+}
+
+class _ArchiveSearchEmptyState extends StatelessWidget {
+  const _ArchiveSearchEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppEmptyState(
+      key: const Key('archives-search-empty-state'),
+      icon: Icons.search_off_rounded,
+      title: l10n.archiveSearchNoResultsTitle,
+      body: l10n.archiveSearchNoResultsBody,
     );
   }
 }

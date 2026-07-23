@@ -95,6 +95,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveAdd => '添加档案';
 
   @override
+  String get archiveSearch => '搜索档案';
+
+  @override
+  String get archiveSearchClose => '关闭搜索';
+
+  @override
+  String get archiveSearchHint => '搜索名称、别名或拼音';
+
+  @override
+  String get archiveSearchClear => '清除搜索';
+
+  @override
+  String get archiveSearchNoResultsTitle => '没有找到档案';
+
+  @override
+  String get archiveSearchNoResultsBody => '试试名称、别名、拼音首字母或全拼。';
+
+  @override
   String get archiveTypePerson => '人物';
 
   @override

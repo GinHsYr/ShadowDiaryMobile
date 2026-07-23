@@ -266,6 +266,42 @@ abstract class AppLocalizations {
   /// **'添加档案'**
   String get archiveAdd;
 
+  /// No description provided for @archiveSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索档案'**
+  String get archiveSearch;
+
+  /// No description provided for @archiveSearchClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭搜索'**
+  String get archiveSearchClose;
+
+  /// No description provided for @archiveSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索名称、别名或拼音'**
+  String get archiveSearchHint;
+
+  /// No description provided for @archiveSearchClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除搜索'**
+  String get archiveSearchClear;
+
+  /// No description provided for @archiveSearchNoResultsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到档案'**
+  String get archiveSearchNoResultsTitle;
+
+  /// No description provided for @archiveSearchNoResultsBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试名称、别名、拼音首字母或全拼。'**
+  String get archiveSearchNoResultsBody;
+
   /// No description provided for @archiveTypePerson.
   ///
   /// In zh, this message translates to:
