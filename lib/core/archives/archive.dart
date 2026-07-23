@@ -38,10 +38,14 @@ class Archive {
   final DateTime updatedAt;
 
   List<String> get aliases {
-    return (alias ?? '')
-        .split(',')
-        .map((value) => value.trim())
-        .where((value) => value.isNotEmpty)
-        .toList(growable: false);
+    return splitArchiveAliases(alias);
   }
+}
+
+List<String> splitArchiveAliases(String? value) {
+  return (value ?? '')
+      .split(RegExp(r'[,，;；\r\n]+'))
+      .map((alias) => alias.trim())
+      .where((alias) => alias.isNotEmpty)
+      .toList(growable: false);
 }

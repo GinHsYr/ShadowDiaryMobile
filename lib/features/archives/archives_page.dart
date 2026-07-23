@@ -12,6 +12,7 @@ import '../../core/archives/archive_sort.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
+import '../../core/widgets/app_search_field.dart';
 import '../../l10n/app_localizations.dart';
 
 typedef OpenNewArchive = Future<Object?> Function();
@@ -178,30 +179,15 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
               ? Padding(
                   key: const Key('archive-search-area'),
                   padding: const EdgeInsets.only(top: AppSpacing.sm),
-                  child: TextField(
-                    key: const Key('archive-search-field'),
+                  child: AppSearchField(
+                    textFieldKey: const Key('archive-search-field'),
                     controller: _searchController,
                     autofocus: true,
-                    textInputAction: TextInputAction.search,
+                    hintText: l10n.archiveSearchHint,
+                    clearTooltip: l10n.archiveSearchClear,
                     onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: l10n.archiveSearchHint,
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _searchQuery.isEmpty
-                          ? null
-                          : IconButton(
-                              key: const Key('archive-search-clear-button'),
-                              tooltip: l10n.archiveSearchClear,
-                              onPressed: _clearSearch,
-                              icon: const Icon(Icons.cancel_rounded),
-                            ),
-                      filled: true,
-                      isDense: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+                    onClear: _clearSearch,
+                    clearButtonKey: const Key('archive-search-clear-button'),
                   ),
                 )
               : const SizedBox(key: ValueKey('archive-search-collapsed')),
@@ -221,7 +207,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
         ? _selectedInitial!
         : groups.first.initial;
     final showAlphabetRail = !_isSearchExpanded;
-    final children = <Widget>[_buildHeader(context)];
+    final children = <Widget>[];
     if (groups.isEmpty) {
       children.add(
         const Padding(
@@ -269,9 +255,18 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
         CustomScrollView(
           slivers: [
             SliverPadding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(child: _buildHeader(context)),
+            ),
+            SliverPadding(
               padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.md,
-                AppSpacing.md,
+                0,
                 showAlphabetRail ? 46 : AppSpacing.md,
                 0,
               ),

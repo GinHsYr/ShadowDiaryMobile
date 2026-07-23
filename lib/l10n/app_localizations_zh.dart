@@ -30,6 +30,82 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGreeting => '你好，准备写点什么？';
 
   @override
+  String get searchOpen => '搜索日记';
+
+  @override
+  String get searchClose => '关闭搜索';
+
+  @override
+  String get searchHint => '搜索标题、正文或档案别名';
+
+  @override
+  String get searchClear => '清除关键词';
+
+  @override
+  String get searchMoodFilter => '心情';
+
+  @override
+  String get searchDateFilter => '日期';
+
+  @override
+  String get searchSelectDateRange => '选择日期范围';
+
+  @override
+  String get searchDateRangeHint => '先选择开始日期，再选择结束日期';
+
+  @override
+  String get searchDateClear => '清除日期';
+
+  @override
+  String get searchDateApply => '应用';
+
+  @override
+  String get searchClearFilters => '清除筛选';
+
+  @override
+  String searchResultsCount(int count) {
+    return '找到 $count 篇日记';
+  }
+
+  @override
+  String get searchRelatedArchives => '相关档案';
+
+  @override
+  String searchExpandedKeywords(String keywords) {
+    return '同时搜索：$keywords';
+  }
+
+  @override
+  String get searchStartTitle => '搜索你的日记';
+
+  @override
+  String get searchStartBody => '输入记忆中的人、一件事或一句话；档案别名也会被自动关联。';
+
+  @override
+  String get searchHistoryTitle => '最近搜索';
+
+  @override
+  String get searchHistoryClear => '清除记录';
+
+  @override
+  String get searchNoResultsTitle => '没找到这段记忆';
+
+  @override
+  String get searchNoResultsBody => '换个关键词，或放宽心情与日期筛选。';
+
+  @override
+  String get searchLoadErrorTitle => '暂时无法搜索';
+
+  @override
+  String get searchLoadErrorBody => '本地搜索遇到问题，请稍后重试。';
+
+  @override
+  String get searchUntitledDiary => '未命名日记';
+
+  @override
+  String get searchEmptyEntry => '这篇日记还没有正文。';
+
+  @override
   String get homeEmptyTitle => '从今天开始记录';
 
   @override

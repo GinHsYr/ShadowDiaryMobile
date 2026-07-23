@@ -8,7 +8,9 @@ import '../features/archives/archives_page.dart';
 import '../features/editor/editor_page.dart';
 import '../features/home/home_page.dart';
 import '../features/media/media_page.dart';
+import '../features/search/search_page.dart';
 import '../features/settings/settings_page.dart';
+import 'radial_reveal_transition.dart';
 import 'shell.dart';
 
 abstract final class AppRoutes {
@@ -16,6 +18,7 @@ abstract final class AppRoutes {
   static const archives = '/archives';
   static const media = '/media';
   static const settings = '/settings';
+  static const search = '/search';
   static const newEntry = '/entries/new';
   static const newArchive = '/archives/new';
 
@@ -63,6 +66,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.home,
                 builder: (context, state) => HomePage(
+                  onSearchRequested: (origin) {
+                    context.push(AppRoutes.search, extra: origin);
+                  },
                   onCalendarDateSelected: (date) {
                     context.push(AppRoutes.newEntryForDate(date));
                   },
@@ -115,6 +121,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.search,
+        pageBuilder: (context, state) {
+          final size = MediaQuery.sizeOf(context);
+          final padding = MediaQuery.paddingOf(context);
+          final origin = state.extra is Offset
+              ? state.extra! as Offset
+              : Offset(size.width - 40, padding.top + 40);
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            transitionDuration: const Duration(milliseconds: 760),
+            reverseTransitionDuration: const Duration(milliseconds: 420),
+            child: SearchPage(
+              onClose: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go(AppRoutes.home);
+                }
+              },
+              onOpenEntry: (entryId) {
+                context.push(AppRoutes.editEntry(entryId));
+              },
+              onOpenArchive: (archiveId) {
+                context.push(AppRoutes.editArchive(archiveId));
+              },
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return RadialRevealTransition(
+                    key: const Key('search-radial-reveal'),
+                    animation: animation,
+                    origin: origin,
+                    child: child,
+                  );
+                },
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.newEntry,

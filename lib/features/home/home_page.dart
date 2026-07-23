@@ -12,9 +12,14 @@ import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
 class HomePage extends ConsumerWidget {
-  const HomePage({this.onCalendarDateSelected, super.key});
+  const HomePage({
+    this.onCalendarDateSelected,
+    this.onSearchRequested,
+    super.key,
+  });
 
   final ValueChanged<DateTime>? onCalendarDateSelected;
+  final ValueChanged<Offset>? onSearchRequested;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,11 +30,38 @@ class HomePage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '👋 ${l10n.homeGreeting}',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      '👋 ${l10n.homeGreeting}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Builder(
+                builder: (buttonContext) {
+                  return IconButton(
+                    key: const Key('home-search-button'),
+                    tooltip: l10n.searchOpen,
+                    onPressed: onSearchRequested == null
+                        ? null
+                        : () => _openSearch(buttonContext),
+                    icon: const Icon(Icons.search_rounded),
+                  );
+                },
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           HomeCalendar(
@@ -45,6 +77,17 @@ class HomePage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _openSearch(BuildContext buttonContext) {
+    final renderBox = buttonContext.findRenderObject();
+    final origin = renderBox is RenderBox && renderBox.hasSize
+        ? renderBox.localToGlobal(renderBox.size.center(Offset.zero))
+        : Offset(
+            MediaQuery.sizeOf(buttonContext).width - 40,
+            MediaQuery.paddingOf(buttonContext).top + 40,
+          );
+    onSearchRequested?.call(origin);
   }
 }
 

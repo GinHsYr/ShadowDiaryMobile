@@ -4,7 +4,7 @@ import 'package:shadow_diary_mobile/core/archives/archive_search.dart';
 
 void main() {
   final archives = <Archive>[
-    _archive('zhang', '张三', alias: '小张,三哥'),
+    _archive('zhang', '张三', alias: '小张;三哥\n老张'),
     _archive('li', '李雷', alias: '雷子'),
     _archive('alice', 'Alice', alias: 'Ally'),
   ];
@@ -21,6 +21,7 @@ void main() {
     expect(_ids(searchArchives(archives, 'xiaozhang')), ['zhang']);
     expect(_ids(searchArchives(archives, 'xz')), ['zhang']);
     expect(_ids(searchArchives(archives, 'Sange')), ['zhang']);
+    expect(_ids(searchArchives(archives, '老张')), ['zhang']);
     expect(_ids(searchArchives(archives, 'ally')), ['alice']);
   });
 

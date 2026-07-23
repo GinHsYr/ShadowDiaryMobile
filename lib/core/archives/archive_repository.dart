@@ -115,12 +115,7 @@ class SqliteArchiveRepository implements ArchiveRepository {
 
 String? _normalizeAliases(String? value) {
   if (value == null) return null;
-  final aliases = value
-      .split(RegExp(r'[,，]'))
-      .map((alias) => alias.trim())
-      .where((alias) => alias.isNotEmpty)
-      .toSet()
-      .toList(growable: false);
+  final aliases = splitArchiveAliases(value).toSet().toList(growable: false);
   return aliases.isEmpty ? null : aliases.join(',');
 }
 

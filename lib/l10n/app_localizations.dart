@@ -140,6 +140,150 @@ abstract class AppLocalizations {
   /// **'你好，准备写点什么？'**
   String get homeGreeting;
 
+  /// No description provided for @searchOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索日记'**
+  String get searchOpen;
+
+  /// No description provided for @searchClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭搜索'**
+  String get searchClose;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索标题、正文或档案别名'**
+  String get searchHint;
+
+  /// No description provided for @searchClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除关键词'**
+  String get searchClear;
+
+  /// No description provided for @searchMoodFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'心情'**
+  String get searchMoodFilter;
+
+  /// No description provided for @searchDateFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期'**
+  String get searchDateFilter;
+
+  /// No description provided for @searchSelectDateRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择日期范围'**
+  String get searchSelectDateRange;
+
+  /// No description provided for @searchDateRangeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选择开始日期，再选择结束日期'**
+  String get searchDateRangeHint;
+
+  /// No description provided for @searchDateClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除日期'**
+  String get searchDateClear;
+
+  /// No description provided for @searchDateApply.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用'**
+  String get searchDateApply;
+
+  /// No description provided for @searchClearFilters.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除筛选'**
+  String get searchClearFilters;
+
+  /// No description provided for @searchResultsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'找到 {count} 篇日记'**
+  String searchResultsCount(int count);
+
+  /// No description provided for @searchRelatedArchives.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关档案'**
+  String get searchRelatedArchives;
+
+  /// No description provided for @searchExpandedKeywords.
+  ///
+  /// In zh, this message translates to:
+  /// **'同时搜索：{keywords}'**
+  String searchExpandedKeywords(String keywords);
+
+  /// No description provided for @searchStartTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索你的日记'**
+  String get searchStartTitle;
+
+  /// No description provided for @searchStartBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入记忆中的人、一件事或一句话；档案别名也会被自动关联。'**
+  String get searchStartBody;
+
+  /// No description provided for @searchHistoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近搜索'**
+  String get searchHistoryTitle;
+
+  /// No description provided for @searchHistoryClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除记录'**
+  String get searchHistoryClear;
+
+  /// No description provided for @searchNoResultsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没找到这段记忆'**
+  String get searchNoResultsTitle;
+
+  /// No description provided for @searchNoResultsBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'换个关键词，或放宽心情与日期筛选。'**
+  String get searchNoResultsBody;
+
+  /// No description provided for @searchLoadErrorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法搜索'**
+  String get searchLoadErrorTitle;
+
+  /// No description provided for @searchLoadErrorBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地搜索遇到问题，请稍后重试。'**
+  String get searchLoadErrorBody;
+
+  /// No description provided for @searchUntitledDiary.
+  ///
+  /// In zh, this message translates to:
+  /// **'未命名日记'**
+  String get searchUntitledDiary;
+
+  /// No description provided for @searchEmptyEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'这篇日记还没有正文。'**
+  String get searchEmptyEntry;
+
   /// No description provided for @homeEmptyTitle.
   ///
   /// In zh, this message translates to:

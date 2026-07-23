@@ -7,6 +7,40 @@
   "navigationSettings": "Settings",
   "newDiary": "New diary",
   "homeGreeting": "Hello, ready to write?",
+  "searchOpen": "Search diaries",
+  "searchClose": "Close search",
+  "searchHint": "Search titles, entries, or archive aliases",
+  "searchClear": "Clear query",
+  "searchMoodFilter": "Mood",
+  "searchDateFilter": "Date",
+  "searchSelectDateRange": "Select date range",
+  "searchDateRangeHint": "Choose a start date, then choose an end date",
+  "searchDateClear": "Clear date",
+  "searchDateApply": "Apply",
+  "searchClearFilters": "Clear filters",
+  "searchResultsCount": "{count} diary entries found",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "searchRelatedArchives": "Related archives",
+  "searchExpandedKeywords": "Also searching: {keywords}",
+  "@searchExpandedKeywords": {
+    "placeholders": {
+      "keywords": {"type": "String"}
+    }
+  },
+  "searchStartTitle": "Search your diary",
+  "searchStartBody": "Enter a person, a moment, or a remembered phrase. Archive aliases are linked automatically.",
+  "searchHistoryTitle": "Recent searches",
+  "searchHistoryClear": "Clear history",
+  "searchNoResultsTitle": "That memory is still hiding",
+  "searchNoResultsBody": "Try another phrase or loosen the mood and date filters.",
+  "searchLoadErrorTitle": "Search is unavailable",
+  "searchLoadErrorBody": "Local search hit a problem. Please try again.",
+  "searchUntitledDiary": "Untitled diary",
+  "searchEmptyEntry": "This diary entry has no body yet.",
   "homeEmptyTitle": "Start with today",
   "homeEmptyBody": "Calendar, insights, and recent entries will arrive in a later feature phase.",
   "homeStatisticsDiaryLabel": "You wrote",

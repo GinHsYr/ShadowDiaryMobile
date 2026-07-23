@@ -27,7 +27,7 @@ void main() {
       Archive(
         id: 'archive-1',
         name: '  张三  ',
-        alias: ' 小张， 三哥,小张 ',
+        alias: ' 小张， 三哥;老张\n小张 ',
         description: '  同学  ',
         type: ArchiveType.person,
         mainImage: 'main.webp',
@@ -40,8 +40,8 @@ void main() {
     final archive = await repository.findById('archive-1');
     expect(archive, isNotNull);
     expect(archive!.name, '张三');
-    expect(archive.alias, '小张,三哥');
-    expect(archive.aliases, ['小张', '三哥']);
+    expect(archive.alias, '小张,三哥,老张');
+    expect(archive.aliases, ['小张', '三哥', '老张']);
     expect(archive.description, '同学');
     expect(archive.type, ArchiveType.person);
     expect(archive.mainImage, 'main.webp');

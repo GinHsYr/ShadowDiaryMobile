@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadow_diary_mobile/app/app.dart';
 import 'package:shadow_diary_mobile/app/app_ionicons.dart';
+import 'package:shadow_diary_mobile/app/radial_reveal_transition.dart';
 import 'package:shadow_diary_mobile/app/router.dart';
 import 'package:shadow_diary_mobile/app/shell.dart';
 import 'package:shadow_diary_mobile/core/archives/archive.dart';
@@ -12,10 +13,13 @@ import 'package:shadow_diary_mobile/core/backup/backup_import_service.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
+import 'package:shadow_diary_mobile/core/diary/diary_search.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
 import 'package:shadow_diary_mobile/core/widgets/app_page.dart';
+import 'package:shadow_diary_mobile/core/widgets/app_search_field.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() {
   testWidgets('navigates across the shell without top or floating bars', (
@@ -357,6 +361,176 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'reveals search from the home icon, debounces results, and reverses on close',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final settingsRepository = MemorySettingsRepository(
+        const AppSettings(
+          themeMode: AppThemeMode.dark,
+          themeSeed: ThemeSeed.rose,
+          localePreference: AppLocalePreference.zh,
+        ),
+      );
+      final diaryRepository = RecordingSearchDiaryRepository(
+        DiarySearchResult(
+          entries: [
+            DiaryEntry(
+              id: 'memory-1',
+              title: '和 Alice 散步',
+              content: '<p>今天和 Ally 去了公园。</p>',
+              plainContent: '今天和 Ally 去了公园。',
+              mood: 'happy',
+              createdAt: DateTime(2026, 7, 20),
+              updatedAt: DateTime(2026, 7, 20),
+            ),
+          ],
+          total: 1,
+          expandedKeywords: const ['Alice', 'Ally'],
+          highlightKeywords: const [
+            SearchHighlightKeyword('Alice'),
+            SearchHighlightKeyword('Ally'),
+          ],
+        ),
+        history: const ['中耳炎', '弱智吧问题', 'dsv4正式版'],
+      );
+      final archiveRepository = RecordingArchiveRepository()
+        ..archives.add(
+          Archive(
+            id: 'alice',
+            name: 'Alice',
+            alias: 'Ally',
+            type: ArchiveType.person,
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          ),
+        );
+      await tester.pumpWidget(
+        _testApp(
+          settingsRepository,
+          diaryRepository: diaryRepository,
+          archiveRepository: archiveRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final searchButton = find.byKey(const Key('home-search-button'));
+      final revealOrigin = tester.getCenter(searchButton);
+      await tester.tap(searchButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+
+      final reveal = tester.widget<RadialRevealTransition>(
+        find.byKey(const Key('search-radial-reveal')),
+      );
+      expect(reveal.origin.dx, closeTo(revealOrigin.dx, 0.01));
+      expect(reveal.origin.dy, closeTo(revealOrigin.dy, 0.01));
+      expect(
+        find.byKey(const Key('search-radial-reveal-clip')),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(milliseconds: 550));
+      final opening = tester.widget<RadialRevealTransition>(
+        find.byKey(const Key('search-radial-reveal')),
+      );
+      expect(opening.animation.value, greaterThan(0));
+      expect(opening.animation.value, lessThan(1));
+      await tester.pump(const Duration(milliseconds: 230));
+      expect(find.text('翻阅记忆'), findsNothing);
+      expect(find.byKey(const Key('search-query-field')), findsOneWidget);
+      expect(find.byType(AppSearchField), findsOneWidget);
+      final closeButton = find.byKey(const Key('search-close-button'));
+      final searchField = find.byKey(const Key('search-query-field'));
+      expect(tester.getCenter(closeButton).dx, closeTo(revealOrigin.dx, 0.01));
+      expect(tester.getCenter(closeButton).dy, closeTo(revealOrigin.dy, 0.01));
+      expect(
+        tester.getRect(searchField).contains(tester.getCenter(closeButton)),
+        isTrue,
+      );
+      final historySection = find.byKey(const Key('search-history-section'));
+      expect(historySection, findsOneWidget);
+      expect(
+        find.descendant(of: historySection, matching: find.byType(Card)),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('search-history-中耳炎')), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline_rounded), findsOneWidget);
+      await tester.tap(find.byKey(const Key('search-history-clear')));
+      await tester.pump();
+      final startIcon = find.byKey(const Key('search-start-icon'));
+      expect(startIcon, findsOneWidget);
+      expect(
+        find.ancestor(
+          of: startIcon,
+          matching: find.byWidgetPredicate((widget) {
+            if (widget is! Container) return false;
+            final decoration = widget.decoration;
+            return decoration is BoxDecoration &&
+                decoration.shape == BoxShape.circle;
+          }),
+        ),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('search-date-filter')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('search-date-range-sheet')), findsOneWidget);
+      final calendar = tester.widget<TableCalendar<void>>(
+        find.byType(TableCalendar<void>),
+      );
+      calendar.onRangeSelected!(
+        DateTime(2026, 7, 10),
+        DateTime(2026, 7, 12),
+        DateTime(2026, 7, 12),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('search-date-apply')));
+      await tester.pumpAndSettle();
+      expect(diaryRepository.searches.single.dateFrom, DateTime(2026, 7, 10));
+      expect(diaryRepository.searches.single.dateTo, DateTime(2026, 7, 12));
+      await tester.tap(find.byKey(const Key('search-date-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('search-date-clear')));
+      await tester.pumpAndSettle();
+      diaryRepository
+        ..queries.clear()
+        ..searches.clear();
+
+      await tester.enterText(
+        find.byKey(const Key('search-query-field')),
+        'Alice',
+      );
+      await tester.pump(const Duration(milliseconds: 299));
+      expect(diaryRepository.queries, isEmpty);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump();
+
+      expect(diaryRepository.queries, ['Alice']);
+      expect(find.byKey(const Key('search-entry-memory-1')), findsOneWidget);
+      expect(find.byKey(const Key('search-archive-alice')), findsOneWidget);
+      expect(find.text('同时搜索：Ally'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('search-close-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final reversing = tester.widget<RadialRevealTransition>(
+        find.byKey(const Key('search-radial-reveal')),
+      );
+      expect(reversing.animation.value, greaterThan(0));
+      expect(reversing.animation.value, lessThan(1));
+
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('search-page')), findsNothing);
+      expect(searchButton, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Widget _testApp(
@@ -423,7 +597,10 @@ class RecordingArchiveRepository extends EmptyArchiveRepository {
   }
 }
 
-class EmptyDiaryRepository implements DiaryRepository {
+class EmptyDiaryRepository implements DiaryRepository, DiarySearchRepository {
+  @override
+  Future<void> clearSearchHistory() async {}
+
   @override
   Future<List<DiaryEntry>> listEntries() async => const [];
 
@@ -437,6 +614,17 @@ class EmptyDiaryRepository implements DiaryRepository {
   Future<DiaryOverview> loadOverview() async => DiaryOverview.empty;
 
   @override
+  Future<List<String>> loadSearchHistory() async => const [];
+
+  @override
+  Future<void> rememberSearch(String query) async {}
+
+  @override
+  Future<DiarySearchResult> searchDiaries(DiarySearchParams params) async {
+    return const DiarySearchResult(entries: [], total: 0);
+  }
+
+  @override
   Future<void> save(DiaryEntry entry) async {}
 }
 
@@ -447,6 +635,25 @@ class RecordingDiaryRepository extends EmptyDiaryRepository {
   Future<DiaryEntry?> findByDate(DateTime date) async {
     requestedDates.add(date);
     return null;
+  }
+}
+
+class RecordingSearchDiaryRepository extends EmptyDiaryRepository {
+  RecordingSearchDiaryRepository(this.result, {this.history = const []});
+
+  final DiarySearchResult result;
+  final List<String> history;
+  final List<String> queries = [];
+  final List<DiarySearchParams> searches = [];
+
+  @override
+  Future<List<String>> loadSearchHistory() async => history;
+
+  @override
+  Future<DiarySearchResult> searchDiaries(DiarySearchParams params) async {
+    queries.add(params.keyword);
+    searches.add(params);
+    return result;
   }
 }
 

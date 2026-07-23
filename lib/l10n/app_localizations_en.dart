@@ -30,6 +30,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreeting => 'Hello, ready to write?';
 
   @override
+  String get searchOpen => 'Search diaries';
+
+  @override
+  String get searchClose => 'Close search';
+
+  @override
+  String get searchHint => 'Search titles, entries, or archive aliases';
+
+  @override
+  String get searchClear => 'Clear query';
+
+  @override
+  String get searchMoodFilter => 'Mood';
+
+  @override
+  String get searchDateFilter => 'Date';
+
+  @override
+  String get searchSelectDateRange => 'Select date range';
+
+  @override
+  String get searchDateRangeHint =>
+      'Choose a start date, then choose an end date';
+
+  @override
+  String get searchDateClear => 'Clear date';
+
+  @override
+  String get searchDateApply => 'Apply';
+
+  @override
+  String get searchClearFilters => 'Clear filters';
+
+  @override
+  String searchResultsCount(int count) {
+    return '$count diary entries found';
+  }
+
+  @override
+  String get searchRelatedArchives => 'Related archives';
+
+  @override
+  String searchExpandedKeywords(String keywords) {
+    return 'Also searching: $keywords';
+  }
+
+  @override
+  String get searchStartTitle => 'Search your diary';
+
+  @override
+  String get searchStartBody =>
+      'Enter a person, a moment, or a remembered phrase. Archive aliases are linked automatically.';
+
+  @override
+  String get searchHistoryTitle => 'Recent searches';
+
+  @override
+  String get searchHistoryClear => 'Clear history';
+
+  @override
+  String get searchNoResultsTitle => 'That memory is still hiding';
+
+  @override
+  String get searchNoResultsBody =>
+      'Try another phrase or loosen the mood and date filters.';
+
+  @override
+  String get searchLoadErrorTitle => 'Search is unavailable';
+
+  @override
+  String get searchLoadErrorBody =>
+      'Local search hit a problem. Please try again.';
+
+  @override
+  String get searchUntitledDiary => 'Untitled diary';
+
+  @override
+  String get searchEmptyEntry => 'This diary entry has no body yet.';
+
+  @override
   String get homeEmptyTitle => 'Start with today';
 
   @override

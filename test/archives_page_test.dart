@@ -45,6 +45,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      tester.getCenter(find.byKey(const Key('archive-search-button'))).dx,
+      closeTo(280, 0.01),
+    );
     expect(find.byKey(const Key('archive-group-A')), findsOneWidget);
     expect(find.byKey(const Key('archive-group-Z')), findsOneWidget);
     expect(find.byKey(const Key('archive-group-#')), findsOneWidget);
