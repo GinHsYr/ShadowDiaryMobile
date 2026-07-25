@@ -10,7 +10,12 @@
   Looking for the desktop version? <a href="https://github.com/GinHsYr/ShadowDiary">ShadowDiary Desktop</a>
 </p>
 
----
+## Display
+<img src="screenshots/home.jpg" width="200" alt="home" />
+<img src="screenshots/setting.jpg" width="200" alt="setting" />
+<img src="screenshots/today.jpg" width="200" alt="today" />
+<img src="screenshots/add archive.jpg" width="200" alt="add archive" />
+<img src="screenshots/search.jpg" width="200" alt="search" />
 
 ## Features
 
@@ -41,7 +46,6 @@
 ### Appearance
 - **Theme Mode** — System / Light / Dark
 - **Five Color Seeds** — Neutral Black, Indigo, Teal, Rose, plus Monet dynamic color (Android 12+)
-- **Material 3** — Full Material Design 3 throughout
 - **Multi-language** — System / 简体中文 / English
 
 ### Security

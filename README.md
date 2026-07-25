@@ -10,7 +10,12 @@
   寻找桌面端？<a href="https://github.com/GinHsYr/ShadowDiary">ShadowDiary 桌面端</a>
 </p>
 
----
+## 展示
+<img src="screenshots/首页.jpg" width="200" alt="首页" />
+<img src="screenshots/设置.jpg" width="200" alt="设置" />
+<img src="screenshots/今日.jpg" width="200" alt="今日" />
+<img src="screenshots/档案添加.jpg" width="200" alt="档案添加" />
+<img src="screenshots/搜索.jpg" width="200" alt="搜索" />
 
 ## 功能
 
@@ -41,7 +46,6 @@
 ### 外观
 - **主题模式** — 跟随系统 / 浅色 / 深色
 - **五种配色** — 中性黑、靛蓝、青绿、玫红，以及 Monet 系统动态取色（Android 12+）
-- **Material 3** — 全面采用 Material Design 3
 - **多语言** — 跟随系统 / 简体中文 / English
 
 ### 安全
