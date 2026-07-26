@@ -452,6 +452,12 @@ abstract class AppLocalizations {
   /// **'人物'**
   String get archiveTypePerson;
 
+  /// No description provided for @archiveTypeObject.
+  ///
+  /// In zh, this message translates to:
+  /// **'物件'**
+  String get archiveTypeObject;
+
   /// No description provided for @archiveTypeOther.
   ///
   /// In zh, this message translates to:
@@ -1147,6 +1153,336 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'尚未配置'**
   String get notConfigured;
+
+  /// No description provided for @lanSyncDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'在同一网络内端到端加密同步日记、档案与图片'**
+  String get lanSyncDescription;
+
+  /// No description provided for @syncSecureCaption.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容仅在已配对设备之间加密传输，不经过云端。'**
+  String get syncSecureCaption;
+
+  /// No description provided for @syncDiscovering.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在寻找桌面端…'**
+  String get syncDiscovering;
+
+  /// No description provided for @syncPairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在建立安全配对…'**
+  String get syncPairing;
+
+  /// No description provided for @syncConnecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在连接…'**
+  String get syncConnecting;
+
+  /// No description provided for @syncTransferring.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在同步内容…'**
+  String get syncTransferring;
+
+  /// No description provided for @syncCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步完成'**
+  String get syncCompleted;
+
+  /// No description provided for @syncNeedsAttention.
+  ///
+  /// In zh, this message translates to:
+  /// **'有冲突需要处理'**
+  String get syncNeedsAttention;
+
+  /// No description provided for @syncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步暂时中断'**
+  String get syncFailed;
+
+  /// No description provided for @syncPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步已暂停'**
+  String get syncPaused;
+
+  /// No description provided for @syncNoDevices.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未发现桌面端'**
+  String get syncNoDevices;
+
+  /// No description provided for @syncNoDevicesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请确认桌面端影迹已打开局域网同步，并连接到同一 Wi-Fi。'**
+  String get syncNoDevicesHint;
+
+  /// No description provided for @syncDevices.
+  ///
+  /// In zh, this message translates to:
+  /// **'附近设备'**
+  String get syncDevices;
+
+  /// No description provided for @syncPaired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配对'**
+  String get syncPaired;
+
+  /// No description provided for @syncAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以配对'**
+  String get syncAvailable;
+
+  /// No description provided for @syncUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不可配对'**
+  String get syncUnavailable;
+
+  /// No description provided for @syncPair.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对'**
+  String get syncPair;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即同步'**
+  String get syncNow;
+
+  /// No description provided for @syncPairCodeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入桌面端验证码'**
+  String get syncPairCodeTitle;
+
+  /// No description provided for @syncPairCodeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证码会在 2 分钟后失效'**
+  String get syncPairCodeHint;
+
+  /// No description provided for @syncPairCodeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'6 位验证码'**
+  String get syncPairCodeLabel;
+
+  /// No description provided for @syncPairConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'安全配对'**
+  String get syncPairConfirm;
+
+  /// No description provided for @syncConflictTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'待处理冲突'**
+  String get syncConflictTitle;
+
+  /// No description provided for @syncConflictCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 项内容需要选择保留版本'**
+  String syncConflictCount(int count);
+
+  /// No description provided for @syncConflictDiary.
+  ///
+  /// In zh, this message translates to:
+  /// **'日记冲突'**
+  String get syncConflictDiary;
+
+  /// No description provided for @syncConflictArchive.
+  ///
+  /// In zh, this message translates to:
+  /// **'档案冲突'**
+  String get syncConflictArchive;
+
+  /// No description provided for @syncKeepLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留本机'**
+  String get syncKeepLocal;
+
+  /// No description provided for @syncKeepRemote.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留桌面端'**
+  String get syncKeepRemote;
+
+  /// No description provided for @syncKeepBoth.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留双方'**
+  String get syncKeepBoth;
+
+  /// No description provided for @syncLocalVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机版本'**
+  String get syncLocalVersion;
+
+  /// No description provided for @syncRemoteVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'桌面端版本'**
+  String get syncRemoteVersion;
+
+  /// No description provided for @syncResolveConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理冲突'**
+  String get syncResolveConflict;
+
+  /// No description provided for @syncConflictConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存冲突处理结果？'**
+  String get syncConflictConfirmTitle;
+
+  /// No description provided for @syncConflictConfirmMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'将应用“{choice}”。保存后此冲突会从待处理列表移除，且无法在此处撤销。'**
+  String syncConflictConfirmMessage(String choice);
+
+  /// No description provided for @syncConflictConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认保存'**
+  String get syncConflictConfirmAction;
+
+  /// No description provided for @syncDiffTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'标题'**
+  String get syncDiffTitle;
+
+  /// No description provided for @syncDiffContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'正文'**
+  String get syncDiffContent;
+
+  /// No description provided for @syncDiffWeather.
+  ///
+  /// In zh, this message translates to:
+  /// **'天气'**
+  String get syncDiffWeather;
+
+  /// No description provided for @syncDiffTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get syncDiffTags;
+
+  /// No description provided for @syncDiffImages.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片'**
+  String get syncDiffImages;
+
+  /// No description provided for @syncDiffRichText.
+  ///
+  /// In zh, this message translates to:
+  /// **'富文本源'**
+  String get syncDiffRichText;
+
+  /// No description provided for @syncDiffCreatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建时间'**
+  String get syncDiffCreatedAt;
+
+  /// No description provided for @syncDiffUpdatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新时间'**
+  String get syncDiffUpdatedAt;
+
+  /// No description provided for @syncDiffOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他原始差异'**
+  String get syncDiffOther;
+
+  /// No description provided for @syncDiffDeletedVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'此版本已删除'**
+  String get syncDiffDeletedVersion;
+
+  /// No description provided for @syncDiffOmittedLines.
+  ///
+  /// In zh, this message translates to:
+  /// **'… 省略 {count} 行 …'**
+  String syncDiffOmittedLines(int count);
+
+  /// No description provided for @syncUnpair.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除配对'**
+  String get syncUnpair;
+
+  /// No description provided for @syncUnpairTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除与此设备的配对？'**
+  String get syncUnpairTitle;
+
+  /// No description provided for @syncUnpairHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'之后需要重新输入验证码才能同步。'**
+  String get syncUnpairHint;
+
+  /// No description provided for @syncLastAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次同步：{time}'**
+  String syncLastAt(String time);
+
+  /// No description provided for @syncErrorAuthentication.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备鉴权失败，请解除配对后重试。'**
+  String get syncErrorAuthentication;
+
+  /// No description provided for @syncErrorPairCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证码无效或已过期。'**
+  String get syncErrorPairCode;
+
+  /// No description provided for @syncErrorTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接超时，请检查两台设备的网络。'**
+  String get syncErrorTimeout;
+
+  /// No description provided for @syncErrorAsset.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片校验失败，未应用本次传输。'**
+  String get syncErrorAsset;
+
+  /// No description provided for @syncErrorConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法完成同步，请稍后重试。'**
+  String get syncErrorConnection;
 
   /// No description provided for @editorNewTitle.
   ///

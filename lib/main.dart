@@ -8,6 +8,11 @@ import 'core/database/app_database.dart';
 import 'core/diary/diary_repository.dart';
 import 'core/settings/app_settings_controller.dart';
 import 'core/settings/app_settings_repository.dart';
+import 'core/sync/lan_discovery_service.dart';
+import 'core/sync/sync_client.dart';
+import 'core/sync/sync_controller.dart';
+import 'core/sync/sync_repository.dart';
+import 'core/sync/sync_secure_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +24,15 @@ Future<void> main() async {
     final archiveRepository = SqliteArchiveRepository(database);
     final backupImportService = DeviceBackupImportService(database);
     final initialSettings = await settingsRepository.load();
+    final syncSecureStore = DeviceSyncSecureStore();
+    final syncDeviceId = await syncSecureStore.getOrCreateDeviceId();
+    final syncRepository = SyncRepository(database, syncDeviceId);
+    final syncDiscoveryService = BonsoirSyncDiscoveryService();
+    final syncClient = ShadowSyncClient(
+      deviceId: syncDeviceId,
+      repository: syncRepository,
+      secureStore: syncSecureStore,
+    );
 
     runApp(
       ProviderScope(
@@ -28,6 +42,10 @@ Future<void> main() async {
           backupImportServiceProvider.overrideWithValue(backupImportService),
           diaryRepositoryProvider.overrideWithValue(diaryRepository),
           archiveRepositoryProvider.overrideWithValue(archiveRepository),
+          syncSecureStoreProvider.overrideWithValue(syncSecureStore),
+          syncRepositoryProvider.overrideWithValue(syncRepository),
+          syncDiscoveryServiceProvider.overrideWithValue(syncDiscoveryService),
+          syncClientProvider.overrideWithValue(syncClient),
         ],
         child: const ShadowDiaryApp(),
       ),

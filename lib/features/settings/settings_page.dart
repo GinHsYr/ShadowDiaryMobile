@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/archives/archive_repository.dart';
 import '../../core/backup/backup_import_service.dart';
@@ -14,6 +15,9 @@ import '../../core/settings/app_settings_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
+import '../../app/router.dart';
+import '../../core/sync/sync_controller.dart';
+import '../../core/sync/sync_models.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -31,6 +35,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final settings = ref.watch(appSettingsControllerProvider);
     final controller = ref.read(appSettingsControllerProvider.notifier);
     final lockState = ref.watch(appLockControllerProvider);
+    final syncState = ref.watch(syncControllerProvider);
 
     return AppPage(
       child: Column(
@@ -127,11 +132,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: Column(
               children: [
                 ListTile(
-                  enabled: false,
+                  key: const Key('lan-sync-tile'),
                   leading: const Icon(Icons.sync_rounded),
                   title: Text(l10n.lanSync),
-                  subtitle: Text(l10n.notConfigured),
+                  subtitle: Text(_syncSubtitle(l10n, syncState)),
                   trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(AppRoutes.lanSync),
                 ),
               ],
             ),
@@ -282,6 +288,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ThemeSeed.teal => l10n.colorTeal,
       ThemeSeed.rose => l10n.colorRose,
       ThemeSeed.monet => l10n.colorMonet,
+    };
+  }
+
+  String _syncSubtitle(AppLocalizations l10n, SyncState state) {
+    return switch (state.phase) {
+      SyncPhase.disabled => l10n.syncPaused,
+      SyncPhase.discovering =>
+        state.pairedDeviceIds.isEmpty
+            ? l10n.notConfigured
+            : l10n.syncDiscovering,
+      SyncPhase.pairing => l10n.syncPairing,
+      SyncPhase.connecting => l10n.syncConnecting,
+      SyncPhase.syncing => l10n.syncTransferring,
+      SyncPhase.conflicts => l10n.syncNeedsAttention,
+      SyncPhase.completed => l10n.syncCompleted,
+      SyncPhase.failed => l10n.syncFailed,
     };
   }
 }

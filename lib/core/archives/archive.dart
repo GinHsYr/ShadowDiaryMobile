@@ -1,5 +1,6 @@
 enum ArchiveType {
   person('person'),
+  object('object'),
   other('other');
 
   const ArchiveType(this.databaseValue);

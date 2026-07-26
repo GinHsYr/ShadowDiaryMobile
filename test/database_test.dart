@@ -20,7 +20,7 @@ void main() {
 
   tearDown(() => appDatabase.close());
 
-  test('creates the complete version 1 schema', () async {
+  test('creates the complete version 2 schema', () async {
     final compileOptions = await appDatabase.database.rawQuery(
       'PRAGMA compile_options',
     );
@@ -47,6 +47,9 @@ void main() {
         'image_refs',
         'person_mention_stats',
         'media_source_refs',
+        'sync_devices',
+        'sync_records',
+        'sync_conflicts',
       }),
     );
 
@@ -69,6 +72,9 @@ void main() {
         'idx_media_source_refs_updated',
         'idx_media_source_refs_source',
         'idx_media_source_refs_image',
+        'idx_sync_records_modified',
+        'idx_sync_records_deleted',
+        'idx_sync_conflicts_created',
       }),
     );
 

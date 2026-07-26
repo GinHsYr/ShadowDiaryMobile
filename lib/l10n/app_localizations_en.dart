@@ -199,6 +199,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get archiveTypePerson => 'Person';
 
   @override
+  String get archiveTypeObject => 'Object';
+
+  @override
   String get archiveTypeOther => 'Other';
 
   @override
@@ -578,6 +581,187 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notConfigured => 'Not configured';
+
+  @override
+  String get lanSyncDescription =>
+      'End-to-end encrypted sync for diaries, archives, and images on your local network';
+
+  @override
+  String get syncSecureCaption =>
+      'Content is encrypted between paired devices and never sent through the cloud.';
+
+  @override
+  String get syncDiscovering => 'Looking for the desktop app…';
+
+  @override
+  String get syncPairing => 'Creating a secure pairing…';
+
+  @override
+  String get syncConnecting => 'Connecting…';
+
+  @override
+  String get syncTransferring => 'Syncing content…';
+
+  @override
+  String get syncCompleted => 'Sync complete';
+
+  @override
+  String get syncNeedsAttention => 'Conflicts need your attention';
+
+  @override
+  String get syncFailed => 'Sync was interrupted';
+
+  @override
+  String get syncPaused => 'Sync paused';
+
+  @override
+  String get syncNoDevices => 'No desktop app found';
+
+  @override
+  String get syncNoDevicesHint =>
+      'Turn on LAN sync in the desktop app and connect both devices to the same Wi-Fi.';
+
+  @override
+  String get syncDevices => 'Nearby devices';
+
+  @override
+  String get syncPaired => 'Paired';
+
+  @override
+  String get syncAvailable => 'Ready to pair';
+
+  @override
+  String get syncUnavailable => 'Pairing unavailable';
+
+  @override
+  String get syncPair => 'Pair';
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String get syncPairCodeTitle => 'Enter the desktop code';
+
+  @override
+  String get syncPairCodeHint => 'The code expires after 2 minutes';
+
+  @override
+  String get syncPairCodeLabel => '6-digit code';
+
+  @override
+  String get syncPairConfirm => 'Pair securely';
+
+  @override
+  String get syncConflictTitle => 'Pending conflicts';
+
+  @override
+  String syncConflictCount(int count) {
+    return 'Choose a version for $count items';
+  }
+
+  @override
+  String get syncConflictDiary => 'Diary conflict';
+
+  @override
+  String get syncConflictArchive => 'Archive conflict';
+
+  @override
+  String get syncKeepLocal => 'Keep this phone';
+
+  @override
+  String get syncKeepRemote => 'Keep desktop';
+
+  @override
+  String get syncKeepBoth => 'Keep both';
+
+  @override
+  String get syncLocalVersion => 'This phone';
+
+  @override
+  String get syncRemoteVersion => 'Desktop';
+
+  @override
+  String get syncResolveConflict => 'Resolve conflict';
+
+  @override
+  String get syncConflictConfirmTitle => 'Save this conflict resolution?';
+
+  @override
+  String syncConflictConfirmMessage(String choice) {
+    return 'This will apply “$choice”. Once saved, the conflict is removed from the pending list and cannot be undone here.';
+  }
+
+  @override
+  String get syncConflictConfirmAction => 'Confirm save';
+
+  @override
+  String get syncDiffTitle => 'Title';
+
+  @override
+  String get syncDiffContent => 'Content';
+
+  @override
+  String get syncDiffWeather => 'Weather';
+
+  @override
+  String get syncDiffTags => 'Tags';
+
+  @override
+  String get syncDiffImages => 'Images';
+
+  @override
+  String get syncDiffRichText => 'Rich-text source';
+
+  @override
+  String get syncDiffCreatedAt => 'Created at';
+
+  @override
+  String get syncDiffUpdatedAt => 'Updated at';
+
+  @override
+  String get syncDiffOther => 'Other raw differences';
+
+  @override
+  String get syncDiffDeletedVersion => 'This version was deleted';
+
+  @override
+  String syncDiffOmittedLines(int count) {
+    return '… $count lines omitted …';
+  }
+
+  @override
+  String get syncUnpair => 'Unpair';
+
+  @override
+  String get syncUnpairTitle => 'Unpair this device?';
+
+  @override
+  String get syncUnpairHint =>
+      'You will need a new verification code before syncing again.';
+
+  @override
+  String syncLastAt(String time) {
+    return 'Last synced: $time';
+  }
+
+  @override
+  String get syncErrorAuthentication =>
+      'Device authentication failed. Unpair the device and try again.';
+
+  @override
+  String get syncErrorPairCode =>
+      'The verification code is invalid or expired.';
+
+  @override
+  String get syncErrorTimeout =>
+      'Connection timed out. Check both devices\' network.';
+
+  @override
+  String get syncErrorAsset =>
+      'An image failed verification, so this transfer was not applied.';
+
+  @override
+  String get syncErrorConnection => 'Sync could not finish. Try again shortly.';
 
   @override
   String get editorNewTitle => 'New diary';

@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
 import '../../core/services/archive_image_service.dart';
+import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'archive_image_viewer.dart';
@@ -40,6 +41,7 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
 
   late final ArchiveRepository _repository;
   late final ArchiveImageService _imageService;
+  late final SyncWriteGuard _syncWriteGuard;
   Archive? _original;
   ArchiveType _type = ArchiveType.person;
   String? _mainImage;
@@ -76,6 +78,7 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
     super.initState();
     _repository = ref.read(archiveRepositoryProvider);
     _imageService = ref.read(archiveImageServiceProvider);
+    _syncWriteGuard = ref.read(syncWriteGuardProvider)..beginEditing();
     _nameController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
     unawaited(_load());
@@ -173,6 +176,7 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
 
   @override
   void dispose() {
+    _syncWriteGuard.endEditing();
     _nameController
       ..removeListener(_onTextChanged)
       ..dispose();
@@ -310,6 +314,11 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
                   value: ArchiveType.person,
                   icon: const Icon(Icons.person_outline_rounded),
                   label: Text(l10n.archiveTypePerson),
+                ),
+                ButtonSegment(
+                  value: ArchiveType.object,
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: Text(l10n.archiveTypeObject),
                 ),
                 ButtonSegment(
                   value: ArchiveType.other,

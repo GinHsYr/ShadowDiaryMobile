@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_date_timeline/easy_date_timeline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,11 +11,48 @@ import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/services/diary_image_service.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
+import 'package:shadow_diary_mobile/core/sync/sync_write_guard.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 import 'package:shadow_diary_mobile/features/editor/editor_page.dart';
 import 'package:shadow_diary_mobile/l10n/app_localizations.dart';
 
 void main() {
+  testWidgets('keeps sync paused until the final dispose save completes', (
+    tester,
+  ) async {
+    final repository = _BlockingDiaryRepository();
+    final container = ProviderContainer(
+      overrides: [diaryRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_testApp(repository, providerContainer: container));
+    await tester.pumpAndSettle();
+    expect(container.read(syncWriteGuardProvider).isEditing, isTrue);
+
+    await tester.enterText(
+      find.byKey(const Key('editor-title-field')),
+      'Saved while closing',
+    );
+    await tester.pump();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const SizedBox.shrink(),
+      ),
+    );
+    await tester.pump();
+
+    expect(repository.saveStarted.isCompleted, isTrue);
+    expect(container.read(syncWriteGuardProvider).isEditing, isTrue);
+
+    repository.finishSave.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(container.read(syncWriteGuardProvider).isEditing, isFalse);
+    expect(repository.entries.single.title, 'Saved while closing');
+  });
+
   testWidgets('collapses and expands the easy date day picker', (tester) async {
     final repository = MemoryDiaryRepository();
     await tester.pumpWidget(_testApp(repository));
@@ -402,32 +441,37 @@ Widget _testApp(
   String? entryId,
   String? initialImageSource,
   int? initialImageIndex,
+  ProviderContainer? providerContainer,
 }) {
+  final app = MaterialApp(
+    debugShowCheckedModeBanner: false,
+    locale: const Locale('en'),
+    theme: AppTheme.light(ThemeSeed.neutral),
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      FlutterQuillLocalizations.delegate,
+      EasyDateTimelineLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: EditorPage(
+      entryId: entryId,
+      initialImageSource: initialImageSource,
+      initialImageIndex: initialImageIndex,
+    ),
+  );
+  if (providerContainer != null) {
+    return UncontrolledProviderScope(container: providerContainer, child: app);
+  }
   return ProviderScope(
     overrides: [
       diaryRepositoryProvider.overrideWithValue(repository),
       if (imageService != null)
         diaryImageServiceProvider.overrideWithValue(imageService),
     ],
-    child: MaterialApp(
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('en'),
-      theme: AppTheme.light(ThemeSeed.neutral),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        FlutterQuillLocalizations.delegate,
-        EasyDateTimelineLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: EditorPage(
-        entryId: entryId,
-        initialImageSource: initialImageSource,
-        initialImageIndex: initialImageIndex,
-      ),
-    ),
+    child: app,
   );
 }
 
@@ -552,6 +596,18 @@ class MemoryDiaryRepository implements DiaryRepository {
     } else {
       entries[index] = entry;
     }
+  }
+}
+
+class _BlockingDiaryRepository extends MemoryDiaryRepository {
+  final saveStarted = Completer<void>();
+  final finishSave = Completer<void>();
+
+  @override
+  Future<void> save(DiaryEntry entry) async {
+    if (!saveStarted.isCompleted) saveStarted.complete();
+    await finishSave.future;
+    await super.save(entry);
   }
 }
 

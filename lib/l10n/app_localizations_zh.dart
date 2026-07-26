@@ -192,6 +192,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get archiveTypePerson => '人物';
 
   @override
+  String get archiveTypeObject => '物件';
+
+  @override
   String get archiveTypeOther => '其他';
 
   @override
@@ -554,6 +557,179 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notConfigured => '尚未配置';
+
+  @override
+  String get lanSyncDescription => '在同一网络内端到端加密同步日记、档案与图片';
+
+  @override
+  String get syncSecureCaption => '内容仅在已配对设备之间加密传输，不经过云端。';
+
+  @override
+  String get syncDiscovering => '正在寻找桌面端…';
+
+  @override
+  String get syncPairing => '正在建立安全配对…';
+
+  @override
+  String get syncConnecting => '正在连接…';
+
+  @override
+  String get syncTransferring => '正在同步内容…';
+
+  @override
+  String get syncCompleted => '同步完成';
+
+  @override
+  String get syncNeedsAttention => '有冲突需要处理';
+
+  @override
+  String get syncFailed => '同步暂时中断';
+
+  @override
+  String get syncPaused => '同步已暂停';
+
+  @override
+  String get syncNoDevices => '尚未发现桌面端';
+
+  @override
+  String get syncNoDevicesHint => '请确认桌面端影迹已打开局域网同步，并连接到同一 Wi-Fi。';
+
+  @override
+  String get syncDevices => '附近设备';
+
+  @override
+  String get syncPaired => '已配对';
+
+  @override
+  String get syncAvailable => '可以配对';
+
+  @override
+  String get syncUnavailable => '暂不可配对';
+
+  @override
+  String get syncPair => '配对';
+
+  @override
+  String get syncNow => '立即同步';
+
+  @override
+  String get syncPairCodeTitle => '输入桌面端验证码';
+
+  @override
+  String get syncPairCodeHint => '验证码会在 2 分钟后失效';
+
+  @override
+  String get syncPairCodeLabel => '6 位验证码';
+
+  @override
+  String get syncPairConfirm => '安全配对';
+
+  @override
+  String get syncConflictTitle => '待处理冲突';
+
+  @override
+  String syncConflictCount(int count) {
+    return '$count 项内容需要选择保留版本';
+  }
+
+  @override
+  String get syncConflictDiary => '日记冲突';
+
+  @override
+  String get syncConflictArchive => '档案冲突';
+
+  @override
+  String get syncKeepLocal => '保留本机';
+
+  @override
+  String get syncKeepRemote => '保留桌面端';
+
+  @override
+  String get syncKeepBoth => '保留双方';
+
+  @override
+  String get syncLocalVersion => '本机版本';
+
+  @override
+  String get syncRemoteVersion => '桌面端版本';
+
+  @override
+  String get syncResolveConflict => '处理冲突';
+
+  @override
+  String get syncConflictConfirmTitle => '保存冲突处理结果？';
+
+  @override
+  String syncConflictConfirmMessage(String choice) {
+    return '将应用“$choice”。保存后此冲突会从待处理列表移除，且无法在此处撤销。';
+  }
+
+  @override
+  String get syncConflictConfirmAction => '确认保存';
+
+  @override
+  String get syncDiffTitle => '标题';
+
+  @override
+  String get syncDiffContent => '正文';
+
+  @override
+  String get syncDiffWeather => '天气';
+
+  @override
+  String get syncDiffTags => '标签';
+
+  @override
+  String get syncDiffImages => '图片';
+
+  @override
+  String get syncDiffRichText => '富文本源';
+
+  @override
+  String get syncDiffCreatedAt => '创建时间';
+
+  @override
+  String get syncDiffUpdatedAt => '更新时间';
+
+  @override
+  String get syncDiffOther => '其他原始差异';
+
+  @override
+  String get syncDiffDeletedVersion => '此版本已删除';
+
+  @override
+  String syncDiffOmittedLines(int count) {
+    return '… 省略 $count 行 …';
+  }
+
+  @override
+  String get syncUnpair => '解除配对';
+
+  @override
+  String get syncUnpairTitle => '解除与此设备的配对？';
+
+  @override
+  String get syncUnpairHint => '之后需要重新输入验证码才能同步。';
+
+  @override
+  String syncLastAt(String time) {
+    return '上次同步：$time';
+  }
+
+  @override
+  String get syncErrorAuthentication => '设备鉴权失败，请解除配对后重试。';
+
+  @override
+  String get syncErrorPairCode => '验证码无效或已过期。';
+
+  @override
+  String get syncErrorTimeout => '连接超时，请检查两台设备的网络。';
+
+  @override
+  String get syncErrorAsset => '图片校验失败，未应用本次传输。';
+
+  @override
+  String get syncErrorConnection => '无法完成同步，请稍后重试。';
 
   @override
   String get editorNewTitle => '新建日记';

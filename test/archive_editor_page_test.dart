@@ -8,12 +8,30 @@ import 'package:shadow_diary_mobile/core/archives/archive.dart';
 import 'package:shadow_diary_mobile/core/archives/archive_repository.dart';
 import 'package:shadow_diary_mobile/core/services/archive_image_service.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
+import 'package:shadow_diary_mobile/core/sync/sync_write_guard.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 import 'package:shadow_diary_mobile/features/archives/archive_editor_page.dart';
 import 'package:shadow_diary_mobile/features/archives/archive_image_viewer.dart';
 import 'package:shadow_diary_mobile/l10n/app_localizations.dart';
 
 void main() {
+  testWidgets('pauses sync for the archive editor route lifetime', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_testApp(_MemoryArchiveRepository()));
+    await tester.tap(find.byKey(const Key('open-archive-editor')));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ArchiveEditorPage)),
+    );
+    expect(container.read(syncWriteGuardProvider).isEditing, isTrue);
+
+    await tester.tap(find.byKey(const Key('archive-editor-back-button')));
+    await tester.pumpAndSettle();
+    expect(container.read(syncWriteGuardProvider).isEditing, isFalse);
+  });
+
   testWidgets('opens the full-screen image viewer', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

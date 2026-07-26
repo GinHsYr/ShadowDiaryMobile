@@ -15,6 +15,7 @@ import '../../core/diary/diary_entry.dart';
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
 import '../../core/services/diary_image_service.dart';
+import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'diary_document_codec.dart';
@@ -54,6 +55,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   final _uuid = const Uuid();
 
   late final DiaryRepository _repository;
+  late final SyncWriteGuard _syncWriteGuard;
   late DateTime _selectedDate;
   late QuillController _quillController;
   StreamSubscription<DocChange>? _documentChanges;
@@ -82,6 +84,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void initState() {
     super.initState();
     _repository = ref.read(diaryRepositoryProvider);
+    _syncWriteGuard = ref.read(syncWriteGuardProvider)..beginEditing();
     _selectedDate = DateUtils.dateOnly(widget.initialDate ?? DateTime.now());
     _datePickerExpanded = widget.initialImageSource == null;
     _quillController = QuillController.basic();
@@ -475,7 +478,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
   @override
   void dispose() {
     _saveDebounce?.cancel();
-    unawaited(_saveCurrent(updateUi: false));
+    unawaited(
+      _saveCurrent(updateUi: false).whenComplete(_syncWriteGuard.endEditing),
+    );
     final documentChanges = _documentChanges;
     if (documentChanges != null) unawaited(documentChanges.cancel());
     WidgetsBinding.instance.removeObserver(this);

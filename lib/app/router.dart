@@ -10,6 +10,7 @@ import '../features/home/home_page.dart';
 import '../features/media/media_page.dart';
 import '../features/search/search_page.dart';
 import '../features/settings/settings_page.dart';
+import '../features/settings/lan_sync_page.dart';
 import 'radial_reveal_transition.dart';
 import 'shell.dart';
 
@@ -18,6 +19,7 @@ abstract final class AppRoutes {
   static const archives = '/archives';
   static const media = '/media';
   static const settings = '/settings';
+  static const lanSync = '/settings/lan-sync';
   static const search = '/search';
   static const newEntry = '/entries/new';
   static const newArchive = '/archives/new';
@@ -121,6 +123,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.lanSync,
+        builder: (context, state) => const LanSyncPage(),
       ),
       GoRoute(
         path: AppRoutes.search,

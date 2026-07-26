@@ -7,7 +7,7 @@ class AppDatabase {
   AppDatabase._(this.database);
 
   static const databaseName = 'shadow_diary.db';
-  static const schemaVersion = 1;
+  static const schemaVersion = 2;
 
   final Database database;
 
@@ -57,11 +57,21 @@ class AppDatabase {
   ) async {
     if (oldVersion < 1) {
       await _createSchema(db);
+      return;
+    }
+    if (oldVersion < 2) {
+      await _createSyncSchema(db);
     }
   }
 
   static Future<void> _createSchema(Database db) async {
     for (final statement in _schemaStatements) {
+      await db.execute(statement);
+    }
+  }
+
+  static Future<void> _createSyncSchema(Database db) async {
+    for (final statement in _syncSchemaStatements) {
       await db.execute(statement);
     }
   }
@@ -211,5 +221,45 @@ class AppDatabase {
       ON media_source_refs(source_type, source_id)
     ''',
     'CREATE INDEX idx_media_source_refs_image ON media_source_refs(image_id)',
+    ..._syncSchemaStatements,
+  ];
+
+  static const List<String> _syncSchemaStatements = [
+    '''
+      CREATE TABLE sync_devices (
+        device_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        paired_at INTEGER NOT NULL,
+        last_seen_at INTEGER,
+        last_sync_at INTEGER
+      )
+    ''',
+    '''
+      CREATE TABLE sync_records (
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        version_vector TEXT NOT NULL,
+        content_hash TEXT NOT NULL,
+        deleted_at INTEGER,
+        modified_at INTEGER NOT NULL,
+        PRIMARY KEY (entity_type, entity_id)
+      )
+    ''',
+    'CREATE INDEX idx_sync_records_modified ON sync_records(modified_at)',
+    'CREATE INDEX idx_sync_records_deleted ON sync_records(deleted_at)',
+    '''
+      CREATE TABLE sync_conflicts (
+        id TEXT PRIMARY KEY,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        peer_device_id TEXT NOT NULL,
+        local_payload TEXT,
+        remote_payload TEXT,
+        local_vector TEXT NOT NULL,
+        remote_vector TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''',
+    'CREATE INDEX idx_sync_conflicts_created ON sync_conflicts(created_at)',
   ];
 }
