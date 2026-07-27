@@ -185,7 +185,8 @@ class SyncRepository {
     final conflicts = <SyncConflict>[];
     var appliedCount = 0;
 
-    for (final remote in remoteRecords) {
+    for (final receivedRemote in remoteRecords) {
+      final remote = await _normalizeRecordForSync(receivedRemote);
       final key = _recordKey(remote.entityType, remote.entityId);
       final local = localRecords.remove(key);
       if (local == null) {
@@ -208,7 +209,11 @@ class SyncRepository {
         continue;
       }
       if (local.isDeleted == remote.isDeleted &&
-          _payloadsEquivalentIgnoringUpdatedAt(local.payload, remote.payload)) {
+          _payloadsEquivalentForSync(
+            local.entityType,
+            local.payload,
+            remote.payload,
+          )) {
         final useRemote = _payloadUpdatedAt(remote) > _payloadUpdatedAt(local);
         final preferred = useRemote ? remote : local;
         final merged = preferred.copyWith(
@@ -386,6 +391,7 @@ class SyncRepository {
           path: file.path,
           size: bytes.length,
           sha256: _hex(digest.bytes),
+          mimeType: _syncAssetMimeType(entry.key),
         ),
       );
     }
@@ -491,7 +497,10 @@ class SyncRepository {
         'description': row['description'] as String?,
         'type': row['type']! as String,
         'mainImage': _canonicalizeOptionalSource(row['main_image'] as String?),
-        'images': rawImages.map(_canonicalizeMediaSources).toList(),
+        'images': rawImages
+            .map(_canonicalizeOptionalSource)
+            .whereType<String>()
+            .toList(growable: false),
         'createdAt': row['created_at']! as int,
         'updatedAt': row['updated_at']! as int,
       };
@@ -577,14 +586,19 @@ class SyncRepository {
     final aliases =
         (payload['aliases'] as List?)?.whereType<String>().toList() ??
         const <String>[];
-    final rawImages =
-        (payload['images'] as List?)?.whereType<String>().toList() ??
-        const <String>[];
+    final rawImages = payload['images'] is List
+        ? (payload['images']! as List).whereType<String>()
+        : const <String>[];
     final localizedImages = <String>[];
     for (final image in rawImages) {
-      localizedImages.add(await _localizeMediaSources(image));
+      final canonical = _canonicalizeOptionalSource(image);
+      if (canonical != null) {
+        localizedImages.add(await _localizeMediaSources(canonical));
+      }
     }
-    final mainImage = payload['mainImage'] as String?;
+    final mainImage = _canonicalizeOptionalSource(
+      payload['mainImage'] is String ? payload['mainImage']! as String : null,
+    );
     await transaction.insert('archives', {
       'id': payload['id']! as String,
       'name': payload['name'] as String? ?? '',
@@ -682,14 +696,49 @@ class SyncRepository {
     return _hex(digest.bytes);
   }
 
-  bool _payloadsEquivalentIgnoringUpdatedAt(
+  Future<SyncRecord> _normalizeRecordForSync(SyncRecord record) async {
+    final original = record.payload;
+    if (original == null) return record;
+    final normalized = _normalizePayloadForSync(record.entityType, original)!;
+    if (_stableJson(original) == _stableJson(normalized)) return record;
+    return record.copyWith(
+      payload: normalized,
+      contentHash: await _payloadHash(normalized),
+    );
+  }
+
+  bool _payloadsEquivalentForSync(
+    SyncEntityType entityType,
     Map<String, Object?>? local,
     Map<String, Object?>? remote,
   ) {
     if (local == null || remote == null) return local == remote;
-    final localContent = Map<String, Object?>.of(local)..remove('updatedAt');
-    final remoteContent = Map<String, Object?>.of(remote)..remove('updatedAt');
+    final localContent = _normalizePayloadForSync(entityType, local)!
+      ..remove('updatedAt');
+    final remoteContent = _normalizePayloadForSync(entityType, remote)!
+      ..remove('updatedAt');
     return _stableJson(localContent) == _stableJson(remoteContent);
+  }
+
+  Map<String, Object?>? _normalizePayloadForSync(
+    SyncEntityType entityType,
+    Map<String, Object?>? payload,
+  ) {
+    if (payload == null) return null;
+    final normalized = Map<String, Object?>.of(payload);
+    if (entityType != SyncEntityType.archive) return normalized;
+
+    normalized['mainImage'] = _canonicalizeOptionalSource(
+      payload['mainImage'] is String ? payload['mainImage']! as String : null,
+    );
+    normalized['images'] = payload['images'] is List
+        ? (payload['images']! as List)
+              .whereType<String>()
+              .map(_canonicalizeOptionalSource)
+              .whereType<String>()
+              .toList(growable: false)
+        : const <String>[];
+    return normalized;
   }
 
   int _payloadUpdatedAt(SyncRecord record) {
@@ -712,7 +761,7 @@ class SyncRepository {
     return value.replaceAllMapped(
       RegExp(
         r'''(?:file:(?://)?[^"'<>\s]*|[A-Za-z]:[\\/][^"'<>\s]*)'''
-        r'([a-fA-F0-9-]{36}(?:_thumb)?\.webp)',
+        r'([a-fA-F0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
         caseSensitive: false,
       ),
       (match) => 'diary-image://${match.group(1)!.toLowerCase()}',
@@ -720,9 +769,10 @@ class SyncRepository {
   }
 
   String? _canonicalizeOptionalSource(String? value) {
-    if (value == null || value.isEmpty) return null;
-    final id = _assetIdFromSource(value);
-    return id == null ? value : 'diary-image://$id';
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) return null;
+    final id = _assetIdFromSource(normalized);
+    return id == null ? normalized : 'diary-image://$id';
   }
 
   Iterable<String> _extractLocalImageSources(String? content) sync* {
@@ -748,7 +798,7 @@ class SyncRepository {
     }
     for (final value in values) {
       final matches = RegExp(
-        r'diary-image://([a-f0-9-]{36}(?:_thumb)?\.webp)',
+        r'diary-image://([a-f0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
         caseSensitive: false,
       ).allMatches(value);
       for (final match in matches) {
@@ -758,20 +808,20 @@ class SyncRepository {
   }
 
   String? _assetIdFromSource(String source) {
-    if (source.startsWith('diary-image://')) {
-      return source.substring('diary-image://'.length).toLowerCase();
-    }
-    final path = _localPathFromSource(source);
-    if (path == null) return null;
-    final filename = p.basename(path).toLowerCase();
+    const assetScheme = 'diary-image://';
+    final normalized = source.trim();
+    final filename = normalized.toLowerCase().startsWith(assetScheme)
+        ? normalized.substring(assetScheme.length).toLowerCase()
+        : normalized.replaceAll('\\', '/').split('/').last.toLowerCase();
     return RegExp(
-          r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb)?\.webp$',
+          r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb\.webp|\.(?:webp|png|jpe?g))$',
         ).hasMatch(filename)
         ? filename
         : null;
   }
 
   String? _localPathFromSource(String source) {
+    if (RegExp(r'^[A-Za-z]:[\\/]').hasMatch(source)) return source;
     final uri = Uri.tryParse(source);
     if (uri?.scheme == 'file') {
       try {
@@ -789,7 +839,7 @@ class SyncRepository {
     await directory.create(recursive: true);
     return value.replaceAllMapped(
       RegExp(
-        r'diary-image://([a-f0-9-]{36}(?:_thumb)?\.webp)',
+        r'diary-image://([a-f0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
         caseSensitive: false,
       ),
       (match) => Uri.file(
@@ -801,11 +851,19 @@ class SyncRepository {
   String _safeAssetFileName(String id) {
     final normalized = id.toLowerCase();
     if (!RegExp(
-      r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb)?\.webp$',
+      r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb\.webp|\.(?:webp|png|jpe?g))$',
     ).hasMatch(normalized)) {
       throw const FormatException('Invalid sync asset identifier.');
     }
     return normalized;
+  }
+
+  String _syncAssetMimeType(String id) {
+    return switch (p.extension(id).toLowerCase()) {
+      '.jpg' || '.jpeg' => 'image/jpeg',
+      '.png' => 'image/png',
+      _ => 'image/webp',
+    };
   }
 
   List<String> _decodeStringList(String? value) {

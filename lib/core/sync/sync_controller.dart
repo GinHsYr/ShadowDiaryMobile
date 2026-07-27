@@ -29,7 +29,6 @@ final syncControllerProvider = NotifierProvider<SyncController, SyncState>(
 );
 
 final syncConflictsProvider = FutureProvider<List<SyncConflict>>((ref) {
-  ref.watch(syncControllerProvider.select((state) => state.conflictCount));
   return ref.read(syncRepositoryProvider)?.listConflicts() ??
       Future.value(const <SyncConflict>[]);
 });
