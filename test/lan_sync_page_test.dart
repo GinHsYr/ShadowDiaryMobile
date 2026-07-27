@@ -60,9 +60,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('pairing completes while the code dialog is closing', (
+  testWidgets('waits for the code dialog to close before pairing', (
     tester,
   ) async {
+    _PairingSyncController.reset();
+    addTearDown(_PairingSyncController.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -75,15 +77,28 @@ void main() {
 
     await tester.tap(find.text('Pair'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.enterText(
       find.byKey(const Key('sync-pair-code-field')),
       '123456',
     );
     await tester.tap(find.byKey(const Key('sync-pair-confirm')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
 
+    expect(_PairingSyncController.pairCalls, 0);
+    expect(find.byKey(const Key('sync-pair-code-dialog')), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(_PairingSyncController.pairCalls, 0);
+
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+
+    expect(_PairingSyncController.pairCalls, 1);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
     expect(find.text('Paired'), findsOneWidget);
+    expect(find.byKey(const Key('sync-pair-code-dialog')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -268,6 +283,8 @@ class _PreviewSyncController extends SyncController {
 }
 
 class _PairingSyncController extends SyncController {
+  static int pairCalls = 0;
+
   static const _peer = SyncPeer(
     deviceId: 'desktop-1',
     name: 'Studio Desktop',
@@ -276,6 +293,10 @@ class _PairingSyncController extends SyncController {
     pairingAvailable: true,
   );
 
+  static void reset() {
+    pairCalls = 0;
+  }
+
   @override
   SyncState build() {
     return const SyncState(phase: SyncPhase.discovering, peers: [_peer]);
@@ -283,6 +304,7 @@ class _PairingSyncController extends SyncController {
 
   @override
   Future<void> pair(SyncPeer peer, String code) async {
+    pairCalls++;
     state = state.copyWith(
       phase: SyncPhase.pairing,
       activePeerId: peer.deviceId,

@@ -172,51 +172,13 @@ class _LanSyncPageState extends ConsumerState<LanSyncPage>
 
   Future<void> _pair(SyncPeer peer) async {
     final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController();
+    final dialogClosed = Completer<void>();
     final code = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.syncPairCodeTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.syncPairCodeHint),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              key: const Key('sync-pair-code-field'),
-              controller: controller,
-              autofocus: true,
-              maxLength: 6,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                labelText: l10n.syncPairCodeLabel,
-                prefixIcon: const Icon(Icons.pin_outlined),
-              ),
-              onSubmitted: (value) {
-                if (value.length == 6) Navigator.of(context).pop(value);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            key: const Key('sync-pair-confirm'),
-            onPressed: () {
-              final value = controller.text;
-              if (value.length == 6) Navigator.of(context).pop(value);
-            },
-            child: Text(l10n.syncPairConfirm),
-          ),
-        ],
-      ),
+      builder: (context) =>
+          _PairCodeDialog(l10n: l10n, onDisposed: dialogClosed.complete),
     );
-    controller.dispose();
+    await dialogClosed.future;
     if (code == null || !mounted) return;
     try {
       await ref.read(syncControllerProvider.notifier).pair(peer, code);
@@ -274,6 +236,74 @@ class _LanSyncPageState extends ConsumerState<LanSyncPage>
     'asset_hash_mismatch' => l10n.syncErrorAsset,
     _ => l10n.syncErrorConnection,
   };
+}
+
+class _PairCodeDialog extends StatefulWidget {
+  const _PairCodeDialog({required this.l10n, required this.onDisposed});
+
+  final AppLocalizations l10n;
+  final VoidCallback onDisposed;
+
+  @override
+  State<_PairCodeDialog> createState() => _PairCodeDialogState();
+}
+
+class _PairCodeDialogState extends State<_PairCodeDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    widget.onDisposed();
+    super.dispose();
+  }
+
+  void _submit([String? submittedValue]) {
+    final value = submittedValue ?? _controller.text;
+    if (value.length != 6) return;
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('sync-pair-code-dialog'),
+      title: Text(widget.l10n.syncPairCodeTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.l10n.syncPairCodeHint),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            key: const Key('sync-pair-code-field'),
+            controller: _controller,
+            autofocus: true,
+            maxLength: 6,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: widget.l10n.syncPairCodeLabel,
+              prefixIcon: const Icon(Icons.pin_outlined),
+            ),
+            onSubmitted: _submit,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(widget.l10n.cancel),
+        ),
+        FilledButton(
+          key: const Key('sync-pair-confirm'),
+          onPressed: _submit,
+          child: Text(widget.l10n.syncPairConfirm),
+        ),
+      ],
+    );
+  }
 }
 
 class _SyncHeroCard extends StatelessWidget {
