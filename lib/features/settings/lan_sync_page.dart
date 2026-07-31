@@ -19,25 +19,7 @@ class LanSyncPage extends ConsumerStatefulWidget {
   ConsumerState<LanSyncPage> createState() => _LanSyncPageState();
 }
 
-class _LanSyncPageState extends ConsumerState<LanSyncPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _radarController;
-
-  @override
-  void initState() {
-    super.initState();
-    _radarController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _radarController.dispose();
-    super.dispose();
-  }
-
+class _LanSyncPageState extends ConsumerState<LanSyncPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -62,7 +44,6 @@ class _LanSyncPageState extends ConsumerState<LanSyncPage>
                 children: [
                   _SyncHeroCard(
                     state: state,
-                    animation: _radarController,
                     onSync: state.isBusy
                         ? null
                         : () => ref
@@ -307,14 +288,9 @@ class _PairCodeDialogState extends State<_PairCodeDialog> {
 }
 
 class _SyncHeroCard extends StatelessWidget {
-  const _SyncHeroCard({
-    required this.state,
-    required this.animation,
-    required this.onSync,
-  });
+  const _SyncHeroCard({required this.state, required this.onSync});
 
   final SyncState state;
-  final Animation<double> animation;
   final VoidCallback? onSync;
 
   @override
@@ -338,193 +314,61 @@ class _SyncHeroCard extends StatelessWidget {
       key: const Key('sync-hero-card'),
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.primaryContainer.withValues(alpha: 0.84),
-            colors.tertiaryContainer.withValues(alpha: 0.64),
-          ],
-        ),
+        color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final narrow = constraints.maxWidth < 340;
-          final radar = SizedBox.square(
-            dimension: narrow ? 92 : 112,
-            child: _SyncRadar(
-              animation: animation,
-              active: state.phase == SyncPhase.discovering || state.isBusy,
-            ),
-          );
-          final details = Column(
-            crossAxisAlignment: narrow
-                ? CrossAxisAlignment.center
-                : CrossAxisAlignment.start,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                child: Text(
-                  label,
-                  key: ValueKey(state.phase),
-                  textAlign: narrow ? TextAlign.center : TextAlign.start,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                state.lastSyncAt == null
-                    ? l10n.lanSyncDescription
-                    : l10n.syncLastAt(
-                        DateFormat.MMMd(
-                          Localizations.localeOf(context).toLanguageTag(),
-                        ).add_Hm().format(state.lastSyncAt!),
-                      ),
-                textAlign: narrow ? TextAlign.center : TextAlign.start,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.onPrimaryContainer.withValues(alpha: 0.78),
-                ),
-              ),
-              if (showProgress) ...[
-                const SizedBox(height: AppSpacing.md),
-                LinearProgressIndicator(
-                  value: state.progress.fraction == 0
-                      ? null
-                      : state.progress.fraction,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              FilledButton.icon(
-                key: const Key('sync-now-button'),
-                onPressed: onSync,
-                icon: state.isBusy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.sync_rounded),
-                label: Text(l10n.syncNow),
-              ),
-            ],
-          );
-          if (narrow) {
-            return Column(
-              children: [
-                radar,
-                const SizedBox(height: AppSpacing.md),
-                details,
-              ],
-            );
-          }
-          return Row(
-            children: [
-              radar,
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(child: details),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _SyncRadar extends StatelessWidget {
-  const _SyncRadar({required this.animation, required this.active});
-
-  final Animation<double> animation;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final colors = Theme.of(context).colorScheme;
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) => CustomPaint(
-        painter: _RadarPainter(
-          progress: active && !reduceMotion ? animation.value : 0.46,
-          color: colors.primary,
-          active: active,
-        ),
-        child: Center(
-          child: AnimatedScale(
-            scale: active && !reduceMotion ? 1.04 : 1,
-            duration: const Duration(milliseconds: 360),
-            curve: Curves.easeOutBack,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: colors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.primary.withValues(alpha: 0.28),
-                    blurRadius: 16,
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.auto_awesome_rounded,
-                size: 18,
-                color: colors.onPrimary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            child: Text(
+              label,
+              key: ValueKey(state.phase),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colors.onSurface,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            state.lastSyncAt == null
+                ? l10n.lanSyncDescription
+                : l10n.syncLastAt(
+                    DateFormat.MMMd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).add_Hm().format(state.lastSyncAt!),
+                  ),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (showProgress) ...[
+            const SizedBox(height: AppSpacing.md),
+            LinearProgressIndicator(
+              value: state.progress.fraction == 0
+                  ? null
+                  : state.progress.fraction,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          FilledButton.icon(
+            key: const Key('sync-now-button'),
+            onPressed: onSync,
+            icon: state.isBusy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync_rounded),
+            label: Text(l10n.syncNow),
+          ),
+        ],
       ),
     );
-  }
-}
-
-class _RadarPainter extends CustomPainter {
-  const _RadarPainter({
-    required this.progress,
-    required this.color,
-    required this.active,
-  });
-
-  final double progress;
-  final Color color;
-  final bool active;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final maxRadius = size.shortestSide / 2;
-    final ringPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (var index = 1; index <= 3; index++) {
-      ringPaint.color = color.withValues(alpha: 0.12 + index * 0.04);
-      canvas.drawCircle(center, maxRadius * index / 3, ringPaint);
-    }
-    if (!active) return;
-    final waveRadius = maxRadius * (0.24 + progress * 0.76);
-    ringPaint
-      ..strokeWidth = 2
-      ..color = color.withValues(alpha: (1 - progress) * 0.55);
-    canvas.drawCircle(center, waveRadius, ringPaint);
-    final angle = progress * 6.283185307179586;
-    final dot = Offset(
-      center.dx + maxRadius * 0.72 * math.cos(angle),
-      center.dy + maxRadius * 0.72 * math.sin(angle),
-    );
-    canvas.drawCircle(dot, 4, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RadarPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.color != color ||
-        oldDelegate.active != active;
   }
 }
 

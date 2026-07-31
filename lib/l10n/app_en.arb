@@ -223,7 +223,19 @@
   "biometricLock": "Biometric lock",
   "appLock": "System unlock",
   "appLockDisabledDescription": "Protect diaries with biometrics or your screen lock",
-  "appLockEnabledDescription": "Authenticate whenever you open or return to the app",
+  "appLockEnabledDescription": "Require authentication after {delay} away from the app",
+  "@appLockEnabledDescription": {
+    "placeholders": {
+      "delay": {
+        "type": "String"
+      }
+    }
+  },
+  "appLockDelay": "Lock after",
+  "appLockDelayOneMinute": "1 minute",
+  "appLockDelayFiveMinutes": "5 minutes",
+  "appLockDelayFifteenMinutes": "15 minutes",
+  "appLockDelayThirtyMinutes": "30 minutes",
   "appLockEnableReason": "Authenticate to turn on system unlock for ShadowDiary",
   "appLockDisableReason": "Authenticate to turn off system unlock for ShadowDiary",
   "appLockAuthenticateReason": "Unlock ShadowDiary to view your diaries",

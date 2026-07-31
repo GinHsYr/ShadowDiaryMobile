@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../settings/app_settings.dart';
+import '../settings/app_settings_controller.dart';
 import '../theme/app_theme.dart';
 import 'app_lock_controller.dart';
+
+final appLockNowProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
 class AppLockGate extends ConsumerStatefulWidget {
   const AppLockGate({required this.child, super.key});
@@ -16,7 +20,7 @@ class AppLockGate extends ConsumerStatefulWidget {
 
 class _AppLockGateState extends ConsumerState<AppLockGate>
     with WidgetsBindingObserver {
-  bool _authenticateOnResume = false;
+  DateTime? _backgroundedAt;
   bool _authenticationOwnsLifecycle = false;
 
   @override
@@ -40,15 +44,33 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
     if (lifecycleState == AppLifecycleState.resumed) {
       if (_authenticationOwnsLifecycle) {
         _authenticationOwnsLifecycle = false;
+        _backgroundedAt = null;
         return;
       }
-      if (_authenticateOnResume) {
-        _authenticateOnResume = false;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _unlockIfNeeded();
-        });
-        WidgetsBinding.instance.scheduleFrame();
+
+      final backgroundedAt = _backgroundedAt;
+      _backgroundedAt = null;
+      if (backgroundedAt == null || !lockState.enabled) {
+        return;
       }
+
+      final now = ref.read(appLockNowProvider)();
+      final delay = ref
+          .read(appSettingsControllerProvider)
+          .appLockDelay
+          .duration;
+      final shouldLock =
+          now.isBefore(backgroundedAt) ||
+          now.difference(backgroundedAt) >= delay;
+      if (!shouldLock) {
+        return;
+      }
+
+      ref.read(appLockControllerProvider.notifier).lock();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _unlockIfNeeded();
+      });
+      WidgetsBinding.instance.scheduleFrame();
       return;
     }
 
@@ -57,10 +79,12 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
       return;
     }
 
-    if (lockState.enabled) {
-      _authenticationOwnsLifecycle = false;
-      _authenticateOnResume = true;
-      ref.read(appLockControllerProvider.notifier).lock();
+    final enteredBackground =
+        lifecycleState == AppLifecycleState.hidden ||
+        lifecycleState == AppLifecycleState.paused ||
+        lifecycleState == AppLifecycleState.detached;
+    if (enteredBackground && lockState.enabled && _backgroundedAt == null) {
+      _backgroundedAt = ref.read(appLockNowProvider)();
     }
   }
 

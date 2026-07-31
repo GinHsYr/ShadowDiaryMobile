@@ -41,6 +41,10 @@ class AppSettingsController extends Notifier<AppSettings> {
     return _persist(state.copyWith(appLockEnabled: value));
   }
 
+  Future<void> setAppLockDelay(AppLockDelay value) {
+    return _persist(state.copyWith(appLockDelay: value));
+  }
+
   Future<void> _persist(AppSettings next) async {
     await _repository.save(next);
     state = next;

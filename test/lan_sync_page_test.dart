@@ -42,7 +42,20 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('sync-hero-card')), findsOneWidget);
+    final heroCard = find.byKey(const Key('sync-hero-card'));
+    expect(heroCard, findsOneWidget);
+    final decoration = tester.widget<Container>(heroCard).decoration;
+    expect(decoration, isA<BoxDecoration>());
+    final boxDecoration = decoration! as BoxDecoration;
+    expect(boxDecoration.gradient, isNull);
+    expect(boxDecoration.color, isNotNull);
+    expect(
+      find.descendant(
+        of: heroCard,
+        matching: find.byIcon(Icons.auto_awesome_rounded),
+      ),
+      findsNothing,
+    );
     expect(find.text('局域网同步'), findsOneWidget);
     expect(find.text('Studio Desktop'), findsOneWidget);
     expect(find.text('已配对'), findsOneWidget);

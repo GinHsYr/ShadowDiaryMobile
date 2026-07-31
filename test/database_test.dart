@@ -168,6 +168,7 @@ void main() {
       themeSeed: ThemeSeed.monet,
       localePreference: AppLocalePreference.en,
       appLockEnabled: true,
+      appLockDelay: AppLockDelay.fifteenMinutes,
     );
     await repository.save(expected);
 
@@ -176,6 +177,7 @@ void main() {
     expect(restored.themeSeed, expected.themeSeed);
     expect(restored.localePreference, expected.localePreference);
     expect(restored.appLockEnabled, isTrue);
+    expect(restored.appLockDelay, AppLockDelay.fifteenMinutes);
 
     await appDatabase.database.insert('settings', {
       'key': 'appearance.theme_mode',
@@ -188,6 +190,12 @@ void main() {
       'value': 'future-value',
     }, conflictAlgorithm: ConflictAlgorithm.replace);
     expect((await repository.load()).appLockEnabled, isFalse);
+
+    await appDatabase.database.insert('settings', {
+      'key': 'security.app_lock_delay',
+      'value': 'future-delay',
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    expect((await repository.load()).appLockDelay, AppLockDelay.oneMinute);
   });
 
   test('saves and loads a diary by local calendar date', () async {

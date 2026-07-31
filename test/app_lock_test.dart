@@ -8,6 +8,7 @@ import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_repository.dart';
 import 'package:shadow_diary_mobile/core/security/app_lock_controller.dart';
+import 'package:shadow_diary_mobile/core/security/app_lock_gate.dart';
 import 'package:shadow_diary_mobile/core/services/service_contracts.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
@@ -47,6 +48,7 @@ void main() {
         'Authenticate to turn on system unlock for ShadowDiary',
       ]);
       expect(repository.settings.appLockEnabled, isTrue);
+      expect(repository.settings.appLockDelay, AppLockDelay.oneMinute);
       expect(
         tester
             .widget<SwitchListTile>(find.byKey(const Key('app-lock-toggle')))
@@ -54,7 +56,28 @@ void main() {
         isTrue,
       );
       expect(find.byKey(const Key('app-lock-screen')), findsNothing);
+      expect(
+        find.text('Require authentication after 1 minute away from the app'),
+        findsOneWidget,
+      );
 
+      await tester.ensureVisible(
+        find.byKey(const Key('app-lock-delay-selector')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('app-lock-delay-selector')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5 minutes'));
+      await tester.pumpAndSettle();
+
+      expect(repository.settings.appLockDelay, AppLockDelay.fiveMinutes);
+      expect(
+        find.text('Require authentication after 5 minutes away from the app'),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.byKey(const Key('app-lock-toggle')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('app-lock-toggle')));
       await tester.pumpAndSettle();
 
@@ -71,6 +94,8 @@ void main() {
       );
       expect(find.text('Authentication was not completed.'), findsOneWidget);
 
+      await tester.ensureVisible(find.byKey(const Key('app-lock-toggle')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('app-lock-toggle')));
       await tester.pumpAndSettle();
 
@@ -109,13 +134,15 @@ void main() {
     );
   });
 
-  testWidgets('locks at launch and whenever the app returns to foreground', (
+  testWidgets('locks at launch and only after the configured time away', (
     tester,
   ) async {
+    final clock = MutableClock(DateTime(2026, 7, 28, 12));
     final repository = MemorySettingsRepository(
       const AppSettings(
         localePreference: AppLocalePreference.en,
         appLockEnabled: true,
+        appLockDelay: AppLockDelay.fiveMinutes,
       ),
     );
     final authentication = FakeDeviceAuthenticationService(
@@ -125,7 +152,9 @@ void main() {
         DeviceAuthenticationResult.success,
       ],
     );
-    await tester.pumpWidget(_testApp(repository, authentication));
+    await tester.pumpWidget(
+      _testApp(repository, authentication, now: clock.now),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('app-lock-screen')), findsOneWidget);
@@ -148,9 +177,30 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pumpAndSettle();
 
-    expect(container.read(appLockControllerProvider).isLocked, isTrue);
-    expect(find.byKey(const Key('app-lock-screen')), findsOneWidget);
-    expect(find.text('Home'), findsNothing);
+    clock.advance(const Duration(minutes: 10));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(authentication.reasons, hasLength(2));
+    expect(container.read(appLockControllerProvider).isLocked, isFalse);
+    expect(find.byKey(const Key('app-lock-screen')), findsNothing);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+
+    expect(container.read(appLockControllerProvider).isLocked, isFalse);
+    clock.advance(const Duration(minutes: 4, seconds: 59));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(authentication.reasons, hasLength(2));
+    expect(container.read(appLockControllerProvider).isLocked, isFalse);
+    expect(find.byKey(const Key('app-lock-screen')), findsNothing);
+    expect(find.text('Home'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+    clock.advance(const Duration(minutes: 5));
 
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
@@ -164,17 +214,31 @@ void main() {
 
 Widget _testApp(
   MemorySettingsRepository repository,
-  DeviceAuthenticationService authentication,
-) {
+  DeviceAuthenticationService authentication, {
+  DateTime Function()? now,
+}) {
   return ProviderScope(
     overrides: [
       appSettingsRepositoryProvider.overrideWithValue(repository),
       initialAppSettingsProvider.overrideWithValue(repository.settings),
       deviceAuthenticationServiceProvider.overrideWithValue(authentication),
+      if (now != null) appLockNowProvider.overrideWithValue(now),
       diaryRepositoryProvider.overrideWithValue(EmptyDiaryRepository()),
     ],
     child: const ShadowDiaryApp(),
   );
+}
+
+class MutableClock {
+  MutableClock(this._value);
+
+  DateTime _value;
+
+  DateTime now() => _value;
+
+  void advance(Duration duration) {
+    _value = _value.add(duration);
+  }
 }
 
 class FakeDeviceAuthenticationService implements DeviceAuthenticationService {

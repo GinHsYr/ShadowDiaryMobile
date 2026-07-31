@@ -538,8 +538,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Protect diaries with biometrics or your screen lock';
 
   @override
-  String get appLockEnabledDescription =>
-      'Authenticate whenever you open or return to the app';
+  String appLockEnabledDescription(String delay) {
+    return 'Require authentication after $delay away from the app';
+  }
+
+  @override
+  String get appLockDelay => 'Lock after';
+
+  @override
+  String get appLockDelayOneMinute => '1 minute';
+
+  @override
+  String get appLockDelayFiveMinutes => '5 minutes';
+
+  @override
+  String get appLockDelayFifteenMinutes => '15 minutes';
+
+  @override
+  String get appLockDelayThirtyMinutes => '30 minutes';
 
   @override
   String get appLockEnableReason =>

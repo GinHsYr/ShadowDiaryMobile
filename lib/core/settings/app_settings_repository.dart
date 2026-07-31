@@ -16,6 +16,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
   static const _themeSeedKey = 'appearance.seed_color';
   static const _localeKey = 'appearance.locale';
   static const _appLockEnabledKey = 'security.app_lock_enabled';
+  static const _appLockDelayKey = 'security.app_lock_delay';
 
   final AppDatabase _appDatabase;
 
@@ -42,6 +43,11 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
         AppLocalePreference.system,
       ),
       appLockEnabled: values[_appLockEnabledKey] == 'true',
+      appLockDelay: _enumValue(
+        AppLockDelay.values,
+        values[_appLockDelayKey],
+        AppLockDelay.oneMinute,
+      ),
     );
   }
 
@@ -53,6 +59,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
       _upsert(batch, _themeSeedKey, settings.themeSeed.name);
       _upsert(batch, _localeKey, settings.localePreference.name);
       _upsert(batch, _appLockEnabledKey, settings.appLockEnabled.toString());
+      _upsert(batch, _appLockDelayKey, settings.appLockDelay.name);
       await batch.commit(noResult: true);
     });
   }

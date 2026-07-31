@@ -520,7 +520,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLockDisabledDescription => '使用指纹、人脸、虹膜或锁屏凭据保护日记';
 
   @override
-  String get appLockEnabledDescription => '每次打开或返回应用时需要验证';
+  String appLockEnabledDescription(String delay) {
+    return '离开应用超过 $delay后需要验证';
+  }
+
+  @override
+  String get appLockDelay => '离开后验证';
+
+  @override
+  String get appLockDelayOneMinute => '1 分钟';
+
+  @override
+  String get appLockDelayFiveMinutes => '5 分钟';
+
+  @override
+  String get appLockDelayFifteenMinutes => '15 分钟';
+
+  @override
+  String get appLockDelayThirtyMinutes => '30 分钟';
 
   @override
   String get appLockEnableReason => '验证身份以开启影迹的系统解锁';

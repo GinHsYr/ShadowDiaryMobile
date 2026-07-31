@@ -88,19 +88,46 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const SizedBox(height: AppSpacing.lg),
           _SectionTitle(l10n.settingsSecurity),
           Card(
-            child: SwitchListTile(
-              key: const Key('app-lock-toggle'),
-              secondary: const Icon(Icons.fingerprint_rounded),
-              title: Text(l10n.appLock),
-              subtitle: Text(
-                lockState.enabled
-                    ? l10n.appLockEnabledDescription
-                    : l10n.appLockDisabledDescription,
-              ),
-              value: lockState.enabled,
-              onChanged: lockState.isAuthenticating
-                  ? null
-                  : (enabled) => _setAppLock(context, ref, enabled),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  key: const Key('app-lock-toggle'),
+                  secondary: const Icon(Icons.fingerprint_rounded),
+                  title: Text(l10n.appLock),
+                  subtitle: Text(
+                    lockState.enabled
+                        ? l10n.appLockEnabledDescription(
+                            _appLockDelayLabel(l10n, settings.appLockDelay),
+                          )
+                        : l10n.appLockDisabledDescription,
+                  ),
+                  value: lockState.enabled,
+                  onChanged: lockState.isAuthenticating
+                      ? null
+                      : (enabled) => _setAppLock(context, ref, enabled),
+                ),
+                if (lockState.enabled) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                    ),
+                    child: _SettingsDropdown<AppLockDelay>(
+                      key: const Key('app-lock-delay-selector'),
+                      label: l10n.appLockDelay,
+                      value: settings.appLockDelay,
+                      options: {
+                        for (final delay in AppLockDelay.values)
+                          delay: _appLockDelayLabel(l10n, delay),
+                      },
+                      onChanged: controller.setAppLockDelay,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -288,6 +315,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ThemeSeed.teal => l10n.colorTeal,
       ThemeSeed.rose => l10n.colorRose,
       ThemeSeed.monet => l10n.colorMonet,
+    };
+  }
+
+  String _appLockDelayLabel(AppLocalizations l10n, AppLockDelay delay) {
+    return switch (delay) {
+      AppLockDelay.oneMinute => l10n.appLockDelayOneMinute,
+      AppLockDelay.fiveMinutes => l10n.appLockDelayFiveMinutes,
+      AppLockDelay.fifteenMinutes => l10n.appLockDelayFifteenMinutes,
+      AppLockDelay.thirtyMinutes => l10n.appLockDelayThirtyMinutes,
     };
   }
 

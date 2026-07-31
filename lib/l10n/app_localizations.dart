@@ -1079,8 +1079,38 @@ abstract class AppLocalizations {
   /// No description provided for @appLockEnabledDescription.
   ///
   /// In zh, this message translates to:
-  /// **'每次打开或返回应用时需要验证'**
-  String get appLockEnabledDescription;
+  /// **'离开应用超过 {delay}后需要验证'**
+  String appLockEnabledDescription(String delay);
+
+  /// No description provided for @appLockDelay.
+  ///
+  /// In zh, this message translates to:
+  /// **'离开后验证'**
+  String get appLockDelay;
+
+  /// No description provided for @appLockDelayOneMinute.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 分钟'**
+  String get appLockDelayOneMinute;
+
+  /// No description provided for @appLockDelayFiveMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'5 分钟'**
+  String get appLockDelayFiveMinutes;
+
+  /// No description provided for @appLockDelayFifteenMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'15 分钟'**
+  String get appLockDelayFifteenMinutes;
+
+  /// No description provided for @appLockDelayThirtyMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'30 分钟'**
+  String get appLockDelayThirtyMinutes;
 
   /// No description provided for @appLockEnableReason.
   ///
