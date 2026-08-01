@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
 import '../diary/diary_overview.dart';
+import '../services/diary_image_store.dart';
 
 const backupFormatVersion = 5;
 const _backupKeyFileNames = {'shadow-diary-backup-key.json', 'backup-key.json'};
@@ -128,6 +129,7 @@ class DeviceBackupImportService implements BackupImportService {
     PickBackupFile? pickBackupFile,
     LoadBackupDirectory? loadTemporaryDirectory,
     LoadBackupDirectory? loadDocumentsDirectory,
+    this._imageStore,
     Uuid? uuid,
   }) : _pickBackupFile = pickBackupFile ?? _pickFile,
        _loadTemporaryDirectory =
@@ -140,6 +142,7 @@ class DeviceBackupImportService implements BackupImportService {
   final PickBackupFile _pickBackupFile;
   final LoadBackupDirectory _loadTemporaryDirectory;
   final LoadBackupDirectory _loadDocumentsDirectory;
+  final DiaryImageStore? _imageStore;
   final Uuid _uuid;
   final Map<String, _BackupSession> _sessions = {};
 
@@ -218,6 +221,7 @@ class DeviceBackupImportService implements BackupImportService {
       }
 
       Directory? importedMediaDirectory;
+      var installedImagePaths = const <String>[];
       try {
         final data = _readBackupData(session);
         final currentDiaryRows = await _database.database.query(
@@ -247,11 +251,14 @@ class DeviceBackupImportService implements BackupImportService {
           selectedDiaryIds: selectedDiaryIds,
           includeArchives: mode == BackupImportMode.overwrite,
         );
-        final assets = _extractAssets(
+        final extractedAssets = _extractAssets(
           session,
           destinationDirectory: importedMediaDirectory,
           neededPaths: neededAssets,
         );
+        final imageStore = _imageStore ?? DiaryImageStore(documentsDirectory);
+        final assets = await _installImageAssets(extractedAssets, imageStore);
+        installedImagePaths = assets.createdImagePaths;
 
         final result = mode == BackupImportMode.overwrite
             ? await _overwrite(data, assets)
@@ -262,17 +269,20 @@ class DeviceBackupImportService implements BackupImportService {
                 assets,
               );
         if (mode == BackupImportMode.overwrite) {
+          await imageStore.cleanupUnreferenced(_database);
           await _cleanupSupersededMedia(documentsDirectory, session.id);
         }
         _sessions.remove(session.id);
         await _deleteDirectory(session.directory);
         return result;
       } on BackupImportException {
+        await _deleteFiles(installedImagePaths);
         if (importedMediaDirectory != null) {
           await _deleteDirectory(importedMediaDirectory);
         }
         rethrow;
       } on Object catch (error) {
+        await _deleteFiles(installedImagePaths);
         if (importedMediaDirectory != null) {
           await _deleteDirectory(importedMediaDirectory);
         }
@@ -636,6 +646,42 @@ class DeviceBackupImportService implements BackupImportService {
     } finally {
       input.closeSync();
     }
+  }
+
+  Future<_ImportedAssets> _installImageAssets(
+    _ImportedAssets assets,
+    DiaryImageStore imageStore,
+  ) async {
+    await imageStore.ensureDirectories();
+    final installedPaths = Map<String, String>.from(assets.paths);
+    final createdPaths = <String>[];
+    for (final entry in assets.paths.entries) {
+      if (!entry.key.startsWith('images/') &&
+          !entry.key.startsWith('thumbnails/')) {
+        continue;
+      }
+      final parsed = diaryImageSourceFromFileName(p.basename(entry.key));
+      if (parsed == null) {
+        throw const BackupImportException(BackupImportErrorCode.invalidBackup);
+      }
+      final source = File(entry.value);
+      final target = imageStore.fileForParsedSource(parsed);
+      if (await target.exists()) {
+        if (!await _filesEqual(source, target)) {
+          throw const BackupImportException(
+            BackupImportErrorCode.invalidBackup,
+          );
+        }
+      } else {
+        await source.copy(target.path);
+        createdPaths.add(target.path);
+      }
+      installedPaths[entry.key] = target.path;
+    }
+    return _ImportedAssets(
+      installedPaths,
+      createdImagePaths: List.unmodifiable(createdPaths),
+    );
   }
 
   Future<Set<int>> _loadLocalDiaryDates() async {
@@ -1054,9 +1100,10 @@ Future<void> _deleteDirectory(Directory directory) async {
 }
 
 class _ImportedAssets {
-  const _ImportedAssets(this.paths);
+  const _ImportedAssets(this.paths, {this.createdImagePaths = const []});
 
   final Map<String, String> paths;
+  final List<String> createdImagePaths;
 
   String requiredFilePath(String sourcePath) {
     final path = paths[sourcePath];
@@ -1070,18 +1117,40 @@ class _ImportedAssets {
     return value.replaceAllMapped(_backupImageUri, (match) {
       final fileName = match.group(1)!;
       final relativePath = _imageAssetPath(fileName);
-      final path = paths[relativePath];
-      if (path == null) {
+      if (!paths.containsKey(relativePath)) {
         throw const BackupImportException(BackupImportErrorCode.invalidBackup);
       }
-      return Uri.file(path).toString();
+      return diaryImageSourceFromFileName(fileName)!.source;
     });
   }
 
   String rewriteArchivePath(String value) {
     final match = _backupImageUri.firstMatch(value);
     if (match == null || match.group(0) != value) return value;
-    return requiredFilePath(_imageAssetPath(match.group(1)!));
+    final fileName = match.group(1)!;
+    requiredFilePath(_imageAssetPath(fileName));
+    return diaryImageSourceFromFileName(fileName)!.source;
+  }
+}
+
+Future<bool> _filesEqual(File left, File right) async {
+  if (await left.length() != await right.length()) return false;
+  final leftBytes = await left.readAsBytes();
+  final rightBytes = await right.readAsBytes();
+  for (var index = 0; index < leftBytes.length; index++) {
+    if (leftBytes[index] != rightBytes[index]) return false;
+  }
+  return true;
+}
+
+Future<void> _deleteFiles(Iterable<String> paths) async {
+  for (final path in paths) {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } on FileSystemException {
+      // A later orphan cleanup can remove an interrupted import asset.
+    }
   }
 }
 

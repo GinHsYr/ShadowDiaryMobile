@@ -1,7 +1,7 @@
 name: shadow_diary_mobile
 description: "ShadowDiary (影迹) Android client."
 publish_to: 'none'
-version: 0.3.5+14
+version: 0.4.0+
 
 environment:
   sdk: ^3.12.2

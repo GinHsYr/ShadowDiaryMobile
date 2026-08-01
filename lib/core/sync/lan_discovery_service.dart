@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bonsoir/bonsoir.dart';
 
@@ -91,18 +92,19 @@ class BonsoirSyncDiscoveryService implements SyncDiscoveryService {
     final attributes = service.attributes;
     final deviceId = attributes['id']?.trim();
     final protocolVersion = int.tryParse(attributes['pv'] ?? '');
-    final host = _selectHost(service.hostAddresses, service.hostname);
+    final hosts = syncHostsFromService(service.hostAddresses, service.hostname);
     if (deviceId == null ||
         deviceId.isEmpty ||
         protocolVersion != 1 ||
-        host == null ||
+        hosts.isEmpty ||
         service.port < 1) {
       return;
     }
     _peersByServiceName[service.name] = SyncPeer(
       deviceId: deviceId,
       name: service.name,
-      host: host,
+      host: hosts.first,
+      alternativeHosts: hosts.skip(1).toList(growable: false),
       port: service.port,
       pairingAvailable: attributes['pair'] == '1',
       protocolVersion: protocolVersion!,
@@ -110,23 +112,59 @@ class BonsoirSyncDiscoveryService implements SyncDiscoveryService {
     _emitPeers();
   }
 
-  String? _selectHost(List<String> addresses, String? hostname) {
-    for (final address in addresses) {
-      if (RegExp(r'^\d{1,3}(?:\.\d{1,3}){3}$').hasMatch(address) &&
-          !address.startsWith('127.')) {
-        return address;
-      }
-    }
-    for (final address in addresses) {
-      if (address.isNotEmpty && address != '::1') return address;
-    }
-    final fallback = hostname?.trim();
-    return fallback == null || fallback.isEmpty ? null : fallback;
-  }
-
   void _emitPeers() {
     final peers = _peersByServiceName.values.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     _peerController.add(List.unmodifiable(peers));
   }
+}
+
+List<String> syncHostsFromService(
+  Iterable<String> addresses,
+  String? hostname,
+) {
+  final ipv4 = <String>[];
+  final globalIpv6 = <String>[];
+  final linkLocalIpv6 = <String>[];
+  final other = <String>[];
+  final seen = <String>{};
+
+  void addAddress(String rawAddress) {
+    var address = rawAddress.trim();
+    if (address.startsWith('[') && address.endsWith(']')) {
+      address = address.substring(1, address.length - 1);
+    }
+    if (address.isEmpty || !seen.add(address.toLowerCase())) return;
+    final parsed = InternetAddress.tryParse(address);
+    if (parsed == null) {
+      other.add(address);
+      return;
+    }
+    if (parsed.isLoopback ||
+        parsed.address == '0.0.0.0' ||
+        parsed.address == '::') {
+      return;
+    }
+    if (parsed.type == InternetAddressType.IPv4) {
+      ipv4.add(address);
+      return;
+    }
+    if (parsed.address.toLowerCase().startsWith('fe80:')) {
+      linkLocalIpv6.add(address);
+    } else {
+      globalIpv6.add(address);
+    }
+  }
+
+  for (final address in addresses) {
+    addAddress(address);
+  }
+  final fallback = hostname?.trim();
+  if (fallback != null && fallback.isNotEmpty) addAddress(fallback);
+  return List.unmodifiable([
+    ...ipv4,
+    ...globalIpv6,
+    ...linkLocalIpv6,
+    ...other,
+  ]);
 }

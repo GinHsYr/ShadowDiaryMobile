@@ -344,6 +344,28 @@ void main() {
     );
   });
 
+  test('does not overwrite an immutable asset identifier', () async {
+    const id = '123e4567-e89b-42d3-a456-426614174000.webp';
+    const original = <int>[97, 98, 99];
+    const originalHash =
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+    const replacementHash =
+        'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb';
+
+    await repository.storeAsset(id, original, originalHash);
+
+    await expectLater(
+      repository.storeAsset(id, const [97], replacementHash),
+      throwsFormatException,
+    );
+    expect(
+      await File(
+        '${mediaDirectory.path}${Platform.pathSeparator}$id',
+      ).readAsBytes(),
+      original,
+    );
+  });
+
   test('collects legacy JPEG archive assets with their MIME type', () async {
     const id = '223e4567-e89b-42d3-a456-426614174001.jpg';
     final image = File('${mediaDirectory.path}${Platform.pathSeparator}$id');

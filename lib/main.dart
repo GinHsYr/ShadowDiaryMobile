@@ -8,6 +8,8 @@ import 'core/database/app_database.dart';
 import 'core/diary/diary_repository.dart';
 import 'core/settings/app_settings_controller.dart';
 import 'core/settings/app_settings_repository.dart';
+import 'core/services/diary_image_store.dart';
+import 'core/services/archive_image_service.dart';
 import 'core/sync/lan_discovery_service.dart';
 import 'core/sync/sync_client.dart';
 import 'core/sync/sync_controller.dart';
@@ -19,14 +21,32 @@ Future<void> main() async {
 
   try {
     final database = await AppDatabase.openBundled();
+    final diaryImageStore = await DiaryImageStore.loadDefault();
+    await diaryImageStore.migrateLegacyReferences(database);
     final settingsRepository = SqliteAppSettingsRepository(database);
     final diaryRepository = SqliteDiaryRepository(database);
     final archiveRepository = SqliteArchiveRepository(database);
-    final backupImportService = DeviceBackupImportService(database);
+    final diaryImageCleanup = DatabaseDiaryImageCleanup(
+      diaryImageStore,
+      database,
+    );
+    final archiveImageService = DeviceArchiveImageService(
+      imageStore: diaryImageStore,
+      isImageReferenced: (source) =>
+          diaryImageStore.isReferenced(database, source),
+    );
+    final backupImportService = DeviceBackupImportService(
+      database,
+      imageStore: diaryImageStore,
+    );
     final initialSettings = await settingsRepository.load();
     final syncSecureStore = DeviceSyncSecureStore();
     final syncDeviceId = await syncSecureStore.getOrCreateDeviceId();
-    final syncRepository = SyncRepository(database, syncDeviceId);
+    final syncRepository = SyncRepository(
+      database,
+      syncDeviceId,
+      imageStore: diaryImageStore,
+    );
     final syncDiscoveryService = BonsoirSyncDiscoveryService();
     final syncClient = ShadowSyncClient(
       deviceId: syncDeviceId,
@@ -38,6 +58,9 @@ Future<void> main() async {
       ProviderScope(
         overrides: [
           appSettingsRepositoryProvider.overrideWithValue(settingsRepository),
+          diaryImageStoreProvider.overrideWithValue(diaryImageStore),
+          diaryImageCleanupProvider.overrideWithValue(diaryImageCleanup),
+          archiveImageServiceProvider.overrideWithValue(archiveImageService),
           initialAppSettingsProvider.overrideWithValue(initialSettings),
           backupImportServiceProvider.overrideWithValue(backupImportService),
           diaryRepositoryProvider.overrideWithValue(diaryRepository),

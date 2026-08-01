@@ -74,8 +74,13 @@ void main() {
       final imageSource = RegExp(
         r'src="([^"]+)"',
       ).firstMatch(importedContent)!.group(1)!;
-      expect(Uri.parse(imageSource).scheme, 'file');
-      expect(await File.fromUri(Uri.parse(imageSource)).exists(), isTrue);
+      expect(imageSource, 'diary-image://$_imageName');
+      expect(
+        await File(
+          '${harness.documentsDirectory.path}/images/$_imageName',
+        ).exists(),
+        isTrue,
+      );
 
       final archiveRows = await harness.database.database.query('archives');
       expect(archiveRows.single['id'], 'current-archive');
@@ -122,16 +127,27 @@ void main() {
       final archiveRows = await harness.database.database.query('archives');
       expect(archiveRows.single['id'], 'backup-archive');
       final archiveImagePath = archiveRows.single['main_image']! as String;
-      expect(pIsAbsolute(archiveImagePath), isTrue);
-      expect(await File(archiveImagePath).exists(), isTrue);
+      expect(archiveImagePath, 'diary-image://$_imageName');
+      expect(
+        await File(
+          '${harness.documentsDirectory.path}/images/$_imageName',
+        ).exists(),
+        isTrue,
+      );
       final archiveImages =
           (jsonDecode(archiveRows.single['images']! as String) as List)
               .cast<String>();
       expect(archiveImages, hasLength(2));
-      for (final imagePath in archiveImages) {
-        expect(pIsAbsolute(imagePath), isTrue);
-        expect(await File(imagePath).exists(), isTrue);
-      }
+      expect(archiveImages, [
+        'diary-image://$_imageName',
+        'diary-image://$_thumbnailName',
+      ]);
+      expect(
+        await File(
+          '${harness.documentsDirectory.path}/thumbnails/$_thumbnailName',
+        ).exists(),
+        isTrue,
+      );
       final settings = await harness.database.database.query(
         'settings',
         where: 'key = ?',
@@ -143,11 +159,11 @@ void main() {
       final mediaSourceRows = await harness.database.database.query(
         'media_source_refs',
       );
-      for (final column in ['image_path', 'preview_path']) {
-        final uri = Uri.parse(mediaSourceRows.single[column]! as String);
-        expect(uri.scheme, 'file');
-        expect(await File.fromUri(uri).exists(), isTrue);
-      }
+      expect(mediaSourceRows.single['image_path'], 'diary-image://$_imageName');
+      expect(
+        mediaSourceRows.single['preview_path'],
+        'diary-image://$_thumbnailName',
+      );
       expect(await harness.legacyMediaFile.exists(), isFalse);
       expect(await harness.olderImportDirectory.exists(), isFalse);
       expect(

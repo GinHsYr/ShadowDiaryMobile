@@ -26,6 +26,26 @@ class SyncClientResult {
 
 typedef SyncProgressCallback = void Function(SyncProgress progress);
 
+Future<T> connectFirstAvailableSyncEndpoint<T>(
+  Iterable<Uri> endpoints,
+  Future<T> Function(Uri endpoint) connect,
+) async {
+  Object? lastError;
+  StackTrace? lastStackTrace;
+  for (final endpoint in endpoints) {
+    try {
+      return await connect(endpoint);
+    } on Object catch (error, stackTrace) {
+      lastError = error;
+      lastStackTrace = stackTrace;
+    }
+  }
+  if (lastError == null || lastStackTrace == null) {
+    throw StateError('No sync endpoint is available.');
+  }
+  Error.throwWithStackTrace(lastError, lastStackTrace);
+}
+
 class ShadowSyncClient {
   ShadowSyncClient({
     required this.deviceId,
@@ -342,8 +362,18 @@ class ShadowSyncClient {
   }
 
   Future<_SyncConnection> _open(SyncPeer peer) async {
-    final channel = _connectChannel(peer.endpoint);
-    await channel.ready.timeout(const Duration(seconds: 8));
+    final channel = await connectFirstAvailableSyncEndpoint(peer.endpoints, (
+      endpoint,
+    ) async {
+      final candidate = _connectChannel(endpoint);
+      try {
+        await candidate.ready.timeout(const Duration(seconds: 5));
+        return candidate;
+      } on Object {
+        await candidate.sink.close();
+        rethrow;
+      }
+    });
     return _SyncConnection(channel);
   }
 
@@ -352,7 +382,7 @@ class ShadowSyncClient {
       endpoint,
       protocols: const [_protocol],
       pingInterval: const Duration(seconds: 15),
-      connectTimeout: const Duration(seconds: 8),
+      connectTimeout: const Duration(seconds: 5),
     );
   }
 

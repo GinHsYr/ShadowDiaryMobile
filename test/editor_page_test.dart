@@ -259,7 +259,10 @@ void main() {
     expect(imageOperations, hasLength(2));
     expect(
       imageOperations.map(_imageSource),
-      containsAll([endsWith('picked-1.webp'), endsWith('picked-2.webp')]),
+      containsAll([
+        'diary-image://picked-1.webp',
+        'diary-image://picked-2.webp',
+      ]),
     );
     expect(imageOperations.map(_imageWidth), everyElement('100%'));
 
@@ -492,7 +495,7 @@ class _FakeDiaryImageService implements DiaryImageService {
 
 StoredDiaryImage _storedImage(String filename) {
   final path = 'C:\\shadow_diary_test\\$filename';
-  return StoredDiaryImage(filePath: path, uri: Uri.file(path));
+  return StoredDiaryImage(filePath: path, source: 'diary-image://$filename');
 }
 
 List<Map<String, dynamic>> _imageOperations(Document document) {

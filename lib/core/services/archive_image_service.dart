@@ -7,8 +7,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'diary_image_store.dart';
+
 final archiveImageServiceProvider = Provider<ArchiveImageService>((ref) {
-  return DeviceArchiveImageService();
+  return DeviceArchiveImageService(
+    imageStore: ref.watch(diaryImageStoreProvider),
+  );
 });
 
 abstract interface class ArchiveImageService {
@@ -21,20 +25,30 @@ typedef PickArchiveImagePaths = Future<List<String>> Function(int maxImages);
 typedef EncodeArchiveImageAsWebp =
     Future<bool> Function(String sourcePath, String destinationPath);
 typedef LoadArchiveImageDirectory = Future<Directory> Function();
+typedef IsArchiveImageReferenced = Future<bool> Function(String source);
 
 class DeviceArchiveImageService implements ArchiveImageService {
   DeviceArchiveImageService({
     PickArchiveImagePaths? pickImagePaths,
     EncodeArchiveImageAsWebp? encodeWebp,
     LoadArchiveImageDirectory? loadImageDirectory,
+    DiaryImageStore? imageStore,
+    this._isImageReferenced,
     this.uuid = const Uuid(),
   }) : _pickImagePaths = pickImagePaths ?? _pickImagesFromGallery,
        _encodeWebp = encodeWebp ?? _encodeAsWebp,
-       _loadImageDirectory = loadImageDirectory ?? _defaultImageDirectory;
+       _loadImageDirectory =
+           loadImageDirectory ??
+           (imageStore == null
+               ? _defaultImageDirectory
+               : () async => imageStore.imageDirectory),
+       _imageStore = imageStore;
 
   final PickArchiveImagePaths _pickImagePaths;
   final EncodeArchiveImageAsWebp _encodeWebp;
   final LoadArchiveImageDirectory _loadImageDirectory;
+  final DiaryImageStore? _imageStore;
+  final IsArchiveImageReferenced? _isImageReferenced;
   final Uuid uuid;
 
   @override
@@ -59,7 +73,9 @@ class DeviceArchiveImageService implements ArchiveImageService {
         if (!encoded || !await File(destinationPath).exists()) {
           throw FileSystemException('WebP encoding did not create a file.');
         }
-        storedPaths.add(destinationPath);
+        storedPaths.add(
+          diaryImageSourceFromFileName(p.basename(destinationPath))!.source,
+        );
       }
       return List.unmodifiable(storedPaths);
     } on Object {
@@ -70,18 +86,37 @@ class DeviceArchiveImageService implements ArchiveImageService {
 
   @override
   Future<void> deleteManagedImages(Iterable<String> paths) async {
-    final requestedPaths = paths.where((path) => path.isNotEmpty).toSet();
-    if (requestedPaths.isEmpty) return;
+    final requestedSources = paths.where((path) => path.isNotEmpty).toSet();
+    if (requestedSources.isEmpty) return;
     final Directory directory;
     try {
       directory = await _loadImageDirectory();
     } on Object {
       return;
     }
-    final root = p.normalize(p.absolute(directory.path));
-    final managedPaths = requestedPaths
-        .map((path) => p.normalize(p.absolute(path)))
-        .where((path) => p.isWithin(root, path));
+    final roots = <String>{p.normalize(p.absolute(directory.path))};
+    final imageStore = _imageStore;
+    if (imageStore?.documentsDirectory != null) {
+      roots.add(p.normalize(p.absolute(imageStore!.thumbnailDirectory.path)));
+    }
+    final managedPaths = <String>{};
+    for (final source in requestedSources) {
+      try {
+        if (await _isImageReferenced?.call(source) ?? false) continue;
+      } on Object {
+        continue;
+      }
+      final parsed = parseDiaryImageSource(source);
+      final files = parsed != null && imageStore?.documentsDirectory != null
+          ? await imageStore!.filesForImageId(parsed.imageId)
+          : <File>[imageStore?.fileForSource(source) ?? File(source)];
+      for (final file in files) {
+        final path = p.normalize(p.absolute(file.path));
+        if (roots.any((root) => p.isWithin(root, path))) {
+          managedPaths.add(path);
+        }
+      }
+    }
     await _deleteExistingFiles(managedPaths);
   }
 
@@ -119,6 +154,6 @@ class DeviceArchiveImageService implements ArchiveImageService {
 
   static Future<Directory> _defaultImageDirectory() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
-    return Directory(p.join(documentsDirectory.path, 'media', 'archive'));
+    return Directory(p.join(documentsDirectory.path, 'images'));
   }
 }

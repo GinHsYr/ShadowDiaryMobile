@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 
+import '../../core/services/diary_image_store.dart';
 import '../../l10n/app_localizations.dart';
 
 void applyDiaryImageWidth(
@@ -119,7 +118,7 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final file = _resolveFile(widget.source);
+    final file = diaryImageStoreOf(context).fileForSource(widget.source);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -301,14 +300,6 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
       _previewPercentage = percentage.toDouble();
     });
     applyDiaryImageWidth(widget.controller, widget.offset, '$percentage%');
-  }
-
-  static File? _resolveFile(String source) {
-    final uri = Uri.tryParse(source);
-    if (uri == null) return null;
-    if (uri.scheme == 'file') return File(uri.toFilePath());
-    if (uri.scheme.isEmpty) return File(source);
-    return null;
   }
 
   static double _resolvePercentage(String? value, double availableWidth) {

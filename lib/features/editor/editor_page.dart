@@ -15,6 +15,7 @@ import '../../core/diary/diary_entry.dart';
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
 import '../../core/services/diary_image_service.dart';
+import '../../core/services/diary_image_store.dart';
 import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -55,6 +56,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   final _uuid = const Uuid();
 
   late final DiaryRepository _repository;
+  late final DiaryImageCleanup _imageCleanup;
   late final SyncWriteGuard _syncWriteGuard;
   late DateTime _selectedDate;
   late QuillController _quillController;
@@ -84,6 +86,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void initState() {
     super.initState();
     _repository = ref.read(diaryRepositoryProvider);
+    _imageCleanup = ref.read(diaryImageCleanupProvider);
     _syncWriteGuard = ref.read(syncWriteGuardProvider)..beginEditing();
     _selectedDate = DateUtils.dateOnly(widget.initialDate ?? DateTime.now());
     _datePickerExpanded = widget.initialImageSource == null;
@@ -365,6 +368,8 @@ class _EditorPageState extends ConsumerState<EditorPage>
       _showSaveError();
       return;
     }
+    await _imageCleanup.cleanupUnreferenced();
+    if (!mounted) return;
     setState(() => _allowPop = true);
     await Future<void>.delayed(Duration.zero);
     if (!mounted) return;
@@ -427,10 +432,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
       final insertion = Delta();
       if (!startsAtLineBoundary) insertion.insert('\n');
       for (var index = 0; index < images.length; index++) {
-        insertion.insert(
-          BlockEmbed.image(images[index].uri.toString()).toJson(),
-          {Attribute.width.key: '100%'},
-        );
+        insertion.insert(BlockEmbed.image(images[index].source).toJson(), {
+          Attribute.width.key: '100%',
+        });
         if (index < images.length - 1 || !endsAtLineBoundary) {
           insertion.insert('\n');
         }
@@ -479,7 +483,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void dispose() {
     _saveDebounce?.cancel();
     unawaited(
-      _saveCurrent(updateUi: false).whenComplete(_syncWriteGuard.endEditing),
+      _saveCurrent(updateUi: false).whenComplete(() async {
+        await _imageCleanup.cleanupUnreferenced();
+        _syncWriteGuard.endEditing();
+      }),
     );
     final documentChanges = _documentChanges;
     if (documentChanges != null) unawaited(documentChanges.cancel());

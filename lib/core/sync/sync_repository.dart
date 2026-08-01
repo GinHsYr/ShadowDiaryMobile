@@ -8,6 +8,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../services/diary_image_store.dart';
 import 'sync_models.dart';
 
 class SyncAsset {
@@ -51,6 +52,7 @@ class SyncRepository {
     this.deviceId, {
     Uuid? uuid,
     Future<Directory> Function()? loadSyncMediaDirectory,
+    this._imageStore,
   }) : _uuid = uuid ?? const Uuid(),
        _loadSyncMediaDirectory =
            loadSyncMediaDirectory ?? _defaultSyncMediaDirectory;
@@ -59,6 +61,7 @@ class SyncRepository {
   final String deviceId;
   final Uuid _uuid;
   final Future<Directory> Function() _loadSyncMediaDirectory;
+  final DiaryImageStore? _imageStore;
   final Sha256 _sha256 = Sha256();
 
   Database get _db => _appDatabase.database;
@@ -370,13 +373,20 @@ class SyncRepository {
       candidates.addAll(_decodeStringList(row['images'] as String?));
     }
     for (final source in candidates) {
-      final localPath = _localPathFromSource(source);
       final assetId = _assetIdFromSource(source);
-      if (localPath != null &&
-          assetId != null &&
-          referencedIds.contains(assetId)) {
-        pathsById.putIfAbsent(assetId, () => localPath);
+      if (assetId == null || !referencedIds.contains(assetId)) continue;
+      final localPath = _localPathFromSource(source);
+      final resolvedFile = localPath == null
+          ? _imageStore?.fileForSource(source)
+          : File(localPath);
+      if (resolvedFile != null) {
+        pathsById.putIfAbsent(assetId, () => resolvedFile.path);
       }
+    }
+    for (final assetId in referencedIds) {
+      if (pathsById.containsKey(assetId)) continue;
+      final file = await _assetFile(assetId);
+      pathsById[assetId] = file.path;
     }
 
     final assets = <SyncAsset>[];
@@ -399,8 +409,7 @@ class SyncRepository {
   }
 
   Future<bool> hasAsset(String id, String expectedHash) async {
-    final directory = await _loadSyncMediaDirectory();
-    final file = File(p.join(directory.path, _safeAssetFileName(id)));
+    final file = await _assetFile(id);
     if (!await file.exists()) return false;
     final digest = await _sha256.hash(await file.readAsBytes());
     return _hex(digest.bytes) == expectedHash.toLowerCase();
@@ -418,12 +427,19 @@ class SyncRepository {
     if (actual != expectedHash.toLowerCase()) {
       throw const FormatException('Sync asset hash mismatch.');
     }
-    final directory = await _loadSyncMediaDirectory();
-    await directory.create(recursive: true);
-    final target = File(p.join(directory.path, _safeAssetFileName(id)));
+    final target = await _assetFile(id);
+    await target.parent.create(recursive: true);
+    if (await target.exists()) {
+      final current = _hex(
+        (await _sha256.hash(await target.readAsBytes())).bytes,
+      );
+      if (current == actual) return;
+      throw const FormatException(
+        'Sync asset identifier is already used by different content.',
+      );
+    }
     final temporary = File('${target.path}.part');
     await temporary.writeAsBytes(bytes, flush: true);
-    if (await target.exists()) await target.delete();
     await temporary.rename(target.path);
   }
 
@@ -542,7 +558,7 @@ class SyncRepository {
     Map<String, Object?> payload,
   ) async {
     final id = payload['id']! as String;
-    final content = await _localizeMediaSources(payload['content']! as String);
+    final content = _canonicalizeMediaSources(payload['content']! as String);
     await transaction.insert('diary_entries', {
       'id': id,
       'title': payload['title'] as String? ?? '',
@@ -589,11 +605,11 @@ class SyncRepository {
     final rawImages = payload['images'] is List
         ? (payload['images']! as List).whereType<String>()
         : const <String>[];
-    final localizedImages = <String>[];
+    final canonicalImages = <String>[];
     for (final image in rawImages) {
       final canonical = _canonicalizeOptionalSource(image);
       if (canonical != null) {
-        localizedImages.add(await _localizeMediaSources(canonical));
+        canonicalImages.add(canonical);
       }
     }
     final mainImage = _canonicalizeOptionalSource(
@@ -605,10 +621,8 @@ class SyncRepository {
       'alias': aliases.isEmpty ? null : aliases.join(', '),
       'description': payload['description'] as String?,
       'type': payload['type'] as String? ?? 'other',
-      'main_image': mainImage == null
-          ? null
-          : await _localizeMediaSources(mainImage),
-      'images': jsonEncode(localizedImages),
+      'main_image': mainImage,
+      'images': jsonEncode(canonicalImages),
       'created_at': (payload['createdAt']! as num).toInt(),
       'updated_at': (payload['updatedAt']! as num).toInt(),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -834,20 +848,6 @@ class SyncRepository {
     return null;
   }
 
-  Future<String> _localizeMediaSources(String value) async {
-    final directory = await _loadSyncMediaDirectory();
-    await directory.create(recursive: true);
-    return value.replaceAllMapped(
-      RegExp(
-        r'diary-image://([a-f0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
-        caseSensitive: false,
-      ),
-      (match) => Uri.file(
-        p.join(directory.path, _safeAssetFileName(match.group(1)!)),
-      ).toString(),
-    );
-  }
-
   String _safeAssetFileName(String id) {
     final normalized = id.toLowerCase();
     if (!RegExp(
@@ -864,6 +864,18 @@ class SyncRepository {
       '.png' => 'image/png',
       _ => 'image/webp',
     };
+  }
+
+  Future<File> _assetFile(String id) async {
+    final fileName = _safeAssetFileName(id);
+    final store = _imageStore;
+    if (store?.documentsDirectory != null) {
+      return store!.fileForParsedSource(
+        diaryImageSourceFromFileName(fileName)!,
+      );
+    }
+    final directory = await _loadSyncMediaDirectory();
+    return File(p.join(directory.path, fileName));
   }
 
   List<String> _decodeStringList(String? value) {

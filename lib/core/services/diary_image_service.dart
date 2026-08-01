@@ -7,15 +7,19 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import 'diary_image_store.dart';
+
 final diaryImageServiceProvider = Provider<DiaryImageService>((ref) {
-  return DeviceDiaryImageService();
+  return DeviceDiaryImageService(
+    imageStore: ref.watch(diaryImageStoreProvider),
+  );
 });
 
 class StoredDiaryImage {
-  const StoredDiaryImage({required this.filePath, required this.uri});
+  const StoredDiaryImage({required this.filePath, required this.source});
 
   final String filePath;
-  final Uri uri;
+  final String source;
 }
 
 abstract interface class DiaryImageService {
@@ -32,10 +36,15 @@ class DeviceDiaryImageService implements DiaryImageService {
     PickDiaryImagePaths? pickImagePaths,
     EncodeDiaryImageAsWebp? encodeWebp,
     LoadDiaryImageDirectory? loadImageDirectory,
+    DiaryImageStore? imageStore,
     this._uuid = const Uuid(),
   }) : _pickImagePaths = pickImagePaths ?? _pickImagesFromGallery,
        _encodeWebp = encodeWebp ?? _encodeAsWebp,
-       _loadImageDirectory = loadImageDirectory ?? _defaultImageDirectory;
+       _loadImageDirectory =
+           loadImageDirectory ??
+           (imageStore == null
+               ? _defaultImageDirectory
+               : () async => imageStore.imageDirectory);
 
   final PickDiaryImagePaths _pickImagePaths;
   final EncodeDiaryImageAsWebp _encodeWebp;
@@ -69,7 +78,9 @@ class DeviceDiaryImageService implements DiaryImageService {
         storedImages.add(
           StoredDiaryImage(
             filePath: destinationPath,
-            uri: Uri.file(destinationPath),
+            source: diaryImageSourceFromFileName(
+              p.basename(destinationPath),
+            )!.source,
           ),
         );
       }
@@ -106,6 +117,6 @@ class DeviceDiaryImageService implements DiaryImageService {
 
   static Future<Directory> _defaultImageDirectory() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
-    return Directory(p.join(documentsDirectory.path, 'media', 'diary'));
+    return Directory(p.join(documentsDirectory.path, 'images'));
   }
 }

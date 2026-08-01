@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:shadow_diary_mobile/core/services/diary_image_service.dart';
 
 void main() {
@@ -56,7 +57,10 @@ void main() {
     expect(encodedDestinations, everyElement(endsWith('.webp')));
     for (var index = 0; index < images.length; index++) {
       expect(images[index].filePath, encodedDestinations[index]);
-      expect(images[index].uri, Uri.file(encodedDestinations[index]));
+      expect(
+        images[index].source,
+        'diary-image://${p.basename(encodedDestinations[index])}',
+      );
       expect(await File(images[index].filePath).exists(), isTrue);
     }
   });

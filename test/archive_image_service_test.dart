@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadow_diary_mobile/core/services/archive_image_service.dart';
+import 'package:shadow_diary_mobile/core/services/diary_image_store.dart';
 import 'package:uuid/uuid.dart';
 
 void main() {
@@ -39,9 +40,14 @@ void main() {
 
     expect(pickerLimit, 2);
     expect(images, hasLength(2));
-    expect(images.every((path) => p.extension(path) == '.webp'), isTrue);
+    expect(images, everyElement(startsWith('diary-image://')));
     expect(images.toSet(), hasLength(2));
-    expect(await File(images.first).exists(), isTrue);
+    final first = parseDiaryImageSource(images.first)!;
+    expect(p.extension(first.fileName), '.webp');
+    expect(
+      await File(p.join(temporaryDirectory.path, first.fileName)).exists(),
+      isTrue,
+    );
   });
 
   test('cleans all attempted outputs when encoding fails', () async {

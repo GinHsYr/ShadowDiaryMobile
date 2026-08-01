@@ -46,4 +46,21 @@ void main() {
     );
     expect(peer.endpoint.toString(), 'ws://[fe80::1234]:43123/sync');
   });
+
+  test('keeps every discovered address as a sync endpoint', () {
+    const peer = SyncPeer(
+      deviceId: 'desktop',
+      name: 'Desktop',
+      host: '192.168.1.8',
+      alternativeHosts: ['2408:8221::8', 'desktop.local'],
+      port: 43123,
+      pairingAvailable: true,
+    );
+
+    expect(peer.endpoints.map((endpoint) => endpoint.toString()), [
+      'ws://192.168.1.8:43123/sync',
+      'ws://[2408:8221::8]:43123/sync',
+      'ws://desktop.local:43123/sync',
+    ]);
+  });
 }

@@ -8,6 +8,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
 import '../../core/media/media_library.dart';
+import '../../core/services/diary_image_store.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -285,7 +286,7 @@ class _MediaImageTile extends StatelessWidget {
             alignment: AlignmentDirectional.bottomEnd,
             children: [
               Image.file(
-                _mediaFile(item.imageSource),
+                _mediaFile(context, item.imageSource),
                 width: double.infinity,
                 fit: BoxFit.fitWidth,
                 filterQuality: FilterQuality.medium,
@@ -550,7 +551,7 @@ class _MediaImageViewerState extends State<_MediaImageViewer> {
             builder: (context, index) {
               final item = widget.items[index];
               return PhotoViewGalleryPageOptions(
-                imageProvider: FileImage(_mediaFile(item.imageSource)),
+                imageProvider: FileImage(_mediaFile(context, item.imageSource)),
                 semanticLabel: l10n.archiveImagePosition(
                   index + 1,
                   widget.items.length,
@@ -725,16 +726,8 @@ class _MediaViewerSourceCard extends StatelessWidget {
   }
 }
 
-File _mediaFile(String source) {
-  final uri = Uri.tryParse(source);
-  if (uri != null && uri.scheme == 'file') {
-    try {
-      return File(uri.toFilePath());
-    } on UnsupportedError {
-      return File(source);
-    }
-  }
-  return File(source);
+File _mediaFile(BuildContext context, String source) {
+  return diaryImageStoreOf(context).fileForSource(source) ?? File(source);
 }
 
 String _mediaSourceTitle(MediaItem item, AppLocalizations l10n) {

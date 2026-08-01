@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
+import '../../core/services/diary_image_store.dart';
 import '../../l10n/app_localizations.dart';
 
 String archiveImageHeroTag(String path) => 'archive-image:$path';
@@ -80,8 +81,10 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
             onPageChanged: (index) => setState(() => _currentIndex = index),
             builder: (context, index) {
               final path = widget.images[index];
+              final imageFile =
+                  diaryImageStoreOf(context).fileForSource(path) ?? File(path);
               return PhotoViewGalleryPageOptions(
-                imageProvider: FileImage(File(path)),
+                imageProvider: FileImage(imageFile),
                 heroAttributes: PhotoViewHeroAttributes(
                   tag: archiveImageHeroTag(path),
                 ),

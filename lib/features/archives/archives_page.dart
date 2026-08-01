@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import '../../core/archives/archive_repository.dart';
 import '../../core/archives/archive_search.dart';
 import '../../core/archives/archive_sort.dart';
 import '../../core/services/archive_image_service.dart';
+import '../../core/services/diary_image_store.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../core/widgets/app_search_field.dart';
@@ -604,6 +604,9 @@ class _ArchiveAvatar extends StatelessWidget {
         ),
       ),
     );
+    final imageFile = archive.mainImage == null
+        ? null
+        : diaryImageStoreOf(context).fileForSource(archive.mainImage!);
     return Container(
       key: Key('archive-avatar-${archive.id}'),
       width: 54,
@@ -613,10 +616,10 @@ class _ArchiveAvatar extends StatelessWidget {
         color: colors.secondaryContainer,
         shape: BoxShape.circle,
       ),
-      child: archive.mainImage == null
+      child: imageFile == null
           ? fallback
           : Image.file(
-              File(archive.mainImage!),
+              imageFile,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => fallback,
             ),

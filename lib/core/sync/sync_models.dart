@@ -36,24 +36,33 @@ class SyncPeer {
     required this.host,
     required this.port,
     required this.pairingAvailable,
+    this.alternativeHosts = const [],
     this.protocolVersion = 1,
   });
 
   final String deviceId;
   final String name;
   final String host;
+  final List<String> alternativeHosts;
   final int port;
   final bool pairingAvailable;
   final int protocolVersion;
 
-  Uri get endpoint {
-    final normalizedHost = host.contains(':') ? '[$host]' : host;
-    return Uri.parse('ws://$normalizedHost:$port/sync');
-  }
+  List<String> get hosts => List.unmodifiable({host, ...alternativeHosts});
+
+  List<Uri> get endpoints => List.unmodifiable(
+    hosts.map(
+      (candidate) =>
+          Uri(scheme: 'ws', host: candidate, port: port, path: '/sync'),
+    ),
+  );
+
+  Uri get endpoint => endpoints.first;
 
   SyncPeer copyWith({
     String? name,
     String? host,
+    List<String>? alternativeHosts,
     int? port,
     bool? pairingAvailable,
     int? protocolVersion,
@@ -62,6 +71,7 @@ class SyncPeer {
       deviceId: deviceId,
       name: name ?? this.name,
       host: host ?? this.host,
+      alternativeHosts: alternativeHosts ?? this.alternativeHosts,
       port: port ?? this.port,
       pairingAvailable: pairingAvailable ?? this.pairingAvailable,
       protocolVersion: protocolVersion ?? this.protocolVersion,

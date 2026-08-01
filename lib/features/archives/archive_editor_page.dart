@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
 import '../../core/services/archive_image_service.dart';
+import '../../core/services/diary_image_store.dart';
 import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -895,6 +896,9 @@ class _MainImagePicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
+    final imageFile = imagePath == null
+        ? null
+        : diaryImageStoreOf(context).fileForSource(imagePath!);
     final placeholder = Container(
       decoration: BoxDecoration(
         color: colors.surfaceContainerHighest,
@@ -934,12 +938,12 @@ class _MainImagePicker extends StatelessWidget {
                 child: InkWell(
                   key: const Key('archive-main-image'),
                   onTap: imagePath == null ? onPick : onPreview,
-                  child: imagePath == null
+                  child: imageFile == null
                       ? placeholder
                       : Hero(
                           tag: archiveImageHeroTag(imagePath!),
                           child: Image.file(
-                            File(imagePath!),
+                            imageFile,
                             width: double.infinity,
                             height: double.infinity,
                             fit: BoxFit.cover,
@@ -1053,6 +1057,8 @@ class _GalleryImageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final imageFile =
+        diaryImageStoreOf(context).fileForSource(path) ?? File(path);
     return Stack(
       children: [
         Material(
@@ -1065,7 +1071,7 @@ class _GalleryImageTile extends StatelessWidget {
             child: Hero(
               tag: archiveImageHeroTag(path),
               child: Image.file(
-                File(path),
+                imageFile,
                 width: double.infinity,
                 fit: BoxFit.fitWidth,
                 frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
