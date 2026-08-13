@@ -362,7 +362,10 @@ class SyncRepository {
     final candidates = <String>[];
     final diaryRows = await _db.query('diary_entries', columns: ['content']);
     for (final row in diaryRows) {
-      candidates.addAll(_extractLocalImageSources(row['content'] as String?));
+      final content = row['content'] as String?;
+      if (content != null) {
+        candidates.addAll(diaryImageSourcesFromHtml(content));
+      }
     }
     final archiveRows = await _db.query(
       'archives',
@@ -376,11 +379,20 @@ class SyncRepository {
       final assetId = _assetIdFromSource(source);
       if (assetId == null || !referencedIds.contains(assetId)) continue;
       final localPath = _localPathFromSource(source);
-      final resolvedFile = localPath == null
-          ? _imageStore?.fileForSource(source)
-          : File(localPath);
-      if (resolvedFile != null) {
-        pathsById.putIfAbsent(assetId, () => resolvedFile.path);
+      File? resolvedFile;
+      if (localPath != null) {
+        final localFile = File(localPath);
+        if (await localFile.exists()) resolvedFile = localFile;
+      }
+      final managedSource = diaryImageSourceFromFileName(assetId);
+      if (resolvedFile == null &&
+          managedSource != null &&
+          _imageStore?.documentsDirectory != null) {
+        resolvedFile = _imageStore!.fileForParsedSource(managedSource);
+      }
+      final file = resolvedFile;
+      if (file != null && await file.exists()) {
+        pathsById.putIfAbsent(assetId, () => file.path);
       }
     }
     for (final assetId in referencedIds) {
@@ -438,6 +450,11 @@ class SyncRepository {
         'Sync asset identifier is already used by different content.',
       );
     }
+    final store = _imageStore;
+    if (store?.documentsDirectory != null) {
+      await store!.writeAsset(id, bytes);
+      return;
+    }
     final temporary = File('${target.path}.part');
     await temporary.writeAsBytes(bytes, flush: true);
     await temporary.rename(target.path);
@@ -469,7 +486,9 @@ class SyncRepository {
       final payload = <String, Object?>{
         'id': row['id']! as String,
         'title': row['title']! as String,
-        'content': _canonicalizeMediaSources(row['content']! as String),
+        'content': canonicalizeDiaryImageSourcesInHtml(
+          row['content']! as String,
+        ),
         'plainContent': row['plain_content']! as String,
         'mood': row['mood']! as String,
         'weather': row['weather'] as String?,
@@ -558,7 +577,9 @@ class SyncRepository {
     Map<String, Object?> payload,
   ) async {
     final id = payload['id']! as String;
-    final content = _canonicalizeMediaSources(payload['content']! as String);
+    final content = canonicalizeDiaryImageSourcesInHtml(
+      payload['content']! as String,
+    );
     await transaction.insert('diary_entries', {
       'id': id,
       'title': payload['title'] as String? ?? '',
@@ -740,7 +761,12 @@ class SyncRepository {
   ) {
     if (payload == null) return null;
     final normalized = Map<String, Object?>.of(payload);
-    if (entityType != SyncEntityType.archive) return normalized;
+    if (entityType == SyncEntityType.diary) {
+      if (payload['content'] case final String content) {
+        normalized['content'] = canonicalizeDiaryImageSourcesInHtml(content);
+      }
+      return normalized;
+    }
 
     normalized['mainImage'] = _canonicalizeOptionalSource(
       payload['mainImage'] is String ? payload['mainImage']! as String : null,
@@ -771,91 +797,41 @@ class SyncRepository {
     return jsonEncode(value);
   }
 
-  String _canonicalizeMediaSources(String value) {
-    return value.replaceAllMapped(
-      RegExp(
-        r'''(?:file:(?://)?[^"'<>\s]*|[A-Za-z]:[\\/][^"'<>\s]*)'''
-        r'([a-fA-F0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
-        caseSensitive: false,
-      ),
-      (match) => 'diary-image://${match.group(1)!.toLowerCase()}',
-    );
-  }
-
   String? _canonicalizeOptionalSource(String? value) {
     final normalized = value?.trim();
     if (normalized == null || normalized.isEmpty) return null;
-    final id = _assetIdFromSource(normalized);
-    return id == null ? normalized : 'diary-image://$id';
-  }
-
-  Iterable<String> _extractLocalImageSources(String? content) sync* {
-    if (content == null || content.isEmpty) return;
-    final matches = RegExp(
-      r'''(?:src|data-src)=["']([^"']+)["']''',
-      caseSensitive: false,
-    ).allMatches(content);
-    for (final match in matches) {
-      final source = match.group(1);
-      if (source != null) yield source;
-    }
+    return canonicalDiaryImageSource(normalized) ?? normalized;
   }
 
   Iterable<String> _canonicalAssetIds(Map<String, Object?> payload) sync* {
     final values = <String>[];
     if (payload['content'] case final String content) {
-      values.addAll(_extractLocalImageSources(content));
+      values.addAll(diaryImageSourcesFromHtml(content));
     }
     if (payload['mainImage'] case final String mainImage) values.add(mainImage);
     if (payload['images'] case final List images) {
       values.addAll(images.whereType<String>());
     }
     for (final value in values) {
-      final matches = RegExp(
-        r'diary-image://([a-f0-9-]{36}(?:_thumb\.webp|\.(?:webp|png|jpe?g)))',
-        caseSensitive: false,
-      ).allMatches(value);
-      for (final match in matches) {
-        yield match.group(1)!.toLowerCase();
-      }
+      final parsed = diaryImageSourceFromSource(value);
+      if (parsed != null) yield parsed.fileName;
     }
   }
 
   String? _assetIdFromSource(String source) {
-    const assetScheme = 'diary-image://';
-    final normalized = source.trim();
-    final filename = normalized.toLowerCase().startsWith(assetScheme)
-        ? normalized.substring(assetScheme.length).toLowerCase()
-        : normalized.replaceAll('\\', '/').split('/').last.toLowerCase();
-    return RegExp(
-          r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb\.webp|\.(?:webp|png|jpe?g))$',
-        ).hasMatch(filename)
-        ? filename
-        : null;
+    return diaryImageSourceFromSource(source)?.fileName;
   }
 
   String? _localPathFromSource(String source) {
-    if (RegExp(r'^[A-Za-z]:[\\/]').hasMatch(source)) return source;
-    final uri = Uri.tryParse(source);
-    if (uri?.scheme == 'file') {
-      try {
-        return uri!.toFilePath();
-      } on Object {
-        return null;
-      }
-    }
-    if (uri == null || uri.scheme.isEmpty) return source;
-    return null;
+    return localPathFromImageSource(source);
   }
 
   String _safeAssetFileName(String id) {
-    final normalized = id.toLowerCase();
-    if (!RegExp(
-      r'^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}(?:_thumb\.webp|\.(?:webp|png|jpe?g))$',
-    ).hasMatch(normalized)) {
+    final parsed = diaryImageSourceFromFileName(id);
+    if (parsed == null) {
       throw const FormatException('Invalid sync asset identifier.');
     }
-    return normalized;
+    return parsed.fileName;
   }
 
   String _syncAssetMimeType(String id) {

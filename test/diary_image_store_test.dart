@@ -65,6 +65,44 @@ void main() {
         p.join(documents.path, 'thumbnails', '${_imageId}_thumb.webp'),
       );
     });
+
+    test('canonicalizes only image attributes without moving their tags', () {
+      const secondId = '223e4567-e89b-42d3-a456-426614174001';
+      const remoteHtml =
+          '<p>Before</p>'
+          '<p><img alt="first" '
+          'src="file:///C:/Shadow%20Diary/images/$_imageId.webp" '
+          'style="width:50%"></p>'
+          '<p>Between $_imageId.webp</p>'
+          "<p><img data-src='/data/user/0/app/images/$secondId.PNG'></p>"
+          '<a href="file:///C:/ShadowDiary/images/$_imageId.webp">After</a>';
+
+      final canonical = canonicalizeDiaryImageSourcesInHtml(remoteHtml);
+
+      expect(
+        canonical,
+        '<p>Before</p>'
+        '<p><img alt="first" src="diary-image://$_imageId.webp" '
+        'style="width:50%"></p>'
+        '<p>Between $_imageId.webp</p>'
+        "<p><img data-src='diary-image://$secondId.png'></p>"
+        '<a href="file:///C:/ShadowDiary/images/$_imageId.webp">After</a>',
+      );
+      expect(diaryImageSourcesFromHtml(canonical), [
+        'diary-image://$_imageId.webp',
+        'diary-image://$secondId.png',
+      ]);
+      expect(canonicalizeDiaryImageSourcesInHtml(canonical), canonical);
+    });
+
+    test('leaves remote URLs and malformed local sources unchanged', () {
+      const html =
+          '<img src="https://example.com/photo.webp">'
+          '<img src="file:///tmp/not-a-managed-name.webp?size=small">'
+          '<img aria-src="C:\\images\\$_imageId.webp">';
+
+      expect(canonicalizeDiaryImageSourcesInHtml(html), html);
+    });
   });
 
   test('migrates managed files and all persisted image references', () async {

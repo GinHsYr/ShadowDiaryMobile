@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:shadow_diary_mobile/core/database/app_database.dart';
+import 'package:shadow_diary_mobile/core/services/diary_image_store.dart';
 import 'package:shadow_diary_mobile/core/sync/sync_models.dart';
 import 'package:shadow_diary_mobile/core/sync/sync_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -232,6 +234,198 @@ void main() {
       expect(snapshot.payload!['mainImage'], 'diary-image://$mainImageId');
       expect(snapshot.payload!['images'], ['diary-image://$galleryImageId']);
       expect(snapshot.versionVector, {'phone-device': 1, 'desktop-device': 1});
+    },
+  );
+
+  test(
+    'normalizes equivalent diary image locations before comparing',
+    () async {
+      const imageId = '123e4567-e89b-42d3-a456-426614174000.webp';
+      await _insertDiary(database, title: 'Same image');
+      await database.database.update(
+        'diary_entries',
+        {
+          'content':
+              '<p>Before</p>'
+              '<p><img src="/data/user/0/app/images/$imageId" '
+              'style="width:60%"></p>'
+              '<p>After</p>',
+        },
+        where: 'id = ?',
+        whereArgs: ['diary-1'],
+      );
+      final local = (await repository.prepareSnapshot()).single;
+      expect(
+        local.payload!['content'],
+        '<p>Before</p>'
+        '<p><img src="diary-image://$imageId" style="width:60%"></p>'
+        '<p>After</p>',
+      );
+      final remotePayload = <String, Object?>{
+        ...local.payload!,
+        'content':
+            '<p>Before</p>'
+            '<p><img src="file:///C:/Shadow%20Diary/images/$imageId" '
+            'style="width:60%"></p>'
+            '<p>After</p>',
+        'updatedAt': 200,
+      };
+
+      final result = await repository.reconcileRemote([
+        SyncRecord(
+          entityType: SyncEntityType.diary,
+          entityId: 'diary-1',
+          versionVector: const {'desktop-device': 1},
+          contentHash: List.filled(64, 'e').join(),
+          modifiedAt: 200,
+          payload: remotePayload,
+        ),
+      ], 'desktop-device');
+
+      expect(result.conflicts, isEmpty);
+      expect(result.appliedCount, 1);
+      final row = (await database.database.query(
+        'diary_entries',
+        where: 'id = ?',
+        whereArgs: ['diary-1'],
+      )).single;
+      expect(
+        row['content'],
+        '<p>Before</p>'
+        '<p><img src="diary-image://$imageId" style="width:60%"></p>'
+        '<p>After</p>',
+      );
+    },
+  );
+
+  test(
+    'applies synchronized diary images at their original HTML positions',
+    () async {
+      const firstId = '123e4567-e89b-42d3-a456-426614174000.webp';
+      const secondId = '223e4567-e89b-42d3-a456-426614174001.jpg';
+      const content =
+          '<p>Before</p>'
+          '<p><img src="file:///C:/Shadow%20Diary/images/$firstId" '
+          'style="width:40%"></p>'
+          '<p>Between</p>'
+          "<p><img data-src='/data/user/0/app/images/$secondId'></p>"
+          '<p>After</p>';
+      final payload = <String, Object?>{
+        'id': 'diary-remote-images',
+        'title': 'Synced images',
+        'content': content,
+        'plainContent': 'Before Between After',
+        'mood': 'calm',
+        'weather': null,
+        'calendarDate': '2026-08-13',
+        'createdAt': DateTime.utc(2026, 8, 13).millisecondsSinceEpoch,
+        'updatedAt': 20,
+        'tags': <String>[],
+      };
+
+      final result = await repository.reconcileRemote([
+        SyncRecord(
+          entityType: SyncEntityType.diary,
+          entityId: 'diary-remote-images',
+          versionVector: const {'desktop-device': 1},
+          contentHash: List.filled(64, 'a').join(),
+          modifiedAt: 20,
+          payload: payload,
+        ),
+      ], 'desktop-device');
+
+      expect(result.appliedCount, 1);
+      final row = (await database.database.query(
+        'diary_entries',
+        where: 'id = ?',
+        whereArgs: ['diary-remote-images'],
+      )).single;
+      expect(
+        row['content'],
+        '<p>Before</p>'
+        '<p><img src="diary-image://$firstId" style="width:40%"></p>'
+        '<p>Between</p>'
+        "<p><img data-src='diary-image://$secondId'></p>"
+        '<p>After</p>',
+      );
+    },
+  );
+
+  test('stores received assets in the managed diary image library', () async {
+    const imageId = '123e4567-e89b-42d3-a456-426614174000.webp';
+    const thumbnailId = '123e4567-e89b-42d3-a456-426614174000_thumb.webp';
+    const bytes = <int>[97, 98, 99];
+    const hash =
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+    final documents = await Directory.systemTemp.createTemp(
+      'shadow-diary-sync-managed-images-',
+    );
+    addTearDown(() async {
+      if (await documents.exists()) await documents.delete(recursive: true);
+    });
+    final store = DiaryImageStore(documents);
+    final managedRepository = SyncRepository(
+      database,
+      'phone-device',
+      imageStore: store,
+      loadSyncMediaDirectory: () async => mediaDirectory,
+    );
+
+    await managedRepository.storeAsset(imageId, bytes, hash);
+    await managedRepository.storeAsset(thumbnailId, bytes, hash);
+
+    expect(
+      await File(p.join(store.imageDirectory.path, imageId)).readAsBytes(),
+      bytes,
+    );
+    expect(
+      await File(
+        p.join(store.thumbnailDirectory.path, thumbnailId),
+      ).readAsBytes(),
+      bytes,
+    );
+    expect(await File(p.join(mediaDirectory.path, imageId)).exists(), isFalse);
+  });
+
+  test(
+    'collects managed assets when a persisted source has a foreign path',
+    () async {
+      const imageId = '123e4567-e89b-42d3-a456-426614174000.webp';
+      const bytes = <int>[97, 98, 99];
+      final documents = await Directory.systemTemp.createTemp(
+        'shadow-diary-sync-collect-images-',
+      );
+      addTearDown(() async {
+        if (await documents.exists()) await documents.delete(recursive: true);
+      });
+      final store = DiaryImageStore(documents);
+      final managedRepository = SyncRepository(
+        database,
+        'phone-device',
+        imageStore: store,
+        loadSyncMediaDirectory: () async => mediaDirectory,
+      );
+      await store.writeAsset(imageId, bytes);
+      await database.database.insert('diary_entries', {
+        'id': 'diary-foreign-image',
+        'title': 'Foreign image path',
+        'content': '<p><img src="C:\\Desktop\\images\\$imageId"></p>',
+        'plain_content': '',
+        'mood': 'calm',
+        'created_at': 1,
+        'updated_at': 1,
+      });
+
+      final snapshot = await managedRepository.prepareSnapshot();
+      final assets = await managedRepository.collectAssets(snapshot);
+
+      expect(assets.single.id, imageId);
+      expect(assets.single.path, p.join(store.imageDirectory.path, imageId));
+      expect(await File(assets.single.path).readAsBytes(), bytes);
+      expect(
+        snapshot.single.payload!['content'],
+        '<p><img src="diary-image://$imageId"></p>',
+      );
     },
   );
 

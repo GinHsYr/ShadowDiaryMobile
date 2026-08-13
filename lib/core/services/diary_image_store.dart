@@ -34,7 +34,12 @@ final RegExp _diaryImageFileNamePattern = RegExp(
 );
 
 final RegExp _htmlImageSourcePattern = RegExp(
-  r'''((?:src|data-src)\s*=\s*(["']))([^"']+)(\2)''',
+  r'''(\s+(?:data-src|src)\s*=\s*(["']))([^"']+)(\2)''',
+  caseSensitive: false,
+);
+
+final RegExp _htmlImageTagPattern = RegExp(
+  r'''<img\b(?:[^>"']+|"[^"]*"|'[^']*')*>''',
   caseSensitive: false,
 );
 
@@ -99,9 +104,45 @@ DiaryImageSource? parseDiaryImageSource(String? source) {
 }
 
 DiaryImageSource? diaryImageSourceFromFileName(String fileName) {
-  return parseDiaryImageSource(
-    '$diaryImageSchemePrefix${p.basename(fileName)}',
-  );
+  if (fileName != p.basename(fileName) ||
+      fileName.contains('/') ||
+      fileName.contains('\\')) {
+    return null;
+  }
+  return parseDiaryImageSource('$diaryImageSchemePrefix$fileName');
+}
+
+DiaryImageSource? diaryImageSourceFromSource(String? source) {
+  final normalized = source?.trim();
+  if (normalized == null || normalized.isEmpty) return null;
+  return parseDiaryImageSource(normalized) ??
+      diaryImageSourceFromFileName(_fileNameFromSource(normalized) ?? '');
+}
+
+String? canonicalDiaryImageSource(String? source) {
+  return diaryImageSourceFromSource(source)?.source;
+}
+
+Iterable<String> diaryImageSourcesFromHtml(String html) sync* {
+  for (final tagMatch in _htmlImageTagPattern.allMatches(html)) {
+    final tag = tagMatch.group(0)!;
+    for (final sourceMatch in _htmlImageSourcePattern.allMatches(tag)) {
+      final source = sourceMatch.group(3);
+      if (source != null && source.trim().isNotEmpty) yield source;
+    }
+  }
+}
+
+String canonicalizeDiaryImageSourcesInHtml(String html) {
+  return html.replaceAllMapped(_htmlImageTagPattern, (tagMatch) {
+    final tag = tagMatch.group(0)!;
+    return tag.replaceAllMapped(_htmlImageSourcePattern, (sourceMatch) {
+      final source = sourceMatch.group(3)!;
+      final canonical = canonicalDiaryImageSource(source);
+      if (canonical == null) return sourceMatch.group(0)!;
+      return '${sourceMatch.group(1)}$canonical${sourceMatch.group(4)}';
+    });
+  });
 }
 
 class DiaryImageStore {
@@ -168,9 +209,7 @@ class DiaryImageStore {
   }
 
   Future<bool> isReferenced(AppDatabase appDatabase, String source) async {
-    final parsed =
-        parseDiaryImageSource(source) ??
-        diaryImageSourceFromFileName(_fileNameFromSource(source) ?? '');
+    final parsed = diaryImageSourceFromSource(source);
     if (parsed == null) return false;
     return (await _referencedImageIds(appDatabase)).contains(parsed.imageId);
   }
@@ -199,9 +238,7 @@ class DiaryImageStore {
       }
     } else {
       for (final source in candidates) {
-        final parsed =
-            parseDiaryImageSource(source) ??
-            diaryImageSourceFromFileName(_fileNameFromSource(source) ?? '');
+        final parsed = diaryImageSourceFromSource(source);
         if (parsed != null) candidateIds.add(parsed.imageId);
       }
     }
@@ -248,10 +285,10 @@ class DiaryImageStore {
       columns: ['content'],
     );
     for (final row in diaryRows) {
-      for (final source in _imageSourcesFromHtml(row['content']! as String)) {
-        final parsed =
-            parseDiaryImageSource(source) ??
-            diaryImageSourceFromFileName(_fileNameFromSource(source) ?? '');
+      for (final source in diaryImageSourcesFromHtml(
+        row['content']! as String,
+      )) {
+        final parsed = diaryImageSourceFromSource(source);
         if (parsed != null) ids.add(parsed.imageId);
       }
     }
@@ -265,9 +302,7 @@ class DiaryImageStore {
         ..._decodeStringList(row['images']),
       ];
       for (final source in sources) {
-        final parsed =
-            parseDiaryImageSource(source) ??
-            diaryImageSourceFromFileName(_fileNameFromSource(source) ?? '');
+        final parsed = diaryImageSourceFromSource(source);
         if (parsed != null) ids.add(parsed.imageId);
       }
     }
@@ -313,7 +348,7 @@ class DiaryImageStore {
 
     final sources = <String>{};
     for (final row in diaryRows) {
-      sources.addAll(_imageSourcesFromHtml(row['content']! as String));
+      sources.addAll(diaryImageSourcesFromHtml(row['content']! as String));
     }
     for (final row in archiveRows) {
       if (row['main_image'] case final String source) sources.add(source);
@@ -328,9 +363,7 @@ class DiaryImageStore {
     final replacements = <String, String>{};
     final migratedLegacyFiles = <String>{};
     for (final source in sources) {
-      final parsed =
-          parseDiaryImageSource(source) ??
-          diaryImageSourceFromFileName(_fileNameFromSource(source) ?? '');
+      final parsed = diaryImageSourceFromSource(source);
       if (parsed == null) continue;
 
       final target = fileForParsedSource(parsed);
@@ -507,24 +540,30 @@ String? localPathFromImageSource(String source) {
 }
 
 String? _fileNameFromSource(String source) {
-  final localPath = localPathFromImageSource(source);
-  if (localPath == null) return null;
-  return localPath.replaceAll('\\', '/').split('/').last;
-}
-
-Iterable<String> _imageSourcesFromHtml(String html) sync* {
-  for (final match in _htmlImageSourcePattern.allMatches(html)) {
-    final source = match.group(3);
-    if (source != null && source.trim().isNotEmpty) yield source;
+  final normalized = source.trim();
+  if (normalized.isEmpty) return null;
+  if (RegExp(r'^[A-Za-z]:[\\/]').hasMatch(normalized)) {
+    return normalized.replaceAll('\\', '/').split('/').last;
   }
+
+  final uri = Uri.tryParse(normalized);
+  if (uri == null || uri.hasQuery || uri.hasFragment) return null;
+  if (uri.scheme == 'file') {
+    return uri.pathSegments.isEmpty ? null : uri.pathSegments.last;
+  }
+  if (uri.scheme.isNotEmpty) return null;
+  return normalized.replaceAll('\\', '/').split('/').last;
 }
 
 String _rewriteHtmlImageSources(String html, Map<String, String> replacements) {
-  return html.replaceAllMapped(_htmlImageSourcePattern, (match) {
-    final source = match.group(3)!;
-    final replacement = replacements[source];
-    if (replacement == null) return match.group(0)!;
-    return '${match.group(1)}$replacement${match.group(4)}';
+  return html.replaceAllMapped(_htmlImageTagPattern, (tagMatch) {
+    final tag = tagMatch.group(0)!;
+    return tag.replaceAllMapped(_htmlImageSourcePattern, (sourceMatch) {
+      final source = sourceMatch.group(3)!;
+      final replacement = replacements[source];
+      if (replacement == null) return sourceMatch.group(0)!;
+      return '${sourceMatch.group(1)}$replacement${sourceMatch.group(4)}';
+    });
   });
 }
 
