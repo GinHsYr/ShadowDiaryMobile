@@ -17,7 +17,7 @@ class BonsoirSyncDiscoveryService implements SyncDiscoveryService {
   BonsoirSyncDiscoveryService({BonsoirDiscovery Function()? createDiscovery})
     : _createDiscovery =
           createDiscovery ??
-          (() => BonsoirDiscovery(type: '_shadowdiary._tcp'));
+          (() => BonsoirDiscovery(type: 'shadowdiary'));
 
   final BonsoirDiscovery Function() _createDiscovery;
   final StreamController<List<SyncPeer>> _peerController =
