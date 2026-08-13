@@ -146,6 +146,10 @@ List<String> syncHostsFromService(
       return;
     }
     if (parsed.type == InternetAddressType.IPv4) {
+      if (parsed.address.startsWith('172.25.')) {
+        other.add(address);
+        return;
+      }
       ipv4.add(address);
       return;
     }
