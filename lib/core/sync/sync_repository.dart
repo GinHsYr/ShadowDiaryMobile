@@ -8,6 +8,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../database/app_database.dart';
+import '../services/diary_image_debug_trace.dart';
 import '../services/diary_image_store.dart';
 import 'sync_models.dart';
 
@@ -422,9 +423,27 @@ class SyncRepository {
 
   Future<bool> hasAsset(String id, String expectedHash) async {
     final file = await _assetFile(id);
-    if (!await file.exists()) return false;
+    if (!await file.exists()) {
+      DiaryImageDebugTrace.fileState(
+        'asset.has.missing',
+        assetId: id,
+        file: file,
+        fields: {'sha256': DiaryImageDebugTrace.hashPrefix(expectedHash)},
+      );
+      return false;
+    }
     final digest = await _sha256.hash(await file.readAsBytes());
-    return _hex(digest.bytes) == expectedHash.toLowerCase();
+    final matches = _hex(digest.bytes) == expectedHash.toLowerCase();
+    DiaryImageDebugTrace.fileState(
+      'asset.has.result',
+      assetId: id,
+      file: file,
+      fields: {
+        'sha256': DiaryImageDebugTrace.hashPrefix(expectedHash),
+        'matches': matches,
+      },
+    );
+    return matches;
   }
 
   Future<void> storeAsset(
@@ -432,6 +451,11 @@ class SyncRepository {
     List<int> bytes,
     String expectedHash,
   ) async {
+    DiaryImageDebugTrace.event('asset.store.received', {
+      'asset': id,
+      'bytes': bytes.length,
+      'sha256': DiaryImageDebugTrace.hashPrefix(expectedHash),
+    });
     if (bytes.length > 32 * 1024 * 1024) {
       throw const FormatException('Sync asset exceeds 32 MiB.');
     }
@@ -440,6 +464,11 @@ class SyncRepository {
       throw const FormatException('Sync asset hash mismatch.');
     }
     final target = await _assetFile(id);
+    DiaryImageDebugTrace.fileState(
+      'asset.store.target',
+      assetId: id,
+      file: target,
+    );
     await target.parent.create(recursive: true);
     if (await target.exists()) {
       final current = _hex(
@@ -453,11 +482,21 @@ class SyncRepository {
     final store = _imageStore;
     if (store?.documentsDirectory != null) {
       await store!.writeAsset(id, bytes);
+      DiaryImageDebugTrace.fileState(
+        'asset.store.managed.complete',
+        assetId: id,
+        file: target,
+      );
       return;
     }
     final temporary = File('${target.path}.part');
     await temporary.writeAsBytes(bytes, flush: true);
     await temporary.rename(target.path);
+    DiaryImageDebugTrace.fileState(
+      'asset.store.fallback.complete',
+      assetId: id,
+      file: target,
+    );
   }
 
   Future<List<SyncRecord>> _readDiaryRecords() async {
@@ -577,9 +616,28 @@ class SyncRepository {
     Map<String, Object?> payload,
   ) async {
     final id = payload['id']! as String;
-    final content = canonicalizeDiaryImageSourcesInHtml(
-      payload['content']! as String,
-    );
+    final remoteContent = payload['content']! as String;
+    final content = canonicalizeDiaryImageSourcesInHtml(remoteContent);
+    if (DiaryImageDebugTrace.enabled) {
+      final sources = diaryImageSourcesFromHtml(
+        content,
+      ).toList(growable: false);
+      DiaryImageDebugTrace.event('diary.apply.images', {
+        'diary': id,
+        'sources': sources.join(','),
+        'sourceCount': sources.length,
+        'canonicalized': remoteContent != content,
+      });
+      for (final source in sources) {
+        final parsed = diaryImageSourceFromSource(source);
+        DiaryImageDebugTrace.fileState(
+          'diary.apply.image.file',
+          assetId: parsed?.fileName ?? source,
+          file: parsed == null ? null : await _assetFile(parsed.fileName),
+          fields: {'source': source},
+        );
+      }
+    }
     await transaction.insert('diary_entries', {
       'id': id,
       'title': payload['title'] as String? ?? '',

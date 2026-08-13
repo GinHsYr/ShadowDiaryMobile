@@ -7,6 +7,8 @@ import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../services/diary_image_debug_trace.dart';
+import '../services/diary_image_store.dart';
 import 'sync_crypto.dart';
 import 'sync_models.dart';
 import 'sync_repository.dart';
@@ -71,10 +73,15 @@ class ShadowSyncClient {
       throw const FormatException('Pairing code must contain six digits.');
     }
 
+    DiaryImageDebugTrace.beginPair(
+      peerId: peer.deviceId,
+      endpointCount: peer.endpoints.length,
+    );
     final ephemeral = await _crypto.newEphemeralKeyPair();
     final clientPublic = base64Encode(ephemeral.publicKey);
     final connection = await _open(peer);
     try {
+      DiaryImageDebugTrace.event('pair.connection.opened');
       connection.sendPlain({
         'kind': 'hello',
         'protocol': 1,
@@ -86,6 +93,10 @@ class ShadowSyncClient {
       final challenge = await connection.nextPlain();
       _expectKind(challenge, 'pairChallenge');
       final serverId = challenge['serverId']! as String;
+      DiaryImageDebugTrace.event('pair.challenge.accepted', {
+        'server': serverId,
+        'matchesDiscoveredPeer': serverId == peer.deviceId,
+      });
       if (serverId != peer.deviceId) {
         throw const FormatException('Discovered peer identity changed.');
       }
@@ -120,8 +131,13 @@ class ShadowSyncClient {
       );
       await secureStore.savePeerSecret(stored);
       await repository.rememberPeer(id: stored.deviceId, name: stored.name);
+      DiaryImageDebugTrace.event('pair.complete', {'peer': stored.deviceId});
       return stored;
+    } on Object catch (error) {
+      DiaryImageDebugTrace.error('pair.failed', error, {'peer': peer.deviceId});
+      rethrow;
     } finally {
+      DiaryImageDebugTrace.event('pair.connection.closing');
       await connection.close();
     }
   }
@@ -134,9 +150,17 @@ class ShadowSyncClient {
     if (peer.deviceId != pairedPeer.deviceId) {
       throw const FormatException('Paired peer identity mismatch.');
     }
+    DiaryImageDebugTrace.beginSync(
+      peerId: peer.deviceId,
+      endpointCount: peer.endpoints.length,
+    );
+    DiaryImageDebugTrace.event('sync.connecting', {
+      'endpoints': peer.endpoints.join(','),
+    });
     final connection = await _open(peer);
     var transferredBytes = 0;
     try {
+      DiaryImageDebugTrace.event('sync.connection.opened');
       connection.sendPlain({
         'kind': 'hello',
         'protocol': 1,
@@ -148,6 +172,10 @@ class ShadowSyncClient {
       _expectKind(challenge, 'authChallenge');
       final nonceText = challenge['nonce']! as String;
       final serverId = challenge['serverId']! as String;
+      DiaryImageDebugTrace.event('sync.auth.challenge', {
+        'server': serverId,
+        'matchesPairedPeer': serverId == pairedPeer.deviceId,
+      });
       if (serverId != pairedPeer.deviceId) {
         throw const FormatException('Authenticated peer identity mismatch.');
       }
@@ -168,6 +196,7 @@ class ShadowSyncClient {
       if (!validServer) {
         throw const FormatException('Server authentication failed.');
       }
+      DiaryImageDebugTrace.event('sync.auth.complete', {'server': serverId});
       await repository.rememberPeer(
         id: pairedPeer.deviceId,
         name: pairedPeer.name,
@@ -180,6 +209,12 @@ class ShadowSyncClient {
       final records = await repository.prepareSnapshot();
       final assets = await repository.collectAssets(records);
       final totalBytes = assets.fold<int>(0, (sum, asset) => sum + asset.size);
+      DiaryImageDebugTrace.event('sync.snapshot.local', {
+        'records': records.length,
+        'assets': assets.length,
+        'assetIds': assets.map((asset) => asset.id).join(','),
+        'assetBytes': totalBytes,
+      });
       onProgress?.call(
         SyncProgress(totalRecords: records.length, totalBytes: totalBytes),
       );
@@ -196,6 +231,11 @@ class ShadowSyncClient {
           (plan['needAssets'] as List?)?.whereType<String>().toSet() ??
           const <String>{};
       final assetById = {for (final asset in assets) asset.id: asset};
+      DiaryImageDebugTrace.event('sync.plan.remote', {
+        'records': remoteRecords.length,
+        'assets': (plan['assets'] as List?)?.length ?? 0,
+        'requestedUploads': neededUploads.join(','),
+      });
       for (final id in neededUploads) {
         final asset = assetById[id];
         if (asset == null) continue;
@@ -218,11 +258,39 @@ class ShadowSyncClient {
 
       final remoteManifests = _assetManifestList(plan['assets']);
       final requestedDownloads = <String>[];
+      DiaryImageDebugTrace.event('sync.assets.offered', {
+        'assets': remoteManifests.length,
+        'assetIds': remoteManifests.map((asset) => asset.id).join(','),
+      });
+      if (DiaryImageDebugTrace.enabled) {
+        final remoteAssetIds = remoteManifests.map((asset) => asset.id).toSet();
+        for (final record in remoteRecords) {
+          if (record.entityType != SyncEntityType.diary ||
+              record.payload == null) {
+            continue;
+          }
+          final sources = diaryImageSourcesFromHtml(
+            record.payload!['content'] as String? ?? '',
+          );
+          for (final source in sources) {
+            final assetId = diaryImageSourceFromSource(source)?.fileName;
+            DiaryImageDebugTrace.event('sync.remote.diary.image', {
+              'diary': record.entityId,
+              'source': source,
+              'asset': assetId,
+              'offered': assetId != null && remoteAssetIds.contains(assetId),
+            });
+          }
+        }
+      }
       for (final manifest in remoteManifests) {
         if (!await repository.hasAsset(manifest.id, manifest.sha256)) {
           requestedDownloads.add(manifest.id);
         }
       }
+      DiaryImageDebugTrace.event('sync.assets.requested', {
+        'assetIds': requestedDownloads.join(','),
+      });
       await connection.sendEncrypted(cipher, {
         'kind': 'requestAssets',
         'ids': requestedDownloads,
@@ -236,6 +304,10 @@ class ShadowSyncClient {
         pairedPeer.deviceId,
       );
       await repository.markPeerSynced(pairedPeer.deviceId);
+      DiaryImageDebugTrace.event('sync.reconcile.complete', {
+        'appliedRecords': reconcile.appliedCount,
+        'conflicts': reconcile.conflicts.length,
+      });
       await connection.sendEncrypted(cipher, {
         'kind': 'applyComplete',
         'appliedRecords': reconcile.appliedCount,
@@ -256,7 +328,15 @@ class ShadowSyncClient {
         conflicts: reconcile.conflicts.length,
         transferredBytes: transferredBytes,
       );
+    } on Object catch (error) {
+      DiaryImageDebugTrace.error('sync.failed', error, {
+        'transferredBytes': transferredBytes,
+      });
+      rethrow;
     } finally {
+      DiaryImageDebugTrace.event('sync.connection.closing', {
+        'transferredBytes': transferredBytes,
+      });
       await connection.close();
     }
   }
@@ -268,6 +348,15 @@ class ShadowSyncClient {
     required void Function(int sent) onProgress,
   }) async {
     final file = File(asset.path);
+    DiaryImageDebugTrace.fileState(
+      'asset.upload.begin',
+      assetId: asset.id,
+      file: file,
+      fields: {
+        'manifestBytes': asset.size,
+        'sha256': DiaryImageDebugTrace.hashPrefix(asset.sha256),
+      },
+    );
     final bytes = await file.readAsBytes();
     var offset = 0;
     while (offset < bytes.length) {
@@ -322,6 +411,12 @@ class ShadowSyncClient {
         if (builder.length != manifest.size) {
           throw const FormatException('Sync asset size mismatch.');
         }
+        DiaryImageDebugTrace.event('asset.download.complete', {
+          'asset': id,
+          'bytes': builder.length,
+          'manifestBytes': manifest.size,
+          'sha256': DiaryImageDebugTrace.hashPrefix(manifest.sha256),
+        });
         await repository.storeAsset(id, builder.takeBytes(), manifest.sha256);
         builders.remove(id);
         requested.remove(id);
@@ -362,15 +457,36 @@ class ShadowSyncClient {
   }
 
   Future<_SyncConnection> _open(SyncPeer peer) async {
+    DiaryImageDebugTrace.event('connection.open.begin', {
+      'peer': peer.deviceId,
+      'endpoints': peer.endpoints.join(','),
+    });
     final channel = await connectFirstAvailableSyncEndpoint(peer.endpoints, (
       endpoint,
     ) async {
+      DiaryImageDebugTrace.event('connection.endpoint.attempt', {
+        'endpoint': endpoint,
+      });
       final candidate = _connectChannel(endpoint);
       try {
         await candidate.ready.timeout(const Duration(seconds: 5));
+        DiaryImageDebugTrace.event('connection.endpoint.connected', {
+          'endpoint': endpoint,
+        });
         return candidate;
-      } on Object {
-        await candidate.sink.close();
+      } on Object catch (error) {
+        DiaryImageDebugTrace.error('connection.endpoint.failed', error, {
+          'endpoint': endpoint,
+        });
+        try {
+          await candidate.sink.close();
+        } on Object catch (closeError) {
+          DiaryImageDebugTrace.error(
+            'connection.endpoint.close.failed',
+            closeError,
+            {'endpoint': endpoint},
+          );
+        }
         rethrow;
       }
     });

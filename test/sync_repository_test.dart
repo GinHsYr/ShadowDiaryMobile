@@ -303,12 +303,14 @@ void main() {
     () async {
       const firstId = '123e4567-e89b-42d3-a456-426614174000.webp';
       const secondId = '223e4567-e89b-42d3-a456-426614174001.jpg';
+      const thirdId = '323e4567-e89b-42d3-a456-426614174002.png';
       const content =
           '<p>Before</p>'
-          '<p><img src="file:///C:/Shadow%20Diary/images/$firstId" '
+          '<p><img src="unsafe:diary-image://$firstId" '
           'style="width:40%"></p>'
           '<p>Between</p>'
           "<p><img data-src='/data/user/0/app/images/$secondId'></p>"
+          '<p><img src="diary-imagdiary-image://$thirdId"></p>'
           '<p>After</p>';
       final payload = <String, Object?>{
         'id': 'diary-remote-images',
@@ -346,6 +348,7 @@ void main() {
         '<p><img src="diary-image://$firstId" style="width:40%"></p>'
         '<p>Between</p>'
         "<p><img data-src='diary-image://$secondId'></p>"
+        '<p><img src="diary-image://$thirdId"></p>'
         '<p>After</p>',
       );
     },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 
+import '../../core/services/diary_image_debug_trace.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -119,6 +120,11 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final file = diaryImageStoreOf(context).fileForSource(widget.source);
+    DiaryImageDebugTrace.imageResolution(
+      source: widget.source,
+      file: file,
+      surface: 'editor',
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -166,6 +172,15 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                                 fit: BoxFit.contain,
                                 gaplessPlayback: true,
                                 errorBuilder: (context, error, stackTrace) {
+                                  DiaryImageDebugTrace.error(
+                                    'image.decode.failed',
+                                    error,
+                                    {
+                                      'surface': 'editor',
+                                      'source': widget.source,
+                                      ...DiaryImageDebugTrace.fileFields(file),
+                                    },
+                                  );
                                   return _MissingImage(
                                     label: l10n.editorImageMissing,
                                   );

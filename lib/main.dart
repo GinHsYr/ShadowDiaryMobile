@@ -10,6 +10,7 @@ import 'core/settings/app_settings_controller.dart';
 import 'core/settings/app_settings_repository.dart';
 import 'core/services/diary_image_store.dart';
 import 'core/services/archive_image_service.dart';
+import 'core/services/diary_image_debug_trace.dart';
 import 'core/sync/lan_discovery_service.dart';
 import 'core/sync/sync_client.dart';
 import 'core/sync/sync_controller.dart';
@@ -18,11 +19,15 @@ import 'core/sync/sync_secure_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  DiaryImageDebugTrace.event('app.bootstrap.begin');
 
   try {
     final database = await AppDatabase.openBundled();
     final diaryImageStore = await DiaryImageStore.loadDefault();
     await diaryImageStore.migrateLegacyReferences(database);
+    DiaryImageDebugTrace.appReady(
+      imageDirectory: diaryImageStore.imageDirectory.path,
+    );
     final settingsRepository = SqliteAppSettingsRepository(database);
     final diaryRepository = SqliteDiaryRepository(database);
     final archiveRepository = SqliteArchiveRepository(database);
@@ -74,6 +79,7 @@ Future<void> main() async {
       ),
     );
   } on Object catch (error, stackTrace) {
+    DiaryImageDebugTrace.error('app.bootstrap.failed', error);
     FlutterError.reportError(
       FlutterErrorDetails(
         exception: error,

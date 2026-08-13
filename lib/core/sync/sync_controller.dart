@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../archives/archive_repository.dart';
 import '../diary/diary_repository.dart';
 import '../media/media_library.dart';
+import '../services/diary_image_debug_trace.dart';
 import '../security/app_lock_controller.dart';
 import 'lan_discovery_service.dart';
 import 'sync_client.dart';
@@ -56,7 +57,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   @override
   SyncState build() {
-    if (!_configured) return const SyncState();
+    if (!_configured) {
+      DiaryImageDebugTrace.event('sync.controller.unconfigured');
+      return const SyncState();
+    }
     void handleWriteGuard() {
       if (!_disposed && !_writeGuard.isEditing && _started) {
         unawaited(_autoSyncVisiblePeer());
@@ -66,6 +70,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _writeGuard.addListener(handleWriteGuard);
     ref.onDispose(() {
+      DiaryImageDebugTrace.event('sync.controller.dispose');
       _disposed = true;
       WidgetsBinding.instance.removeObserver(this);
       _writeGuard.removeListener(handleWriteGuard);
@@ -76,8 +81,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     });
     ref.listen(appLockControllerProvider, (previous, next) {
       if (next.isLocked) {
+        DiaryImageDebugTrace.event('sync.controller.locked');
         unawaited(stop());
       } else if (previous?.isLocked == true) {
+        DiaryImageDebugTrace.event('sync.controller.unlocked');
         unawaited(start());
       }
     });
@@ -87,6 +94,10 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    DiaryImageDebugTrace.event('sync.lifecycle', {
+      'state': state.name,
+      'started': _started,
+    });
     switch (state) {
       case AppLifecycleState.resumed:
         unawaited(start());
@@ -99,11 +110,27 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
   }
 
   Future<void> start() async {
-    if (_disposed || _started) return;
-    if (ref.read(appLockControllerProvider).isLocked) return;
+    if (_disposed || _started) {
+      DiaryImageDebugTrace.event('sync.controller.start.skipped', {
+        'disposed': _disposed,
+        'started': _started,
+      });
+      return;
+    }
+    if (ref.read(appLockControllerProvider).isLocked) {
+      DiaryImageDebugTrace.event('sync.controller.start.skipped', {
+        'reason': 'app-locked',
+      });
+      return;
+    }
     _started = true;
+    DiaryImageDebugTrace.event('sync.controller.start.begin');
     try {
       _pairedPeers = await _secureStore.loadPeerSecrets();
+      DiaryImageDebugTrace.event('sync.controller.peers.loaded', {
+        'pairedCount': _pairedPeers.length,
+        'pairedIds': _pairedPeers.keys.join(','),
+      });
       state = state.copyWith(
         phase: SyncPhase.discovering,
         pairedDeviceIds: _pairedPeers.keys.toSet(),
@@ -112,21 +139,30 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       _peerSubscription ??= _discovery.peers.listen(
         _handlePeers,
         onError: (Object error, StackTrace stackTrace) {
+          DiaryImageDebugTrace.error('sync.controller.discovery.failed', error);
           _setFailure(error);
         },
       );
       await _discovery.start();
+      DiaryImageDebugTrace.event('sync.controller.start.complete');
       _periodicTimer ??= Timer.periodic(const Duration(seconds: 45), (_) {
         if (_started && !state.isBusy) unawaited(_autoSyncVisiblePeer());
       });
     } on Object catch (error) {
       _started = false;
+      DiaryImageDebugTrace.error('sync.controller.start.failed', error);
       _setFailure(error);
     }
   }
 
   Future<void> stop() async {
-    if (!_started) return;
+    if (!_started) {
+      DiaryImageDebugTrace.event('sync.controller.stop.skipped', {
+        'reason': 'not-started',
+      });
+      return;
+    }
+    DiaryImageDebugTrace.event('sync.controller.stop.begin');
     _started = false;
     _periodicTimer?.cancel();
     _periodicTimer = null;
@@ -140,10 +176,15 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
         clearActivePeer: true,
       );
     }
+    DiaryImageDebugTrace.event('sync.controller.stop.complete');
   }
 
   Future<void> pair(SyncPeer peer, String code) async {
-    if (state.isBusy) return;
+    if (state.isBusy) {
+      DiaryImageDebugTrace.event('pair.skipped', {'reason': 'busy'});
+      return;
+    }
+    DiaryImageDebugTrace.event('pair.requested', {'peer': peer.deviceId});
     state = state.copyWith(
       phase: SyncPhase.pairing,
       activePeerId: peer.deviceId,
@@ -158,17 +199,42 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
       );
       await syncNow(peer);
     } on Object catch (error) {
+      DiaryImageDebugTrace.error('pair.controller.failed', error, {
+        'peer': peer.deviceId,
+      });
       _setFailure(error);
       rethrow;
     }
   }
 
   Future<void> syncNow([SyncPeer? requestedPeer]) async {
-    if (state.isBusy || _writeGuard.isEditing) return;
+    if (state.isBusy || _writeGuard.isEditing) {
+      DiaryImageDebugTrace.event('sync.request.skipped', {
+        'busy': state.isBusy,
+        'editing': _writeGuard.isEditing,
+      });
+      return;
+    }
     final peer = requestedPeer ?? _firstPairedVisiblePeer();
-    if (peer == null) return;
+    if (peer == null) {
+      DiaryImageDebugTrace.event('sync.request.skipped', {
+        'reason': 'no-paired-visible-peer',
+        'visiblePeers': state.peers.map((item) => item.deviceId).join(','),
+      });
+      return;
+    }
     final secret = _pairedPeers[peer.deviceId];
-    if (secret == null) return;
+    if (secret == null) {
+      DiaryImageDebugTrace.event('sync.request.skipped', {
+        'reason': 'missing-paired-secret',
+        'peer': peer.deviceId,
+      });
+      return;
+    }
+    DiaryImageDebugTrace.event('sync.request.accepted', {
+      'peer': peer.deviceId,
+      'manual': requestedPeer != null,
+    });
     _lastAutoAttempt[peer.deviceId] = DateTime.now();
     state = state.copyWith(
       phase: SyncPhase.connecting,
@@ -195,6 +261,12 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
         clearError: true,
       );
       ref.invalidate(syncConflictsProvider);
+      DiaryImageDebugTrace.event('sync.controller.complete', {
+        'peer': peer.deviceId,
+        'appliedRecords': result.appliedRecords,
+        'conflicts': totalConflicts,
+        'transferredBytes': result.transferredBytes,
+      });
       if (result.conflicts == 0) {
         _retryTimer?.cancel();
         _retryTimer = Timer(const Duration(seconds: 3), () {
@@ -204,6 +276,9 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
         });
       }
     } on Object catch (error) {
+      DiaryImageDebugTrace.error('sync.controller.failed', error, {
+        'peer': peer.deviceId,
+      });
       _setFailure(error);
     }
   }
@@ -235,6 +310,14 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   void _handlePeers(List<SyncPeer> peers) {
     if (_disposed) return;
+    DiaryImageDebugTrace.event('sync.controller.peers.visible', {
+      'count': peers.length,
+      'peerIds': peers.map((peer) => peer.deviceId).join(','),
+      'pairedVisible': peers
+          .where((peer) => _pairedPeers.containsKey(peer.deviceId))
+          .map((peer) => peer.deviceId)
+          .join(','),
+    });
     state = state.copyWith(peers: peers);
     unawaited(_autoSyncVisiblePeer());
   }
@@ -246,8 +329,13 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
     final lastAttempt = _lastAutoAttempt[peer.deviceId];
     if (lastAttempt != null &&
         DateTime.now().difference(lastAttempt) < const Duration(seconds: 30)) {
+      DiaryImageDebugTrace.event('sync.auto.skipped', {
+        'peer': peer.deviceId,
+        'reason': 'retry-cooldown',
+      });
       return;
     }
+    DiaryImageDebugTrace.event('sync.auto.starting', {'peer': peer.deviceId});
     await syncNow(peer);
   }
 
@@ -260,6 +348,7 @@ class SyncController extends Notifier<SyncState> with WidgetsBindingObserver {
 
   void _setFailure(Object error) {
     if (_disposed) return;
+    DiaryImageDebugTrace.error('sync.controller.state.failed', error);
     state = state.copyWith(
       phase: SyncPhase.failed,
       error: _friendlyError(error),

@@ -19,6 +19,12 @@ void main() {
       final image = parseDiaryImageSource(
         '  DIARY-IMAGE://${_imageId.toUpperCase()}.JPEG  ',
       );
+      final unsafeImage = parseDiaryImageSource(
+        'unsafe:DIARY-IMAGE://${_imageId.toUpperCase()}.PNG',
+      );
+      final duplicatedSchemeImage = parseDiaryImageSource(
+        'diary-imagDIARY-IMAGE://${_imageId.toUpperCase()}.WEBP',
+      );
       final thumbnail = parseDiaryImageSource(
         'diary-image://${_imageId}_thumb.webp',
       );
@@ -28,6 +34,13 @@ void main() {
       expect(image.extension, 'jpeg');
       expect(image.isThumbnail, isFalse);
       expect(image.source, 'diary-image://$_imageId.jpeg');
+      expect(unsafeImage, isNotNull);
+      expect(unsafeImage!.source, 'diary-image://$_imageId.png');
+      expect(duplicatedSchemeImage, isNotNull);
+      expect(
+        duplicatedSchemeImage!.source,
+        'diary-image://$_imageId.webp',
+      );
       expect(thumbnail, isNotNull);
       expect(thumbnail!.isThumbnail, isTrue);
       expect(thumbnail.fileName, '${_imageId}_thumb.webp');
@@ -64,6 +77,10 @@ void main() {
         store.fileForSource('diary-image://${_imageId}_thumb.webp')!.path,
         p.join(documents.path, 'thumbnails', '${_imageId}_thumb.webp'),
       );
+      expect(
+        store.fileForSource('unsafe:diary-image://$_imageId.webp')!.path,
+        p.join(documents.path, 'images', '$_imageId.webp'),
+      );
     });
 
     test('canonicalizes only image attributes without moving their tags', () {
@@ -93,6 +110,19 @@ void main() {
         'diary-image://$secondId.png',
       ]);
       expect(canonicalizeDiaryImageSourcesInHtml(canonical), canonical);
+
+      final unsafeHtml = '<img src="unsafe:diary-image://$_imageId.webp">';
+      expect(
+        canonicalizeDiaryImageSourcesInHtml(unsafeHtml),
+        '<img src="diary-image://$_imageId.webp">',
+      );
+
+      final duplicatedSchemeHtml =
+          '<img src="diary-imagdiary-image://$_imageId.webp">';
+      expect(
+        canonicalizeDiaryImageSourcesInHtml(duplicatedSchemeHtml),
+        '<img src="diary-image://$_imageId.webp">',
+      );
     });
 
     test('leaves remote URLs and malformed local sources unchanged', () {

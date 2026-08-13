@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'diary_image_debug_trace.dart';
 import '../database/app_database.dart';
 
 const diaryImageScheme = 'diary-image';
 const diaryImageSchemePrefix = '$diaryImageScheme://';
+const _duplicatedDiaryImageSchemePrefix =
+    'diary-imag$diaryImageSchemePrefix';
 
 final diaryImageStoreProvider = Provider<DiaryImageStore>((ref) {
   return const DiaryImageStore.unconfigured();
@@ -83,8 +86,9 @@ class DatabaseDiaryImageCleanup implements DiaryImageCleanup {
 }
 
 DiaryImageSource? parseDiaryImageSource(String? source) {
-  final normalized = source?.trim();
-  if (normalized == null || normalized.isEmpty) return null;
+  final rawSource = source?.trim();
+  if (rawSource == null || rawSource.isEmpty) return null;
+  final normalized = _normalizeDiaryImagePrefix(rawSource);
   if (!normalized.toLowerCase().startsWith(diaryImageSchemePrefix)) {
     return null;
   }
@@ -101,6 +105,24 @@ DiaryImageSource? parseDiaryImageSource(String? source) {
     extension: extension,
     isThumbnail: isThumbnail,
   );
+}
+
+String _normalizeDiaryImagePrefix(String source) {
+  const unsafePrefix = 'unsafe:';
+  var normalized = source;
+  if (normalized.toLowerCase().startsWith(unsafePrefix)) {
+    final candidate = normalized.substring(unsafePrefix.length);
+    if (candidate.toLowerCase().startsWith(diaryImageSchemePrefix)) {
+      normalized = candidate;
+    }
+  }
+
+  if (normalized.toLowerCase().startsWith(
+    _duplicatedDiaryImageSchemePrefix,
+  )) {
+    return '$diaryImageSchemePrefix${normalized.substring(_duplicatedDiaryImageSchemePrefix.length)}';
+  }
+  return normalized;
 }
 
 DiaryImageSource? diaryImageSourceFromFileName(String fileName) {
@@ -187,12 +209,30 @@ class DiaryImageStore {
   File? fileForSource(String source) {
     final parsed = parseDiaryImageSource(source);
     if (parsed != null) {
-      if (documentsDirectory == null) return null;
-      return fileForParsedSource(parsed);
+      if (documentsDirectory == null) {
+        DiaryImageDebugTrace.event('image.resolve.unconfigured', {
+          'source': source,
+          'asset': parsed.fileName,
+        });
+        return null;
+      }
+      final file = fileForParsedSource(parsed);
+      DiaryImageDebugTrace.imageResolution(
+        source: source,
+        file: file,
+        surface: 'image-store',
+      );
+      return file;
     }
 
     final localPath = localPathFromImageSource(source);
-    return localPath == null ? null : File(localPath);
+    final file = localPath == null ? null : File(localPath);
+    DiaryImageDebugTrace.imageResolution(
+      source: source,
+      file: file,
+      surface: 'image-store-fallback',
+    );
+    return file;
   }
 
   Future<File> writeAsset(String fileName, List<int> bytes) async {
@@ -202,10 +242,22 @@ class DiaryImageStore {
     }
     await ensureDirectories();
     final target = fileForParsedSource(parsed);
+    DiaryImageDebugTrace.fileState(
+      'asset.store.write.begin',
+      assetId: parsed.fileName,
+      file: target,
+      fields: {'incomingBytes': bytes.length},
+    );
     final temporary = File('${target.path}.part');
     await temporary.writeAsBytes(bytes, flush: true);
     if (await target.exists()) await target.delete();
-    return temporary.rename(target.path);
+    final stored = await temporary.rename(target.path);
+    DiaryImageDebugTrace.fileState(
+      'asset.store.write.complete',
+      assetId: parsed.fileName,
+      file: stored,
+    );
+    return stored;
   }
 
   Future<bool> isReferenced(AppDatabase appDatabase, String source) async {
