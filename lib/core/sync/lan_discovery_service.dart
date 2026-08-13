@@ -17,7 +17,7 @@ class BonsoirSyncDiscoveryService implements SyncDiscoveryService {
   BonsoirSyncDiscoveryService({BonsoirDiscovery Function()? createDiscovery})
     : _createDiscovery =
           createDiscovery ??
-          (() => BonsoirDiscovery(type: 'shadowdiary'));
+          (() => BonsoirDiscovery(type: '_shadowdiary._tcp'));
 
   final BonsoirDiscovery Function() _createDiscovery;
   final StreamController<List<SyncPeer>> _peerController =
@@ -146,6 +146,10 @@ List<String> syncHostsFromService(
       return;
     }
     if (parsed.type == InternetAddressType.IPv4) {
+      if (parsed.address.startsWith('172.25.')) {
+        other.add(address);
+        return;
+      }
       ipv4.add(address);
       return;
     }
