@@ -812,6 +812,42 @@ abstract class AppLocalizations {
   /// **'服务'**
   String get settingsServices;
 
+  /// No description provided for @backupExport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出备份'**
+  String get backupExport;
+
+  /// No description provided for @backupExportDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'将日记、档案和媒体保存为 ShadowDiary ZIP 备份'**
+  String get backupExportDescription;
+
+  /// No description provided for @backupExporting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在导出备份…'**
+  String get backupExporting;
+
+  /// No description provided for @backupExportSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份导出成功。'**
+  String get backupExportSuccess;
+
+  /// No description provided for @backupExportUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'此设备暂不支持导出备份。'**
+  String get backupExportUnavailable;
+
+  /// No description provided for @backupExportFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出失败，当前数据未被修改。'**
+  String get backupExportFailed;
+
   /// No description provided for @backupImport.
   ///
   /// In zh, this message translates to:

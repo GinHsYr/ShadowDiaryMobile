@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/archives/archive_repository.dart';
 import '../../core/backup/backup_import_service.dart';
+import '../../core/backup/backup_export_service.dart';
 import '../../core/diary/diary_repository.dart';
 import '../../core/media/media_library.dart';
 import '../../core/security/app_lock_controller.dart';
@@ -28,6 +29,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isInspectingBackup = false;
+  bool _isExportingBackup = false;
 
   @override
   Widget build(BuildContext context) {
@@ -133,24 +135,48 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           const SizedBox(height: AppSpacing.lg),
           _SectionTitle(l10n.settingsData),
           Card(
-            child: ListTile(
-              key: const Key('backup-import-tile'),
-              leading: const Icon(Icons.settings_backup_restore_rounded),
-              title: Text(l10n.backupImport),
-              subtitle: Text(
-                _isInspectingBackup
-                    ? l10n.backupReading
-                    : l10n.backupImportDescription,
-              ),
-              trailing: _isInspectingBackup
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Icon(Icons.chevron_right_rounded),
-              onTap: _isInspectingBackup
-                  ? null
-                  : () => unawaited(_selectBackup()),
+            child: Column(
+              children: [
+                ListTile(
+                  key: const Key('backup-import-tile'),
+                  leading: const Icon(Icons.settings_backup_restore_rounded),
+                  title: Text(l10n.backupImport),
+                  subtitle: Text(
+                    _isInspectingBackup
+                        ? l10n.backupReading
+                        : l10n.backupImportDescription,
+                  ),
+                  trailing: _isInspectingBackup
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Icon(Icons.chevron_right_rounded),
+                  onTap: _isInspectingBackup || _isExportingBackup
+                      ? null
+                      : () => unawaited(_selectBackup()),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('backup-export-tile'),
+                  leading: const Icon(Icons.file_upload_outlined),
+                  title: Text(l10n.backupExport),
+                  subtitle: Text(
+                    _isExportingBackup
+                        ? l10n.backupExporting
+                        : l10n.backupExportDescription,
+                  ),
+                  trailing: _isExportingBackup
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Icon(Icons.chevron_right_rounded),
+                  onTap: _isExportingBackup || _isInspectingBackup
+                      ? null
+                      : () => unawaited(_exportBackup()),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -172,6 +198,39 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _exportBackup() async {
+    final l10n = AppLocalizations.of(context);
+    final service = ref.read(backupExportServiceProvider);
+    setState(() => _isExportingBackup = true);
+    try {
+      final result = await service.exportBackup();
+      if (!mounted || result == null) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.backupExportSuccess)));
+    } on Object catch (error) {
+      if (mounted) _showBackupExportError(error);
+    } finally {
+      if (mounted) setState(() => _isExportingBackup = false);
+    }
+  }
+
+  void _showBackupExportError(Object error) {
+    final l10n = AppLocalizations.of(context);
+    final message = error is BackupExportException
+        ? switch (error.code) {
+            BackupExportErrorCode.unavailable => l10n.backupExportUnavailable,
+            BackupExportErrorCode.transferInProgress => l10n.backupTransferBusy,
+            BackupExportErrorCode.invalidDatabase ||
+            BackupExportErrorCode.unreadableFile ||
+            BackupExportErrorCode.exportFailed => l10n.backupExportFailed,
+          }
+        : l10n.backupExportFailed;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _selectBackup() async {

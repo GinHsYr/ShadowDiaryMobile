@@ -4,12 +4,13 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class AppDatabase {
-  AppDatabase._(this.database);
+  AppDatabase._(this.database, this.path);
 
   static const databaseName = 'shadow_diary.db';
   static const schemaVersion = 2;
 
   final Database database;
+  final String path;
 
   /// Opens the app database with a bundled SQLite build.
   ///
@@ -45,7 +46,7 @@ class AppDatabase {
         onUpgrade: _migrate,
       ),
     );
-    return AppDatabase._(database);
+    return AppDatabase._(database, databasePath);
   }
 
   Future<void> close() => database.close();

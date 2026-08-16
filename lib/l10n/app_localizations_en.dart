@@ -391,6 +391,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsServices => 'Services';
 
   @override
+  String get backupExport => 'Export backup';
+
+  @override
+  String get backupExportDescription =>
+      'Save diaries, archives, and media as a ShadowDiary ZIP backup';
+
+  @override
+  String get backupExporting => 'Exporting backup...';
+
+  @override
+  String get backupExportSuccess => 'Backup exported successfully.';
+
+  @override
+  String get backupExportUnavailable =>
+      'Backup export is not available on this device.';
+
+  @override
+  String get backupExportFailed =>
+      'Export failed. Current data was not changed.';
+
+  @override
   String get backupImport => 'Import backup';
 
   @override

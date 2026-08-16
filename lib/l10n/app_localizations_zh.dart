@@ -382,6 +382,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsServices => '服务';
 
   @override
+  String get backupExport => '导出备份';
+
+  @override
+  String get backupExportDescription => '将日记、档案和媒体保存为 ShadowDiary ZIP 备份';
+
+  @override
+  String get backupExporting => '正在导出备份…';
+
+  @override
+  String get backupExportSuccess => '备份导出成功。';
+
+  @override
+  String get backupExportUnavailable => '此设备暂不支持导出备份。';
+
+  @override
+  String get backupExportFailed => '导出失败，当前数据未被修改。';
+
+  @override
   String get backupImport => '导入备份';
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app.dart';
 import 'core/archives/archive_repository.dart';
 import 'core/backup/backup_import_service.dart';
+import 'core/backup/backup_export_service.dart';
 import 'core/database/app_database.dart';
 import 'core/diary/diary_repository.dart';
 import 'core/settings/app_settings_controller.dart';
@@ -44,6 +45,10 @@ Future<void> main() async {
       database,
       imageStore: diaryImageStore,
     );
+    final backupExportService = DeviceBackupExportService(
+      database,
+      imageStore: diaryImageStore,
+    );
     final initialSettings = await settingsRepository.load();
     final syncSecureStore = DeviceSyncSecureStore();
     final syncDeviceId = await syncSecureStore.getOrCreateDeviceId();
@@ -68,6 +73,7 @@ Future<void> main() async {
           archiveImageServiceProvider.overrideWithValue(archiveImageService),
           initialAppSettingsProvider.overrideWithValue(initialSettings),
           backupImportServiceProvider.overrideWithValue(backupImportService),
+          backupExportServiceProvider.overrideWithValue(backupExportService),
           diaryRepositoryProvider.overrideWithValue(diaryRepository),
           archiveRepositoryProvider.overrideWithValue(archiveRepository),
           syncSecureStoreProvider.overrideWithValue(syncSecureStore),
