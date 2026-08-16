@@ -28,6 +28,22 @@ class MediaPage extends ConsumerStatefulWidget {
 
 class _MediaPageState extends ConsumerState<MediaPage> {
   _MediaFilter _filter = _MediaFilter.all;
+  late final ScrollController _scrollController;
+  double _scrollFraction = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,82 +58,139 @@ class _MediaPageState extends ConsumerState<MediaPage> {
               : constraints.maxWidth >= 560
               ? 3
               : 2;
-          return CustomScrollView(
-            key: const Key('media-scroll-view'),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _MediaHeader(
-                  library: library.value,
-                  filter: _filter,
-                  onFilterChanged: (filter) {
-                    setState(() => _filter = filter);
-                  },
+          final loadedLibrary = library.value;
+          final visibleItems = loadedLibrary == null
+              ? const <MediaItem>[]
+              : _visibleItems(loadedLibrary);
+          final showDateRail = visibleItems.isNotEmpty;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              CustomScrollView(
+                key: const Key('media-scroll-view'),
+                controller: _scrollController,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _MediaHeader(
+                      library: loadedLibrary,
+                      filter: _filter,
+                      onFilterChanged: (filter) {
+                        setState(() => _filter = filter);
+                        // A filter changes the date index, so start from its
+                        // newest item instead of leaving the old offset active.
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!_scrollController.hasClients) return;
+                          _scrollController.jumpTo(0);
+                        });
+                      },
+                    ),
+                  ),
+                  ...library.when(
+                    loading: () => const <Widget>[
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _MediaLoadingState(),
+                      ),
+                    ],
+                    error: (error, stackTrace) => <Widget>[
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _MediaErrorState(
+                          onRetry: () => ref.invalidate(mediaLibraryProvider),
+                        ),
+                      ),
+                    ],
+                    data: (value) {
+                      if (value.items.isEmpty) {
+                        return const <Widget>[
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _MediaEmptyState(),
+                          ),
+                        ];
+                      }
+                      final visibleItems = _visibleItems(value);
+                      if (visibleItems.isEmpty) {
+                        return const <Widget>[
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _MediaFilteredEmptyState(),
+                          ),
+                        ];
+                      }
+                      return <Widget>[
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSpacing.sm,
+                            AppSpacing.sm,
+                            AppSpacing.sm,
+                            104,
+                          ),
+                          sliver: SliverMasonryGrid.count(
+                            key: const Key('media-masonry-grid'),
+                            crossAxisCount: columnCount,
+                            mainAxisSpacing: AppSpacing.xs,
+                            crossAxisSpacing: AppSpacing.xs,
+                            childCount: visibleItems.length,
+                            itemBuilder: (context, index) {
+                              final item = visibleItems[index];
+                              return _MediaImageTile(
+                                item: item,
+                                onTap: () => _openViewer(visibleItems, index),
+                              );
+                            },
+                          ),
+                        ),
+                      ];
+                    },
+                  ),
+                ],
+              ),
+              if (showDateRail)
+                PositionedDirectional(
+                  top: 136,
+                  end: 4,
+                  bottom: 112,
+                  child: _MediaDateRail(
+                    dates: _mediaDates(visibleItems),
+                    value: _scrollFraction,
+                    onChanged: _scrollToFraction,
+                  ),
                 ),
-              ),
-              ...library.when(
-                loading: () => const <Widget>[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _MediaLoadingState(),
-                  ),
-                ],
-                error: (error, stackTrace) => <Widget>[
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _MediaErrorState(
-                      onRetry: () => ref.invalidate(mediaLibraryProvider),
-                    ),
-                  ),
-                ],
-                data: (value) {
-                  if (value.items.isEmpty) {
-                    return const <Widget>[
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _MediaEmptyState(),
-                      ),
-                    ];
-                  }
-                  final visibleItems = _visibleItems(value);
-                  if (visibleItems.isEmpty) {
-                    return const <Widget>[
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _MediaFilteredEmptyState(),
-                      ),
-                    ];
-                  }
-                  return <Widget>[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.sm,
-                        AppSpacing.sm,
-                        AppSpacing.sm,
-                        104,
-                      ),
-                      sliver: SliverMasonryGrid.count(
-                        key: const Key('media-masonry-grid'),
-                        crossAxisCount: columnCount,
-                        mainAxisSpacing: AppSpacing.xs,
-                        crossAxisSpacing: AppSpacing.xs,
-                        childCount: visibleItems.length,
-                        itemBuilder: (context, index) {
-                          final item = visibleItems[index];
-                          return _MediaImageTile(
-                            item: item,
-                            onTap: () => _openViewer(visibleItems, index),
-                          );
-                        },
-                      ),
-                    ),
-                  ];
-                },
-              ),
             ],
           );
         },
       ),
     );
+  }
+
+  void _handleScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final next = position.maxScrollExtent <= 0
+        ? 0.0
+        : (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+    if ((next - _scrollFraction).abs() < 0.005) return;
+    setState(() => _scrollFraction = next);
+  }
+
+  void _scrollToFraction(double fraction, {bool animate = false}) {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final next = fraction.clamp(0.0, 1.0);
+    final target = position.maxScrollExtent * next;
+    if (animate) {
+      _scrollController.animateTo(
+        target,
+        duration: _motionDuration(context, 240),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
+    if ((_scrollFraction - next).abs() >= 0.005) {
+      setState(() => _scrollFraction = next);
+    }
   }
 
   List<MediaItem> _visibleItems(MediaLibrary library) {
@@ -140,6 +213,187 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     );
     if (!mounted || source == null) return;
     await widget.onOpenSource?.call(source);
+  }
+}
+
+List<DateTime> _mediaDates(Iterable<MediaItem> items) {
+  final datesByKey = <int, DateTime>{};
+  for (final item in items) {
+    final date = DateUtils.dateOnly(item.sourceDate);
+    datesByKey[_dayKey(date)] = date;
+  }
+  final dates = datesByKey.values.toList()
+    ..sort((left, right) => right.compareTo(left));
+  return List.unmodifiable(dates);
+}
+
+int _dayKey(DateTime date) => date.year * 10000 + date.month * 100 + date.day;
+
+class _MediaDateRail extends StatefulWidget {
+  const _MediaDateRail({
+    required this.dates,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final List<DateTime> dates;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  @override
+  State<_MediaDateRail> createState() => _MediaDateRailState();
+}
+
+class _MediaDateRailState extends State<_MediaDateRail> {
+  bool _isInteracting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+
+    return Semantics(
+      container: true,
+      label: l10n.mediaDateRail,
+      child: SizedBox(
+        key: const Key('media-date-rail'),
+        width: 22,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final trackHeight = constraints.maxHeight
+                .clamp(1.0, double.infinity)
+                .toDouble();
+            final thumbLeft = (constraints.maxWidth - 8) / 2;
+
+            void updateFromOffset(double offset) {
+              final fraction = (offset / trackHeight).clamp(0.0, 1.0);
+              widget.onChanged(fraction);
+            }
+
+            return Listener(
+              behavior: HitTestBehavior.opaque,
+              onPointerDown: (event) {
+                _setInteracting(true);
+                updateFromOffset(event.localPosition.dy);
+              },
+              onPointerMove: (event) {
+                _setInteracting(true);
+                updateFromOffset(event.localPosition.dy);
+              },
+              onPointerUp: (_) => _setInteracting(false),
+              onPointerCancel: (_) => _setInteracting(false),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        key: const Key('media-date-line'),
+                        width: 3,
+                        decoration: BoxDecoration(
+                          color: colors.outlineVariant.withValues(alpha: 0.76),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: thumbLeft,
+                    top: _thumbTop(trackHeight),
+                    child: IgnorePointer(
+                      child: Container(
+                        key: const Key('media-date-thumb'),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: colors.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: colors.onPrimary, width: 1),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_isInteracting)
+                    PositionedDirectional(
+                      top: _bubbleTop(trackHeight),
+                      end: 14,
+                      child: _MediaDateBubble(date: _selectedDate),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _setInteracting(bool value) {
+    if (_isInteracting == value || !mounted) return;
+    setState(() => _isInteracting = value);
+  }
+
+  double _thumbTop(double trackHeight) {
+    final maxTop = (trackHeight - 8).clamp(0.0, double.infinity);
+    return (widget.value.clamp(0.0, 1.0) * maxTop).toDouble();
+  }
+
+  double _bubbleTop(double trackHeight) {
+    const bubbleHeight = 34.0;
+    final maxTop = (trackHeight - bubbleHeight).clamp(0.0, double.infinity);
+    final center = widget.value.clamp(0.0, 1.0) * trackHeight;
+    return (center - bubbleHeight / 2).clamp(0.0, maxTop).toDouble();
+  }
+
+  DateTime get _selectedDate {
+    if (widget.dates.isEmpty) return DateTime.now();
+    final maxIndex = widget.dates.length - 1;
+    final index = (widget.value.clamp(0.0, 1.0) * maxIndex).round().clamp(
+      0,
+      maxIndex,
+    );
+    return widget.dates[index];
+  }
+}
+
+class _MediaDateBubble extends StatelessWidget {
+  const _MediaDateBubble({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final dateLabel = locale.languageCode == 'zh'
+        ? DateFormat('yyyy年M月d日', locale.toLanguageTag()).format(date)
+        : DateFormat.yMMMMd(locale.toLanguageTag()).format(date);
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      key: const Key('media-date-bubble'),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: colors.shadow.withValues(alpha: 0.16),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Text(
+          dateLabel,
+          maxLines: 1,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -735,4 +989,10 @@ String _mediaSourceTitle(MediaItem item, AppLocalizations l10n) {
   return item.sourceType == MediaSourceType.diary
       ? l10n.mediaUntitledDiary
       : l10n.navigationArchives;
+}
+
+Duration _motionDuration(BuildContext context, int milliseconds) {
+  return MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : Duration(milliseconds: milliseconds);
 }

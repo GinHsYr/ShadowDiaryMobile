@@ -115,7 +115,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
               ),
             ),
           ),
-          if (widget.onAddArchive != null)
+          if (widget.onAddArchive != null && !_isSearchExpanded)
             PositionedDirectional(
               end: AppSpacing.md,
               bottom: 92,
@@ -665,58 +665,87 @@ class _AlphabetRail extends StatelessWidget {
             12.0,
             18.0,
           );
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final initial in alphabet)
-                SizedBox(
-                  width: 24,
-                  height: itemHeight,
-                  child: InkWell(
-                    key: Key('archive-index-$initial'),
-                    customBorder: const CircleBorder(),
-                    onTap: availableInitials.contains(initial)
-                        ? () => onSelected(initial)
-                        : null,
-                    child: Center(
-                      child: AnimatedContainer(
-                        duration: _motionDuration(context, 140),
-                        width: 17,
-                        height: 17,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: selectedInitial == initial
-                              ? colors.primary
-                              : Colors.transparent,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          initial,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: selectedInitial == initial
-                                    ? colors.onPrimary
-                                    : availableInitials.contains(initial)
-                                    ? colors.onSurfaceVariant
-                                    : colors.onSurfaceVariant.withValues(
-                                        alpha: 0.32,
-                                      ),
-                                fontSize: 9,
-                                height: 1,
-                                fontWeight: selectedInitial == initial
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragStart: (details) =>
+                _selectAtPosition(details.localPosition.dy, itemHeight),
+            onVerticalDragUpdate: (details) =>
+                _selectAtPosition(details.localPosition.dy, itemHeight),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final initial in alphabet)
+                  SizedBox(
+                    width: 24,
+                    height: itemHeight,
+                    child: InkWell(
+                      key: Key('archive-index-$initial'),
+                      customBorder: const CircleBorder(),
+                      onTap: availableInitials.contains(initial)
+                          ? () => onSelected(initial)
+                          : null,
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: _motionDuration(context, 140),
+                          width: 17,
+                          height: 17,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: selectedInitial == initial
+                                ? colors.primary
+                                : Colors.transparent,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            initial,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: selectedInitial == initial
+                                      ? colors.onPrimary
+                                      : availableInitials.contains(initial)
+                                      ? colors.onSurfaceVariant
+                                      : colors.onSurfaceVariant.withValues(
+                                          alpha: 0.32,
+                                        ),
+                                  fontSize: 9,
+                                  height: 1,
+                                  fontWeight: selectedInitial == initial
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           );
         },
       ),
     );
+  }
+
+  void _selectAtPosition(double localY, double itemHeight) {
+    final index = (localY / itemHeight).floor().clamp(0, alphabet.length - 1);
+    final initial = _nearestAvailableInitial(index);
+    if (initial != null) onSelected(initial);
+  }
+
+  String? _nearestAvailableInitial(int index) {
+    if (availableInitials.contains(alphabet[index])) return alphabet[index];
+    for (var distance = 1; distance < alphabet.length; distance++) {
+      final left = index - distance;
+      if (left >= 0 && availableInitials.contains(alphabet[left])) {
+        return alphabet[left];
+      }
+      final right = index + distance;
+      if (right < alphabet.length &&
+          availableInitials.contains(alphabet[right])) {
+        return alphabet[right];
+      }
+    }
+    return null;
   }
 }
 

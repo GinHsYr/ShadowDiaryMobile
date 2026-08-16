@@ -142,6 +142,78 @@ void main() {
     expect(find.byType(AppEmptyState), findsOneWidget);
     expect(find.byType(SliverMasonryGrid), findsNothing);
   });
+
+  testWidgets('provides a date rail with continuous drag navigation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final newest = DateTime(2026, 7, 22);
+    final diaryEntries = List<DiaryEntry>.generate(12, (index) {
+      final date = newest.subtract(Duration(days: index));
+      return DiaryEntry(
+        id: 'diary-$index',
+        title: '日记 $index',
+        content: '<p><img src="missing-$index.webp"></p>',
+        plainContent: '',
+        mood: 'calm',
+        createdAt: date,
+        updatedAt: date,
+      );
+    });
+
+    await tester.pumpWidget(
+      _testApp(
+        diaryRepository: _MemoryDiaryRepository(diaryEntries),
+        archiveRepository: _MemoryArchiveRepository(const []),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final dateRail = find.byKey(const Key('media-date-rail'));
+    expect(dateRail, findsOneWidget);
+    expect(tester.widget<SizedBox>(dateRail).width, 22);
+    expect(find.byKey(const Key('media-date-bubble')), findsNothing);
+
+    final lineRect = tester.getRect(find.byKey(const Key('media-date-line')));
+    final thumbRect = tester.getRect(find.byKey(const Key('media-date-thumb')));
+    expect(lineRect.center.dx, closeTo(thumbRect.center.dx, 0.1));
+
+    final scrollViewRect = tester.getRect(
+      find.byKey(const Key('media-scroll-view')),
+    );
+    final imageRect = tester.getRect(
+      find.byKey(const Key('media-item-diary:diary-1:0')),
+    );
+    expect(imageRect.right, greaterThan(scrollViewRect.right - 36));
+
+    final scrollController = tester
+        .widget<CustomScrollView>(find.byKey(const Key('media-scroll-view')))
+        .controller!;
+    expect(scrollController.position.maxScrollExtent, greaterThan(0));
+    final initialOffset = scrollController.offset;
+    final railRect = tester.getRect(dateRail);
+    final gesture = await tester.startGesture(
+      Offset(railRect.center.dx, railRect.top + 5),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('media-date-bubble')), findsOneWidget);
+    expect(find.text('2026年7月22日'), findsOneWidget);
+
+    await gesture.moveBy(const Offset(0, 180));
+    await tester.pump();
+    expect(find.byKey(const Key('media-date-bubble')), findsOneWidget);
+    expect(scrollController.offset, greaterThan(initialOffset));
+
+    await gesture.up();
+    await tester.pump();
+    expect(find.byKey(const Key('media-date-bubble')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _testApp({

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:wheel_slider/wheel_slider.dart';
 
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
+import '../../core/settings/app_settings_controller.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -26,6 +28,7 @@ class HomePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final overview =
         ref.watch(diaryOverviewProvider).value ?? DiaryOverview.empty;
+    final showOnboarding = _shouldShowOnboarding(ref);
     return AppPage(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -64,9 +67,18 @@ class HomePage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          if (showOnboarding) ...[
+            _HomeOnboardingGuide(onDismiss: () => _completeOnboarding(ref)),
+            const SizedBox(height: AppSpacing.md),
+          ],
           HomeCalendar(
             diaryDates: overview.diaryDates,
-            onDateSelected: onCalendarDateSelected,
+            onDateSelected: (date) {
+              if (showOnboarding) {
+                _completeOnboarding(ref);
+              }
+              onCalendarDateSelected?.call(date);
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           HomeStatisticsCards(
@@ -79,6 +91,27 @@ class HomePage extends ConsumerWidget {
     );
   }
 
+  bool _shouldShowOnboarding(WidgetRef ref) {
+    try {
+      return !ref.watch(appSettingsControllerProvider).onboardingCompleted;
+    } on Object {
+      // Standalone widget tests can render HomePage without app bootstrap.
+      return false;
+    }
+  }
+
+  void _completeOnboarding(WidgetRef ref) {
+    try {
+      unawaited(
+        ref
+            .read(appSettingsControllerProvider.notifier)
+            .setOnboardingCompleted(true),
+      );
+    } on Object {
+      // There is no persistence layer when HomePage is rendered in isolation.
+    }
+  }
+
   void _openSearch(BuildContext buttonContext) {
     final renderBox = buttonContext.findRenderObject();
     final origin = renderBox is RenderBox && renderBox.hasSize
@@ -88,6 +121,60 @@ class HomePage extends ConsumerWidget {
             MediaQuery.paddingOf(buttonContext).top + 40,
           );
     onSearchRequested?.call(origin);
+  }
+}
+
+class _HomeOnboardingGuide extends StatelessWidget {
+  const _HomeOnboardingGuide({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      key: const Key('home-onboarding-guide'),
+      color: colors.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 8, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.touch_app_rounded, color: colors.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.onboardingTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    l10n.onboardingBody,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              key: const Key('home-onboarding-dismiss'),
+              tooltip: l10n.onboardingDismiss,
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

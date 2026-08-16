@@ -30,6 +30,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreeting => 'Hello, ready to write?';
 
   @override
+  String get onboardingTitle => 'Start your first diary';
+
+  @override
+  String get onboardingBody =>
+      'Tap any date on the home calendar to start writing the diary for that day.';
+
+  @override
+  String get onboardingDismiss => 'Got it';
+
+  @override
   String get searchOpen => 'Search diaries';
 
   @override
@@ -368,6 +378,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaViewSource => 'View source';
+
+  @override
+  String get mediaDateRail => 'Browse by date';
 
   @override
   String get settingsAppearance => 'Appearance';

@@ -140,6 +140,24 @@ abstract class AppLocalizations {
   /// **'你好，准备写点什么？'**
   String get homeGreeting;
 
+  /// No description provided for @onboardingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始写第一篇日记'**
+  String get onboardingTitle;
+
+  /// No description provided for @onboardingBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击首页日历中的日期，开始编写对应日期的日记。'**
+  String get onboardingBody;
+
+  /// No description provided for @onboardingDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get onboardingDismiss;
+
   /// No description provided for @searchOpen.
   ///
   /// In zh, this message translates to:
@@ -770,6 +788,12 @@ abstract class AppLocalizations {
   /// **'查看出处'**
   String get mediaViewSource;
 
+  /// No description provided for @mediaDateRail.
+  ///
+  /// In zh, this message translates to:
+  /// **'按日期浏览'**
+  String get mediaDateRail;
+
   /// No description provided for @settingsAppearance.
   ///
   /// In zh, this message translates to:
@@ -821,7 +845,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupExportDescription.
   ///
   /// In zh, this message translates to:
-  /// **'将日记、档案和媒体保存为 ShadowDiary ZIP 备份'**
+  /// **'将数据备份并导出'**
   String get backupExportDescription;
 
   /// No description provided for @backupExporting.
@@ -857,7 +881,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupImportDescription.
   ///
   /// In zh, this message translates to:
-  /// **'从 ShadowDiary ZIP 备份恢复日记和档案'**
+  /// **'从备份文件恢复数据'**
   String get backupImportDescription;
 
   /// No description provided for @backupReading.

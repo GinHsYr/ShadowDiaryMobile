@@ -169,6 +169,7 @@ void main() {
       localePreference: AppLocalePreference.en,
       appLockEnabled: true,
       appLockDelay: AppLockDelay.fifteenMinutes,
+      onboardingCompleted: true,
     );
     await repository.save(expected);
 
@@ -178,6 +179,7 @@ void main() {
     expect(restored.localePreference, expected.localePreference);
     expect(restored.appLockEnabled, isTrue);
     expect(restored.appLockDelay, AppLockDelay.fifteenMinutes);
+    expect(restored.onboardingCompleted, isTrue);
 
     await appDatabase.database.insert('settings', {
       'key': 'appearance.theme_mode',

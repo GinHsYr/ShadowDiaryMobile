@@ -40,6 +40,7 @@ class AppSettings {
     this.localePreference = AppLocalePreference.system,
     this.appLockEnabled = false,
     this.appLockDelay = AppLockDelay.oneMinute,
+    this.onboardingCompleted = false,
   });
 
   final AppThemeMode themeMode;
@@ -47,6 +48,7 @@ class AppSettings {
   final AppLocalePreference localePreference;
   final bool appLockEnabled;
   final AppLockDelay appLockDelay;
+  final bool onboardingCompleted;
 
   AppSettings copyWith({
     AppThemeMode? themeMode,
@@ -54,6 +56,7 @@ class AppSettings {
     AppLocalePreference? localePreference,
     bool? appLockEnabled,
     AppLockDelay? appLockDelay,
+    bool? onboardingCompleted,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
@@ -61,6 +64,7 @@ class AppSettings {
       localePreference: localePreference ?? this.localePreference,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
       appLockDelay: appLockDelay ?? this.appLockDelay,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 }

@@ -17,6 +17,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
   static const _localeKey = 'appearance.locale';
   static const _appLockEnabledKey = 'security.app_lock_enabled';
   static const _appLockDelayKey = 'security.app_lock_delay';
+  static const _onboardingCompletedKey = 'onboarding.completed';
 
   final AppDatabase _appDatabase;
 
@@ -48,6 +49,7 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
         values[_appLockDelayKey],
         AppLockDelay.oneMinute,
       ),
+      onboardingCompleted: values[_onboardingCompletedKey] == 'true',
     );
   }
 
@@ -60,6 +62,11 @@ class SqliteAppSettingsRepository implements AppSettingsRepository {
       _upsert(batch, _localeKey, settings.localePreference.name);
       _upsert(batch, _appLockEnabledKey, settings.appLockEnabled.toString());
       _upsert(batch, _appLockDelayKey, settings.appLockDelay.name);
+      _upsert(
+        batch,
+        _onboardingCompletedKey,
+        settings.onboardingCompleted.toString(),
+      );
       await batch.commit(noResult: true);
     });
   }

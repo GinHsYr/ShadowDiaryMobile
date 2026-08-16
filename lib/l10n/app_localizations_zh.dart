@@ -30,6 +30,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGreeting => '你好，准备写点什么？';
 
   @override
+  String get onboardingTitle => '开始写第一篇日记';
+
+  @override
+  String get onboardingBody => '点击首页日历中的日期，开始编写对应日期的日记。';
+
+  @override
+  String get onboardingDismiss => '知道了';
+
+  @override
   String get searchOpen => '搜索日记';
 
   @override
@@ -361,6 +370,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaViewSource => '查看出处';
 
   @override
+  String get mediaDateRail => '按日期浏览';
+
+  @override
   String get settingsAppearance => '外观';
 
   @override
@@ -385,7 +397,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupExport => '导出备份';
 
   @override
-  String get backupExportDescription => '将日记、档案和媒体保存为 ShadowDiary ZIP 备份';
+  String get backupExportDescription => '将数据备份并导出';
 
   @override
   String get backupExporting => '正在导出备份…';
@@ -403,7 +415,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupImport => '导入备份';
 
   @override
-  String get backupImportDescription => '从 ShadowDiary ZIP 备份恢复日记和档案';
+  String get backupImportDescription => '从备份文件恢复数据';
 
   @override
   String get backupReading => '正在读取备份…';

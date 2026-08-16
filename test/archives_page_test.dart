@@ -132,16 +132,18 @@ void main() {
         _testApp(
           repository,
           locale: const Locale('zh'),
-          page: const ArchivesPage(),
+          page: ArchivesPage(onAddArchive: () async => false),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('archive-search-field')), findsNothing);
+      expect(find.byKey(const Key('archives-add-button')), findsOneWidget);
       await tester.tap(find.byKey(const Key('archive-search-button')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('archive-search-field')), findsOneWidget);
       expect(find.byKey(const Key('archive-alphabet-rail')), findsNothing);
+      expect(find.byKey(const Key('archives-add-button')), findsNothing);
 
       await tester.enterText(
         find.byKey(const Key('archive-search-field')),
@@ -206,6 +208,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('archive-search-field')), findsNothing);
       expect(find.byKey(const Key('archive-alphabet-rail')), findsOneWidget);
+      expect(find.byKey(const Key('archives-add-button')), findsOneWidget);
+
+      final indexA = tester.getCenter(find.byKey(const Key('archive-index-A')));
+      final indexZ = tester.getCenter(find.byKey(const Key('archive-index-Z')));
+      await tester.dragFrom(indexA, indexZ - indexA);
+      await tester.pumpAndSettle();
+      final selectedMarker = tester.widget<AnimatedContainer>(
+        find.descendant(
+          of: find.byKey(const Key('archive-index-Z')),
+          matching: find.byType(AnimatedContainer),
+        ),
+      );
+      expect(
+        (selectedMarker.decoration! as BoxDecoration).color,
+        Theme.of(
+          tester.element(find.byKey(const Key('archive-index-Z'))),
+        ).colorScheme.primary,
+      );
       expect(tester.takeException(), isNull);
     },
   );
