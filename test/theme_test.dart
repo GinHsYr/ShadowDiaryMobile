@@ -1,9 +1,27 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings.dart';
 import 'package:shadow_diary_mobile/core/theme/app_theme.dart';
 
 void main() {
+  test('uses Microsoft YaHei for Windows themes', () {
+    final originalPlatform = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      expect(
+        AppTheme.light(ThemeSeed.neutral).textTheme.bodyMedium?.fontFamily,
+        'Microsoft YaHei',
+      );
+      expect(
+        AppTheme.dark(ThemeSeed.neutral).textTheme.bodyMedium?.fontFamily,
+        'Microsoft YaHei',
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = originalPlatform;
+    }
+  });
+
   test('neutral theme gives controls readable contrast in both modes', () {
     final lightTheme = AppTheme.light(ThemeSeed.neutral);
     final lightColors = lightTheme.colorScheme;

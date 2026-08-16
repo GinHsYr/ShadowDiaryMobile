@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
@@ -12,6 +13,7 @@ abstract final class AppSpacing {
 
 abstract final class AppTheme {
   static const double cardRadius = 16;
+  static const String _windowsFontFamily = 'Microsoft YaHei';
 
   static ThemeData light(ThemeSeed seed, {ColorScheme? dynamicColorScheme}) =>
       _build(Brightness.light, seed, dynamicColorScheme: dynamicColorScheme);
@@ -40,6 +42,9 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: defaultTargetPlatform == TargetPlatform.windows
+          ? _windowsFontFamily
+          : null,
       colorScheme: scheme,
       scaffoldBackgroundColor: isDark
           ? const Color(0xFF111111)
