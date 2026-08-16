@@ -314,8 +314,12 @@
   "editorTitlePlaceholder": "Today's title",
   "editorBodyPlaceholder": "Write what happened today...",
   "editorMood": "Mood",
-  "editorSaving": "Saving...",
-  "editorSaved": "Auto-saved",
+  "editorCharacterCount": "Characters: {count}",
+  "@editorCharacterCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "editorSaveError": "Could not save. Please try again.",
   "editorCollapseDates": "Collapse dates",
   "editorExpandDates": "Expand dates",

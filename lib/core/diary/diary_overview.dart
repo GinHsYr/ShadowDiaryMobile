@@ -24,6 +24,15 @@ class DiaryOverview {
 
 const String _objectReplacementCharacter = '\uFFFC';
 
+int countDiaryCharacters(String plainContent) {
+  return plainContent
+      .replaceAll('$_objectReplacementCharacter\n', '')
+      .replaceAll(_objectReplacementCharacter, '')
+      .trimRight()
+      .runes
+      .length;
+}
+
 typedef DiaryOverviewSource = ({
   DateTime createdAt,
   String title,
@@ -53,11 +62,7 @@ DiaryOverview calculateDiaryOverview(
       continue;
     }
     diaryCount++;
-    final writtenText = entry.plainContent
-        .replaceAll('$_objectReplacementCharacter\n', '')
-        .replaceAll(_objectReplacementCharacter, '')
-        .trimRight();
-    characterCount += writtenText.runes.length;
+    characterCount += countDiaryCharacters(entry.plainContent);
     final date = DateTime(
       entry.createdAt.year,
       entry.createdAt.month,

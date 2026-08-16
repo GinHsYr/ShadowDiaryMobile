@@ -802,10 +802,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editorMood => 'Mood';
 
   @override
-  String get editorSaving => 'Saving...';
-
-  @override
-  String get editorSaved => 'Auto-saved';
+  String editorCharacterCount(int count) {
+    return 'Characters: $count';
+  }
 
   @override
   String get editorSaveError => 'Could not save. Please try again.';

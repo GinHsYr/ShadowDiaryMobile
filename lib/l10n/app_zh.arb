@@ -314,8 +314,12 @@
   "editorTitlePlaceholder": "今天的标题",
   "editorBodyPlaceholder": "写下今天发生的事……",
   "editorMood": "心情",
-  "editorSaving": "正在保存…",
-  "editorSaved": "已自动保存",
+  "editorCharacterCount": "字数：{count}",
+  "@editorCharacterCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "editorSaveError": "保存失败，请重试。",
   "editorCollapseDates": "收起日期",
   "editorExpandDates": "展开日期",

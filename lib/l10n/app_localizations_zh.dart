@@ -770,10 +770,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editorMood => '心情';
 
   @override
-  String get editorSaving => '正在保存…';
-
-  @override
-  String get editorSaved => '已自动保存';
+  String editorCharacterCount(int count) {
+    return '字数：$count';
+  }
 
   @override
   String get editorSaveError => '保存失败，请重试。';

@@ -1556,17 +1556,11 @@ abstract class AppLocalizations {
   /// **'心情'**
   String get editorMood;
 
-  /// No description provided for @editorSaving.
+  /// No description provided for @editorCharacterCount.
   ///
   /// In zh, this message translates to:
-  /// **'正在保存…'**
-  String get editorSaving;
-
-  /// No description provided for @editorSaved.
-  ///
-  /// In zh, this message translates to:
-  /// **'已自动保存'**
-  String get editorSaved;
+  /// **'字数：{count}'**
+  String editorCharacterCount(int count);
 
   /// No description provided for @editorSaveError.
   ///

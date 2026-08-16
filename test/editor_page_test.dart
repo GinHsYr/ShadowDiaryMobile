@@ -116,6 +116,29 @@ void main() {
     );
   });
 
+  testWidgets('shows and updates the diary character count', (tester) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final repository = MemoryDiaryRepository([
+      _entry('counted', today, 'Counted title', '<p>你好世界</p>', '你好世界'),
+    ]);
+    await tester.pumpWidget(_testApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Characters: 4'), findsOneWidget);
+    expect(find.text('Auto-saved'), findsNothing);
+
+    final editor = tester.widget<QuillEditor>(
+      find.byKey(const Key('editor-quill-editor')),
+    );
+    editor.controller.replaceText(0, 0, '🙂', null);
+    await tester.pump();
+
+    expect(
+      tester.widget<Text>(find.byKey(const Key('editor-character-count'))).data,
+      'Characters: 5',
+    );
+  });
+
   testWidgets('automatically saves title, mood, and Quill HTML', (
     tester,
   ) async {

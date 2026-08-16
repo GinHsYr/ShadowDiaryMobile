@@ -66,10 +66,8 @@ class _EditorPageState extends ConsumerState<EditorPage>
   DiaryEntry? _entry;
   String _mood = _defaultMood;
   int _changeRevision = 0;
-  int _pendingSaves = 0;
   bool _datePickerExpanded = true;
   bool _isLoading = true;
-  bool _isSaving = false;
   bool _hasChanges = false;
   bool _isApplyingEntry = false;
   bool _isAddingImage = false;
@@ -79,6 +77,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   bool _lastSaveSucceeded = true;
   bool _didRevealSourceImage = false;
   int _sourceImageRevealAttempts = 0;
+  int _characterCount = 0;
   Object? _loadError;
   int? _sourceImageOffset;
 
@@ -125,6 +124,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
     _titleController.text = entry?.title ?? '';
     _mood = entry?.mood.isNotEmpty == true ? entry!.mood : _defaultMood;
     _quillController.document = _documentFromEntry(entry);
+    _characterCount = countDiaryCharacters(
+      _quillController.document.toPlainText(),
+    );
     _sourceImageOffset = _findSourceImageOffset();
     _listenToDocument();
     _hasChanges = false;
@@ -221,7 +223,14 @@ class _EditorPageState extends ConsumerState<EditorPage>
       unawaited(previousSubscription.cancel());
     }
     _documentChanges = _quillController.document.changes.listen((_) {
-      if (!_isApplyingEntry && !_isLoading) _markChanged();
+      if (_isApplyingEntry || _isLoading) return;
+      final characterCount = countDiaryCharacters(
+        _quillController.document.toPlainText(),
+      );
+      if (mounted && characterCount != _characterCount) {
+        setState(() => _characterCount = characterCount);
+      }
+      _markChanged();
     });
   }
 
@@ -240,7 +249,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
     });
   }
 
-  Future<bool> _saveCurrent({bool updateUi = true}) async {
+  Future<bool> _saveCurrent() async {
     if (!_hasChanges) {
       await _saveQueue;
       return _lastSaveSucceeded;
@@ -255,7 +264,6 @@ class _EditorPageState extends ConsumerState<EditorPage>
     );
     if (!hasContent && _entry == null) {
       _hasChanges = false;
-      if (updateUi && mounted) setState(() {});
       return true;
     }
 
@@ -290,10 +298,6 @@ class _EditorPageState extends ConsumerState<EditorPage>
             );
 
     _entry = entry;
-    _pendingSaves++;
-    if (updateUi && mounted) {
-      setState(() => _isSaving = true);
-    }
     final result = Completer<bool>();
     _saveQueue = _saveQueue.then((_) async {
       try {
@@ -317,11 +321,6 @@ class _EditorPageState extends ConsumerState<EditorPage>
             library: 'ShadowDiary autosave',
           ),
         );
-      } finally {
-        _pendingSaves--;
-        if (updateUi && mounted) {
-          setState(() => _isSaving = _pendingSaves > 0);
-        }
       }
     });
     await _saveQueue;
@@ -483,7 +482,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
   void dispose() {
     _saveDebounce?.cancel();
     unawaited(
-      _saveCurrent(updateUi: false).whenComplete(() async {
+      _saveCurrent().whenComplete(() async {
         await _imageCleanup.cleanupUnreferenced();
         _syncWriteGuard.endEditing();
       }),
@@ -525,7 +524,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
                       _EditorHeader(
                         date: _selectedDate,
                         expanded: _datePickerExpanded,
-                        isSaving: _isSaving || _hasChanges,
+                        characterCount: _characterCount,
                         l10n: l10n,
                         onBack: _exit,
                         onToggleDatePicker: () => setState(
@@ -651,7 +650,7 @@ class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
     required this.date,
     required this.expanded,
-    required this.isSaving,
+    required this.characterCount,
     required this.l10n,
     required this.onBack,
     required this.onToggleDatePicker,
@@ -659,7 +658,7 @@ class _EditorHeader extends StatelessWidget {
 
   final DateTime date;
   final bool expanded;
-  final bool isSaving;
+  final int characterCount;
   final AppLocalizations l10n;
   final VoidCallback onBack;
   final VoidCallback onToggleDatePicker;
@@ -684,7 +683,8 @@ class _EditorHeader extends StatelessWidget {
               children: [
                 Text(label, style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  isSaving ? l10n.editorSaving : l10n.editorSaved,
+                  l10n.editorCharacterCount(characterCount),
+                  key: const Key('editor-character-count'),
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
               ],

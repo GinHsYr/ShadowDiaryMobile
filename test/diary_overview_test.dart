@@ -2,6 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_overview.dart';
 
 void main() {
+  test('counts diary characters without image placeholders', () {
+    expect(countDiaryCharacters('你好\n世界\uFFFC\n🙂'), 6);
+  });
+
   test('counts an image-only diary without counting image placeholders', () {
     final overview = calculateDiaryOverview([
       (
