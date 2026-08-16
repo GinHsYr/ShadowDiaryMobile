@@ -362,6 +362,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('uses a desktop navigation rail with readable content width', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.en),
+    );
+    await tester.pumpWidget(_testApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DesktopNavigationRail), findsOneWidget);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byType(FrostedNavigationBar), findsNothing);
+    expect(
+      tester.getSize(find.byType(DesktopNavigationRail)).width,
+      DesktopNavigationRail.width,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('home-calendar-card'))).width,
+      lessThanOrEqualTo(AppPage.maxContentWidth),
+    );
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'reveals search from the home icon, debounces results, and reverses on close',
     (tester) async {

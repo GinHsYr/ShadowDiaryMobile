@@ -18,11 +18,12 @@ class AppDatabase {
   /// bundled build does. Keeping the normal sqflite database directory makes
   /// the file location stable if the backend changes.
   static Future<AppDatabase> openBundled() async {
-    final databaseDirectory = await getDatabasesPath();
-    await Directory(databaseDirectory).create(recursive: true);
     sqfliteFfiInit();
+    final factory = databaseFactoryFfi;
+    final databaseDirectory = await factory.getDatabasesPath();
+    await Directory(databaseDirectory).create(recursive: true);
     return open(
-      factory: databaseFactoryFfi,
+      factory: factory,
       path: p.join(databaseDirectory, databaseName),
     );
   }

@@ -53,6 +53,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
       bottom: false,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final isDesktop = AppPage.isDesktop(context);
           final columnCount = constraints.maxWidth >= 840
               ? 4
               : constraints.maxWidth >= 560
@@ -124,7 +125,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                             AppSpacing.sm,
                             AppSpacing.sm,
                             AppSpacing.sm,
-                            104,
+                            isDesktop ? AppSpacing.lg : 104,
                           ),
                           sliver: SliverMasonryGrid.count(
                             key: const Key('media-masonry-grid'),
@@ -150,7 +151,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                 PositionedDirectional(
                   top: 136,
                   end: 4,
-                  bottom: 112,
+                  bottom: isDesktop ? AppSpacing.lg : 112,
                   child: _MediaDateRail(
                     dates: _mediaDates(visibleItems),
                     value: _scrollFraction,

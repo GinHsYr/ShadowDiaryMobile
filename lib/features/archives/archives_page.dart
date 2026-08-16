@@ -75,6 +75,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
   @override
   Widget build(BuildContext context) {
     final archives = ref.watch(archiveListProvider);
+    final isDesktop = AppPage.isDesktop(context);
     return SafeArea(
       key: const Key('archives-page-safe-area'),
       bottom: false,
@@ -118,7 +119,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
           if (widget.onAddArchive != null && !_isSearchExpanded)
             PositionedDirectional(
               end: AppSpacing.md,
-              bottom: 92,
+              bottom: isDesktop ? AppSpacing.lg : 92,
               child: FloatingActionButton(
                 key: const Key('archives-add-button'),
                 heroTag: 'archives-add-button',
@@ -197,6 +198,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
   }
 
   Widget _buildArchiveList(BuildContext context, List<ArchiveGroup> groups) {
+    final isDesktop = AppPage.isDesktop(context);
     final availableInitials = groups.map((group) => group.initial).toSet();
     _groupKeys.removeWhere(
       (initial, key) => !availableInitials.contains(initial),
@@ -246,7 +248,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
           );
         }
       }
-      children.add(const SizedBox(height: 112));
+      children.add(SizedBox(height: isDesktop ? AppSpacing.lg : 112));
     }
 
     return Stack(
@@ -278,7 +280,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
           PositionedDirectional(
             top: 72,
             end: 4,
-            bottom: 112,
+            bottom: isDesktop ? AppSpacing.lg : 112,
             child: Center(
               child: _AlphabetRail(
                 alphabet: _alphabet,
@@ -392,6 +394,7 @@ class _ArchiveStaticLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = AppPage.isDesktop(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -405,11 +408,11 @@ class _ArchiveStaticLayout extends StatelessWidget {
           Expanded(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
+                padding: EdgeInsets.fromLTRB(
                   AppSpacing.lg,
                   0,
                   AppSpacing.lg,
-                  88,
+                  isDesktop ? AppSpacing.md : 88,
                 ),
                 child: child,
               ),

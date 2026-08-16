@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/database/app_database.dart';
 import 'package:shadow_diary_mobile/core/diary/diary_entry.dart';
@@ -90,6 +92,25 @@ void main() {
       'PRAGMA foreign_keys',
     );
     expect(foreignKeys.single.values.single, 1);
+  });
+
+  test('opens the bundled database without a global sqflite factory', () async {
+    final bundled = await AppDatabase.openBundled();
+    final databasePath = bundled.path;
+    addTearDown(() async {
+      await bundled.close();
+      for (final suffix in ['', '-shm', '-wal']) {
+        final file = File('$databasePath$suffix');
+        if (await file.exists()) await file.delete();
+      }
+    });
+
+    expect(
+      await bundled.database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ),
+      isNotEmpty,
+    );
   });
 
   test('keeps FTS in sync across insert, update, and delete', () async {

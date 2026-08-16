@@ -65,6 +65,21 @@ void main() {
     }
   });
 
+  test('keeps source bytes on Windows without native compression', () async {
+    if (!Platform.isWindows) return;
+    final source = File(p.join(temporaryDirectory.path, 'source.jpg'));
+    final bytes = [0, 1, 2, 3, 4];
+    await source.writeAsBytes(bytes);
+    final service = DeviceDiaryImageService(
+      pickImagePaths: (maxImages) async => [source.path],
+      loadImageDirectory: () async => temporaryDirectory,
+    );
+
+    final images = await service.pickAndStore(maxImages: 1);
+
+    expect(await File(images.single.filePath).readAsBytes(), bytes);
+  });
+
   test('caps a picker response at the requested image count', () async {
     var encodedCount = 0;
     final service = DeviceDiaryImageService(

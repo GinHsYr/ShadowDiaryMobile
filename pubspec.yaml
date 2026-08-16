@@ -1,5 +1,5 @@
 name: shadow_diary_mobile
-description: "ShadowDiary (影迹) Android client."
+description: "ShadowDiary (影迹) desktop and Android client."
 publish_to: 'none'
 version: 0.4.0+23
 
@@ -56,6 +56,10 @@ flutter_launcher_icons:
   android: true
   image_path: resource/icon.png
   min_sdk_android: 24
+  windows:
+    generate: true
+    image_path: resource/icon.png
+    icon_size: 256
 
 hooks:
   user_defines:

@@ -104,6 +104,14 @@ class DeviceDiaryImageService implements DiaryImageService {
     String sourcePath,
     String destinationPath,
   ) async {
+    if (Platform.isWindows) {
+      // flutter_image_compress has no Windows implementation. Flutter's
+      // decoder reads the copied image by its file signature, so keeping the
+      // original bytes preserves image import until native compression is
+      // available on desktop.
+      await File(sourcePath).copy(destinationPath);
+      return true;
+    }
     final result = await FlutterImageCompress.compressAndGetFile(
       sourcePath,
       destinationPath,

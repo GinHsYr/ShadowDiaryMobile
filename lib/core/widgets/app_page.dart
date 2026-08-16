@@ -5,27 +5,41 @@ import '../theme/app_theme.dart';
 class AppPage extends StatelessWidget {
   const AppPage({required this.child, super.key});
 
+  static const desktopBreakpoint = 900.0;
+  static const maxContentWidth = 1120.0;
+
+  static bool isDesktop(BuildContext context) {
+    return MediaQuery.sizeOf(context).width >= desktopBreakpoint;
+  }
+
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    // The shell extends its body behind the navigation bar so that the bar's
-    // BackdropFilter has real page content to sample. Keep the top and side
-    // insets, but let the scroll viewport paint through the bottom inset. The
-    // sliver padding below still keeps the final item clear of the bar.
+    final isDesktop = AppPage.isDesktop(context);
     return SafeArea(
       key: const Key('app-page-safe-area'),
       bottom: false,
       child: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              104,
+            padding: EdgeInsets.fromLTRB(
+              isDesktop ? AppSpacing.xl : AppSpacing.md,
+              isDesktop ? AppSpacing.xl : AppSpacing.md,
+              isDesktop ? AppSpacing.xl : AppSpacing.md,
+              isDesktop ? AppSpacing.lg : 104,
             ),
-            sliver: SliverToBoxAdapter(child: child),
+            sliver: SliverToBoxAdapter(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: AppPage.maxContentWidth,
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
           ),
         ],
       ),
