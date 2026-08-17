@@ -16,6 +16,7 @@ import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
 import '../../core/services/diary_image_service.dart';
 import '../../core/services/diary_image_store.dart';
+import '../../core/services/image_picker_support.dart';
 import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -43,7 +44,7 @@ class EditorPage extends ConsumerStatefulWidget {
 
 class _EditorPageState extends ConsumerState<EditorPage>
     with WidgetsBindingObserver {
-  static const _maxImagesPerSelection = 9;
+  static const _maxImagesPerSelection = maxImagesPerPickerSelection;
   static const _maxImagesPerDiary = 20;
   static final _firstDate = DateTime(1900);
   static final _lastDate = DateTime(2100, 12, 31);

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 
 const motionPhotoFileSuffix = '_motion.mp4';
@@ -16,7 +15,6 @@ const _imageExtensions = <String>{
   '.png',
   '.webp',
 };
-const _videoExtensions = <String>{'.mov', '.mp4', '.m4v', '.3gp'};
 
 class MotionPhotoSelection {
   const MotionPhotoSelection({required this.imagePath, this.motionPath});
@@ -25,47 +23,16 @@ class MotionPhotoSelection {
   final String? motionPath;
 }
 
-Future<List<String>> pickMotionPhotoPaths(int maxImages) async {
-  final result = await FilePicker.pickFiles(
-    allowMultiple: true,
-    type: FileType.custom,
-    allowedExtensions: [
-      ..._imageExtensions.map((extension) => extension.substring(1)),
-      ..._videoExtensions.map((extension) => extension.substring(1)),
-    ],
-  );
-  if (result == null) return const [];
-  return result.files
-      .map((file) => file.path)
-      .whereType<String>()
-      .take(maxImages * 2)
-      .toList(growable: false);
-}
-
-List<MotionPhotoSelection> pairMotionPhotoSelections(
+List<MotionPhotoSelection> imageSelectionsFromPaths(
   Iterable<String> paths, {
   required int maxImages,
 }) {
-  final images = <String>[];
-  final videosByStem = <String, String>{};
-  for (final path in paths) {
-    final extension = p.extension(path).toLowerCase();
-    final stem = p.basenameWithoutExtension(path).toLowerCase();
-    if (_imageExtensions.contains(extension)) {
-      images.add(path);
-    } else if (_videoExtensions.contains(extension)) {
-      videosByStem.putIfAbsent(stem, () => path);
-    }
-  }
-  return images
-      .take(maxImages)
-      .map(
-        (imagePath) => MotionPhotoSelection(
-          imagePath: imagePath,
-          motionPath:
-              videosByStem[p.basenameWithoutExtension(imagePath).toLowerCase()],
-        ),
+  return paths
+      .where(
+        (path) => _imageExtensions.contains(p.extension(path).toLowerCase()),
       )
+      .take(maxImages)
+      .map((imagePath) => MotionPhotoSelection(imagePath: imagePath))
       .toList(growable: false);
 }
 

@@ -50,6 +50,29 @@ void main() {
     );
   });
 
+  test(
+    'limits each picker request to nine images and rejects videos',
+    () async {
+      int? pickerLimit;
+      final service = DeviceArchiveImageService(
+        pickImagePaths: (maxImages) async {
+          pickerLimit = maxImages;
+          return const ['one.jpg', 'video.mp4', 'two.png'];
+        },
+        encodeWebp: (source, destination) async {
+          await File(destination).writeAsString(source);
+          return true;
+        },
+        loadImageDirectory: () async => temporaryDirectory,
+      );
+
+      final images = await service.pickAndStore(maxImages: 20);
+
+      expect(pickerLimit, 9);
+      expect(images, hasLength(2));
+    },
+  );
+
   test('keeps source bytes on Windows without native compression', () async {
     if (!Platform.isWindows) return;
     final source = File(p.join(temporaryDirectory.path, 'source.jpg'));

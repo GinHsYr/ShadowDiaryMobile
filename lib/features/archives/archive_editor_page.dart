@@ -11,6 +11,7 @@ import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/services/diary_image_store.dart';
+import '../../core/services/image_picker_support.dart';
 import '../../core/widgets/live_photo_badge.dart';
 import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
@@ -29,7 +30,7 @@ class ArchiveEditorPage extends ConsumerStatefulWidget {
 
 class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
   static const maxImages = 20;
-  static const _maxImagesPerSelection = 9;
+  static const _maxImagesPerSelection = maxImagesPerPickerSelection;
 
   final _formKey = GlobalKey<FormState>();
   final _sourceImageKey = GlobalKey();

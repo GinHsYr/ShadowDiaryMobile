@@ -4,16 +4,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/services/motion_photo_support.dart';
 
 void main() {
-  test('pairs Apple-style still and motion files by basename', () {
-    final selections = pairMotionPhotoSelections(const [
+  test('keeps still images and ignores video paths', () {
+    final selections = imageSelectionsFromPaths(const [
       r'C:\photos\IMG_0001.HEIC',
       r'C:\photos\IMG_0001.MOV',
       r'C:\photos\IMG_0002.JPG',
     ], maxImages: 9);
 
     expect(selections, hasLength(2));
-    expect(selections.first.motionPath, endsWith('IMG_0001.MOV'));
-    expect(selections.last.motionPath, isNull);
+    expect(
+      selections.map((selection) => selection.motionPath),
+      everyElement(isNull),
+    );
   });
 
   test('finds an embedded ISO-BMFF motion video after the poster bytes', () {

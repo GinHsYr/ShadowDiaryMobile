@@ -99,6 +99,29 @@ void main() {
     expect(encodedCount, 9);
   });
 
+  test(
+    'limits each picker request to nine images and rejects videos',
+    () async {
+      int? pickerLimit;
+      final service = DeviceDiaryImageService(
+        pickImagePaths: (maxImages) async {
+          pickerLimit = maxImages;
+          return const ['first.jpg', 'video.mp4', 'second.png'];
+        },
+        loadImageDirectory: () async => temporaryDirectory,
+        encodeWebp: (sourcePath, destinationPath) async {
+          await File(destinationPath).writeAsBytes([1]);
+          return true;
+        },
+      );
+
+      final images = await service.pickAndStore(maxImages: 20);
+
+      expect(pickerLimit, 9);
+      expect(images, hasLength(2));
+    },
+  );
+
   test('removes the whole batch when one WebP encoding fails', () async {
     var encodedCount = 0;
     final service = DeviceDiaryImageService(

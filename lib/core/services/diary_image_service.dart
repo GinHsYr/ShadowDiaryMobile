@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import 'diary_image_store.dart';
+import 'image_picker_support.dart';
 import 'motion_photo_support.dart';
 
 final diaryImageServiceProvider = Provider<DiaryImageService>((ref) {
@@ -43,7 +44,7 @@ class DeviceDiaryImageService implements DiaryImageService {
     LoadDiaryImageDirectory? loadImageDirectory,
     DiaryImageStore? imageStore,
     this._uuid = const Uuid(),
-  }) : _pickImagePaths = pickImagePaths ?? pickMotionPhotoPaths,
+  }) : _pickImagePaths = pickImagePaths ?? pickGalleryImagePaths,
        _encodeWebp = encodeWebp ?? _encodeAsWebp,
        _loadImageDirectory =
            loadImageDirectory ??
@@ -61,9 +62,10 @@ class DeviceDiaryImageService implements DiaryImageService {
     if (maxImages < 1) {
       throw ArgumentError.value(maxImages, 'maxImages', 'must be positive');
     }
-    final selections = pairMotionPhotoSelections(
-      await _pickImagePaths(maxImages),
-      maxImages: maxImages,
+    final selectionLimit = imagePickerSelectionLimit(maxImages);
+    final selections = imageSelectionsFromPaths(
+      await _pickImagePaths(selectionLimit),
+      maxImages: selectionLimit,
     );
     if (selections.isEmpty) return const [];
 
