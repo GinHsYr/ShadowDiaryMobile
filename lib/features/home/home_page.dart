@@ -82,10 +82,13 @@ class HomePage extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           HomeStatisticsCards(
+            height: 118,
             diaryCount: overview.diaryCount,
             streakDays: overview.streakDays,
             characterCount: overview.characterCount,
           ),
+          const SizedBox(height: AppSpacing.md),
+          HomeDiaryAnalysisEntry(label: l10n.diaryAnalysis),
         ],
       ),
     );
@@ -183,14 +186,17 @@ class HomeStatisticsCards extends StatelessWidget {
     required this.diaryCount,
     required this.streakDays,
     required this.characterCount,
+    this.height = 118,
     super.key,
   }) : assert(diaryCount >= 0),
        assert(streakDays >= 0),
-       assert(characterCount >= 0);
+       assert(characterCount >= 0),
+       assert(height > 0);
 
   final int diaryCount;
   final int streakDays;
   final int characterCount;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +210,7 @@ class HomeStatisticsCards extends StatelessWidget {
 
         return SizedBox(
           key: const Key('home-statistics-cards'),
-          height: 112,
+          height: height,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -336,6 +342,55 @@ class _HomeStatisticCard extends StatelessWidget {
   }
 }
 
+class HomeDiaryAnalysisEntry extends StatelessWidget {
+  const HomeDiaryAnalysisEntry({this.label, super.key});
+
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    const buttonHeight = 50.0;
+
+    return Semantics(
+      key: const Key('home-diary-analysis-entry-semantics'),
+      container: true,
+      enabled: false,
+      label: label,
+      child: SizedBox(
+        key: const Key('home-diary-analysis-entry'),
+        width: double.infinity,
+        height: buttonHeight,
+        child: OutlinedButton(
+          onPressed: null,
+          style: OutlinedButton.styleFrom(
+            alignment: AlignmentDirectional.centerStart,
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.insights_outlined, size: 22),
+              if (label != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    label!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const Icon(Icons.lock_outline_rounded, size: 17),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The home-page month calendar.
 ///
 /// [diaryDates] is intentionally date-only input so the widget can be wired to
@@ -408,49 +463,6 @@ class _HomeCalendarState extends State<HomeCalendar> {
               onChooseMonth: _showMonthYearPicker,
             ),
             const SizedBox(height: AppSpacing.xs),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  key: const Key('calendar-shortcuts'),
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                    child: Row(
-                      key: const Key('calendar-shortcut-row'),
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _ShortcutButton(
-                          label: l10n.calendarToday,
-                          onPressed: () => _selectDay(_today),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        _ShortcutButton(
-                          label: l10n.calendarYesterday,
-                          onPressed: () => _selectDay(
-                            _today.subtract(const Duration(days: 1)),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        _ShortcutButton(
-                          label: l10n.calendarLastWeekSameDay,
-                          onPressed: () => _selectDay(
-                            _today.subtract(const Duration(days: 7)),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        _ShortcutButton(
-                          label: l10n.calendarLastMonthSameDay,
-                          onPressed: () =>
-                              _selectDay(_sameDayLastMonth(_today)),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppSpacing.xs),
             TableCalendar<bool>(
               key: const Key('home-month-calendar'),
               locale: locale,
@@ -480,8 +492,8 @@ class _HomeCalendarState extends State<HomeCalendar> {
               headerVisible: false,
               availableCalendarFormats: const {CalendarFormat.month: 'Month'},
               calendarFormat: CalendarFormat.month,
-              rowHeight: 36,
-              daysOfWeekHeight: 28,
+              rowHeight: 38,
+              daysOfWeekHeight: 30,
               startingDayOfWeek: StartingDayOfWeek.sunday,
               availableGestures: AvailableGestures.horizontalSwipe,
               onDaySelected: (selectedDay, focusedDay) {
@@ -536,32 +548,6 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-            ),
-            const Divider(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.lg,
-              runSpacing: AppSpacing.sm,
-              children: [
-                _LegendItem(
-                  marker: Icon(
-                    Icons.check_rounded,
-                    size: 16,
-                    color: colors.primary,
-                  ),
-                  label: l10n.calendarHasDiary,
-                ),
-                _LegendItem(
-                  marker: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: BoxDecoration(
-                      color: colors.primary,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                  ),
-                  label: l10n.calendarToday,
-                ),
-              ],
             ),
             const Divider(height: AppSpacing.md),
             Row(
@@ -653,12 +639,6 @@ class _HomeCalendarState extends State<HomeCalendar> {
 
   static int _daysInMonth(DateTime date) {
     return DateTime(date.year, date.month + 1, 0).day;
-  }
-
-  static DateTime _sameDayLastMonth(DateTime date) {
-    final previousMonth = DateTime(date.year, date.month - 1);
-    final day = date.day.clamp(1, _daysInMonth(previousMonth));
-    return DateTime(previousMonth.year, previousMonth.month, day);
   }
 }
 
@@ -1051,53 +1031,6 @@ class _CalendarHeader extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.chevron_right_rounded),
         ),
-      ],
-    );
-  }
-}
-
-class _ShortcutButton extends StatelessWidget {
-  const _ShortcutButton({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final backgroundColor = theme.brightness == Brightness.dark
-        ? const Color(0xFF3A3A3A)
-        : const Color(0xFFF0F0F0);
-    return TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: colors.onSurface,
-        backgroundColor: backgroundColor,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        minimumSize: const Size(0, 30),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-      ),
-      child: Text(label),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.marker, required this.label});
-
-  final Widget marker;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 18, height: 18, child: Center(child: marker)),
-        const SizedBox(width: AppSpacing.xs),
-        Text(label),
       ],
     );
   }

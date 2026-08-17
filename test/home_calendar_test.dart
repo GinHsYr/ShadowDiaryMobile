@@ -24,8 +24,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('2026年7月'), findsOneWidget);
-      expect(find.text('回到今天'), findsNothing);
-      expect(find.text('上周今日'), findsOneWidget);
+      expect(find.byKey(const Key('calendar-shortcuts')), findsNothing);
+      expect(find.byKey(const Key('calendar-shortcut-row')), findsNothing);
+      expect(find.text('今天'), findsNothing);
+      expect(find.text('昨天'), findsNothing);
+      expect(find.text('上周今日'), findsNothing);
+      expect(find.text('上月今日'), findsNothing);
+      expect(find.text('有日记'), findsNothing);
       expect(find.text('本月写作完成度'), findsOneWidget);
       expect(find.text('已写 2 / 31 天'), findsOneWidget);
       expect(find.text('6.5%'), findsOneWidget);
@@ -37,25 +42,12 @@ void main() {
         find.byKey(const Key('home-calendar-diary-20260720')),
         findsOneWidget,
       );
-      expect(
-        tester.getCenter(find.byKey(const Key('calendar-shortcut-row'))).dx,
-        closeTo(
-          tester.getCenter(find.byKey(const Key('home-calendar-card'))).dx,
-          0.5,
-        ),
-      );
 
       await tester.tap(find.byKey(const Key('calendar-previous-month')));
       await tester.pumpAndSettle();
 
       expect(find.text('2026年6月'), findsOneWidget);
       expect(find.text('已写 0 / 30 天'), findsOneWidget);
-
-      await tester.tap(find.text('今天').first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('2026年7月'), findsOneWidget);
-      expect(find.text('已写 2 / 31 天'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('calendar-month-picker')));
       await tester.pumpAndSettle();
@@ -204,8 +196,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('July 2026'), findsOneWidget);
-    expect(find.text('Back to today'), findsNothing);
-    expect(find.text('This day last month'), findsOneWidget);
+    expect(find.byKey(const Key('calendar-shortcuts')), findsNothing);
+    expect(find.byKey(const Key('calendar-shortcut-row')), findsNothing);
+    expect(find.text('Today'), findsNothing);
+    expect(find.text('Yesterday'), findsNothing);
+    expect(find.text('This day last week'), findsNothing);
+    expect(find.text('This day last month'), findsNothing);
+    expect(find.text('Diary entry'), findsNothing);
     expect(find.text('Monthly writing progress'), findsOneWidget);
     expect(find.text('Written 0 / 31 days'), findsOneWidget);
     expect(find.byKey(const Key('home-month-calendar')), findsOneWidget);
@@ -218,13 +215,6 @@ void main() {
     );
     expect(progress.color, Colors.black);
     expect(progress.backgroundColor, const Color(0xFFD7D7D7));
-    final todayShortcut = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, 'Today'),
-    );
-    expect(
-      todayShortcut.style?.backgroundColor?.resolve(<WidgetState>{}),
-      const Color(0xFFF0F0F0),
-    );
 
     await tester.tap(find.byKey(const Key('calendar-month-picker')));
     await tester.pumpAndSettle();

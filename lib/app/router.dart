@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/media/media_library.dart';
+import '../features/settings/about_page.dart';
 import '../features/archives/archive_editor_page.dart';
 import '../features/archives/archives_page.dart';
 import '../features/editor/editor_page.dart';
@@ -19,6 +20,7 @@ abstract final class AppRoutes {
   static const archives = '/archives';
   static const media = '/media';
   static const settings = '/settings';
+  static const about = '/settings/about';
   static const lanSync = '/settings/lan-sync';
   static const search = '/search';
   static const newEntry = '/entries/new';
@@ -123,6 +125,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.about,
+        builder: (context, state) => const AboutPage(),
       ),
       GoRoute(
         path: AppRoutes.lanSync,

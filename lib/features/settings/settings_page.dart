@@ -195,6 +195,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _SectionTitle(l10n.about),
+          Card(
+            child: ListTile(
+              key: const Key('about-tile'),
+              leading: const Icon(Icons.info_outline_rounded),
+              title: Text(l10n.about),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.push(AppRoutes.about),
+            ),
+          ),
         ],
       ),
     );

@@ -356,36 +356,6 @@ abstract class AppLocalizations {
   /// **'字'**
   String get homeStatisticsCharacterUnit;
 
-  /// No description provided for @calendarToday.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天'**
-  String get calendarToday;
-
-  /// No description provided for @calendarYesterday.
-  ///
-  /// In zh, this message translates to:
-  /// **'昨天'**
-  String get calendarYesterday;
-
-  /// No description provided for @calendarLastWeekSameDay.
-  ///
-  /// In zh, this message translates to:
-  /// **'上周今日'**
-  String get calendarLastWeekSameDay;
-
-  /// No description provided for @calendarLastMonthSameDay.
-  ///
-  /// In zh, this message translates to:
-  /// **'上月今日'**
-  String get calendarLastMonthSameDay;
-
-  /// No description provided for @calendarHasDiary.
-  ///
-  /// In zh, this message translates to:
-  /// **'有日记'**
-  String get calendarHasDiary;
-
   /// No description provided for @calendarMonthlyProgress.
   ///
   /// In zh, this message translates to:
@@ -841,6 +811,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'服务'**
   String get settingsServices;
+
+  /// No description provided for @about.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于'**
+  String get about;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'软件版本'**
+  String get aboutVersion;
+
+  /// No description provided for @aboutOpenSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'开源地址'**
+  String get aboutOpenSource;
+
+  /// No description provided for @aboutAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者'**
+  String get aboutAuthor;
+
+  /// No description provided for @aboutSoftwareIcon.
+  ///
+  /// In zh, this message translates to:
+  /// **'软件图标'**
+  String get aboutSoftwareIcon;
+
+  /// No description provided for @diaryAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'日记分析'**
+  String get diaryAnalysis;
 
   /// No description provided for @backupExport.
   ///

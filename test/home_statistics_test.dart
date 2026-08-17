@@ -10,6 +10,88 @@ import 'package:shadow_diary_mobile/features/home/home_page.dart';
 import 'package:shadow_diary_mobile/l10n/app_localizations.dart';
 
 void main() {
+  testWidgets('keeps the disabled analysis entry aligned on a narrow home', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _homeApp(
+        locale: const Locale('en'),
+        theme: AppTheme.light(ThemeSeed.neutral),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final entry = find.byKey(const Key('home-diary-analysis-entry'));
+    final entryButton = find.descendant(
+      of: entry,
+      matching: find.byType(OutlinedButton),
+    );
+    expect(find.text('Diary analysis'), findsOneWidget);
+    expect(tester.widget<OutlinedButton>(entryButton).onPressed, isNull);
+    expect(
+      tester.getSize(entry).width,
+      closeTo(
+        tester.getSize(find.byKey(const Key('home-calendar-card'))).width,
+        0.1,
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('home-calendar-card'))).height,
+      greaterThan(420),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('home-statistics-cards'))).height,
+      118,
+    );
+    expect(tester.getSize(entry).height, 50);
+    expect(tester.getRect(entry).bottom, lessThanOrEqualTo(760));
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const Key('app-page-safe-area')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('does not create a scroll range when home content fits', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _homeApp(
+        locale: const Locale('en'),
+        theme: AppTheme.light(ThemeSeed.neutral),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const Key('app-page-safe-area')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      0,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shows localized statistics cards below the calendar', (
     tester,
   ) async {
@@ -50,7 +132,7 @@ void main() {
     final characterSize = tester.getSize(
       find.byKey(const Key('home-statistics-character-card')),
     );
-    expect(diarySize.height, 112);
+    expect(diarySize.height, 118);
     expect(streakSize, diarySize);
     expect(characterSize, diarySize);
 

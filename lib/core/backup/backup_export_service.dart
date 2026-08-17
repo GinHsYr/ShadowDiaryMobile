@@ -11,6 +11,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../database/app_database.dart';
 import '../services/diary_image_store.dart';
+import '../app_info.dart';
 
 const backupFilePrefix = 'shadow-diary-backup';
 const backupExportFormatVersion = 5;
@@ -65,7 +66,7 @@ class DeviceBackupExportService implements BackupExportService {
     required this._imageStore,
     SaveBackupFile? saveBackupFile,
     this.appName = 'ShadowDiary',
-    this.appVersion = '0.4.0',
+    this.appVersion = AppInfo.version,
     Random? random,
   }) : _saveBackupFile = saveBackupFile ?? _saveFile,
        _random = random ?? Random.secure();

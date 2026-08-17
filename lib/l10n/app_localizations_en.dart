@@ -148,21 +148,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeStatisticsCharacterUnit => 'characters';
 
   @override
-  String get calendarToday => 'Today';
-
-  @override
-  String get calendarYesterday => 'Yesterday';
-
-  @override
-  String get calendarLastWeekSameDay => 'This day last week';
-
-  @override
-  String get calendarLastMonthSameDay => 'This day last month';
-
-  @override
-  String get calendarHasDiary => 'Diary entry';
-
-  @override
   String get calendarMonthlyProgress => 'Monthly writing progress';
 
   @override
@@ -405,6 +390,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsServices => 'Services';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get aboutVersion => 'Version';
+
+  @override
+  String get aboutOpenSource => 'Open-source project';
+
+  @override
+  String get aboutAuthor => 'Author';
+
+  @override
+  String get aboutSoftwareIcon => 'Software icon';
+
+  @override
+  String get diaryAnalysis => 'Diary analysis';
 
   @override
   String get backupExport => 'Export backup';

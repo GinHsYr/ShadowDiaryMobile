@@ -1,7 +1,7 @@
 name: shadow_diary_mobile
 description: "ShadowDiary (影迹) desktop and Android client."
 publish_to: 'none'
-version: 0.4.0+23
+version: 0.4.5+30
 
 environment:
   sdk: ^3.12.2
@@ -38,6 +38,7 @@ dependencies:
   sqlite3: ^3.5.0
   table_calendar: ^3.2.0
   uuid: ^4.6.0
+  url_launcher: ^6.3.2
   video_player: ^2.10.0
   vsc_quill_delta_to_html: ^1.0.5
   web_socket_channel: ^3.0.3
@@ -53,14 +54,16 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+  assets:
+    - resources/icon.png
 
 flutter_launcher_icons:
   android: true
-  image_path: resource/icon.png
+  image_path: resources/icon.png
   min_sdk_android: 24
   windows:
     generate: true
-    image_path: resource/icon.png
+    image_path: resources/icon.png
     icon_size: 256
 
 hooks:

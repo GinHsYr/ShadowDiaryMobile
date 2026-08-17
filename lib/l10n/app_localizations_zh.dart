@@ -142,21 +142,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeStatisticsCharacterUnit => '字';
 
   @override
-  String get calendarToday => '今天';
-
-  @override
-  String get calendarYesterday => '昨天';
-
-  @override
-  String get calendarLastWeekSameDay => '上周今日';
-
-  @override
-  String get calendarLastMonthSameDay => '上月今日';
-
-  @override
-  String get calendarHasDiary => '有日记';
-
-  @override
   String get calendarMonthlyProgress => '本月写作完成度';
 
   @override
@@ -395,6 +380,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsServices => '服务';
+
+  @override
+  String get about => '关于';
+
+  @override
+  String get aboutVersion => '软件版本';
+
+  @override
+  String get aboutOpenSource => '开源地址';
+
+  @override
+  String get aboutAuthor => '作者';
+
+  @override
+  String get aboutSoftwareIcon => '软件图标';
+
+  @override
+  String get diaryAnalysis => '日记分析';
 
   @override
   String get backupExport => '导出备份';

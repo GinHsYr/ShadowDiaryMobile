@@ -19,6 +19,7 @@ import 'package:shadow_diary_mobile/core/settings/app_settings_controller.dart';
 import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
 import 'package:shadow_diary_mobile/core/widgets/app_page.dart';
 import 'package:shadow_diary_mobile/core/widgets/app_search_field.dart';
+import 'package:shadow_diary_mobile/features/settings/about_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 void main() {
@@ -184,6 +185,32 @@ void main() {
     expect(find.text('Settings'), findsWidgets);
   });
 
+  testWidgets('opens the localized about page with app details', (
+    tester,
+  ) async {
+    final repository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.zh),
+    );
+    await tester.pumpWidget(_testApp(repository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    final aboutTile = tester.widget<ListTile>(
+      find.byKey(const Key('about-tile')),
+    );
+    expect(aboutTile.onTap, isNotNull);
+    aboutTile.onTap!();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('about-page')), findsOneWidget);
+    expect(find.byKey(const Key('about-app-icon')), findsOneWidget);
+    expect(find.text('软件版本: 0.4.5+30'), findsOneWidget);
+    expect(find.text('GinHsYr'), findsOneWidget);
+    expect(find.text(AboutPage.openSourceUrl), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'previews backup details and waits for incremental confirmation',
     (tester) async {
@@ -336,16 +363,25 @@ void main() {
     );
     expect(pageSafeArea.bottom, isFalse);
 
-    final scrollViewBottom = tester
-        .getBottomRight(
-          find.descendant(
-            of: find.byType(AppPage),
-            matching: find.byType(CustomScrollView),
-          ),
-        )
-        .dy;
     final navigationBarTop = tester.getTopLeft(find.byType(NavigationBar)).dy;
-    expect(scrollViewBottom, greaterThan(navigationBarTop));
+    final homeScrollable = find
+        .descendant(
+          of: find.byKey(const Key('app-page-safe-area')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final scrollPosition = tester
+        .state<ScrollableState>(homeScrollable)
+        .position;
+    expect(scrollPosition.maxScrollExtent, greaterThan(0));
+    scrollPosition.jumpTo(scrollPosition.maxScrollExtent);
+    await tester.pump();
+    expect(
+      tester
+          .getBottomRight(find.byKey(const Key('home-diary-analysis-entry')))
+          .dy,
+      lessThanOrEqualTo(navigationBarTop),
+    );
 
     final navigationBar = tester.widget<NavigationBar>(
       find.byType(NavigationBar),
