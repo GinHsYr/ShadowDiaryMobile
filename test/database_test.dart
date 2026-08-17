@@ -95,13 +95,17 @@ void main() {
   });
 
   test('opens the bundled database without a global sqflite factory', () async {
-    final bundled = await AppDatabase.openBundled();
-    final databasePath = bundled.path;
+    final databaseDirectory = await Directory.systemTemp.createTemp(
+      'shadow-diary-bundled-db-',
+    );
+    final bundled = await AppDatabase.openBundled(
+      factory: databaseFactoryFfi,
+      databaseDirectory: databaseDirectory.path,
+    );
     addTearDown(() async {
       await bundled.close();
-      for (final suffix in ['', '-shm', '-wal']) {
-        final file = File('$databasePath$suffix');
-        if (await file.exists()) await file.delete();
+      if (await databaseDirectory.exists()) {
+        await databaseDirectory.delete(recursive: true);
       }
     });
 

@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../database/app_database.dart';
 import '../services/diary_image_debug_trace.dart';
 import '../services/diary_image_store.dart';
+import '../services/motion_photo_support.dart';
 import 'sync_models.dart';
 
 class SyncAsset {
@@ -394,6 +395,14 @@ class SyncRepository {
       final file = resolvedFile;
       if (file != null && await file.exists()) {
         pathsById.putIfAbsent(assetId, () => file.path);
+      }
+      final parsed = diaryImageSourceFromSource(source);
+      if (parsed != null) {
+        final motionId = motionPhotoFileName(parsed.imageId);
+        final motionFile = _imageStore?.motionFileForSource(source);
+        if (motionFile != null && await motionFile.exists()) {
+          pathsById.putIfAbsent(motionId, () => motionFile.path);
+        }
       }
     }
     for (final assetId in referencedIds) {
@@ -872,7 +881,10 @@ class SyncRepository {
     }
     for (final value in values) {
       final parsed = diaryImageSourceFromSource(value);
-      if (parsed != null) yield parsed.fileName;
+      if (parsed != null) {
+        yield parsed.fileName;
+        yield motionPhotoFileName(parsed.imageId);
+      }
     }
   }
 
@@ -886,15 +898,16 @@ class SyncRepository {
 
   String _safeAssetFileName(String id) {
     final parsed = diaryImageSourceFromFileName(id);
-    if (parsed == null) {
+    if (parsed == null && motionPhotoImageIdFromFileName(id) == null) {
       throw const FormatException('Invalid sync asset identifier.');
     }
-    return parsed.fileName;
+    return parsed?.fileName ?? id.toLowerCase();
   }
 
   String _syncAssetMimeType(String id) {
     return switch (p.extension(id).toLowerCase()) {
       '.jpg' || '.jpeg' => 'image/jpeg',
+      '.mp4' || '.mov' => 'video/mp4',
       '.png' => 'image/png',
       _ => 'image/webp',
     };
@@ -904,9 +917,9 @@ class SyncRepository {
     final fileName = _safeAssetFileName(id);
     final store = _imageStore;
     if (store?.documentsDirectory != null) {
-      return store!.fileForParsedSource(
-        diaryImageSourceFromFileName(fileName)!,
-      );
+      final parsed = diaryImageSourceFromFileName(fileName);
+      if (parsed != null) return store!.fileForParsedSource(parsed);
+      return File(p.join(store!.imageDirectory.path, fileName));
     }
     final directory = await _loadSyncMediaDirectory();
     return File(p.join(directory.path, fileName));

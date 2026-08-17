@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import 'diary_image_store.dart';
+import 'motion_photo_support.dart';
 
 final archiveImageServiceProvider = Provider<ArchiveImageService>((ref) {
   return DeviceArchiveImageService(
@@ -35,7 +35,7 @@ class DeviceArchiveImageService implements ArchiveImageService {
     DiaryImageStore? imageStore,
     this._isImageReferenced,
     this.uuid = const Uuid(),
-  }) : _pickImagePaths = pickImagePaths ?? _pickImagesFromGallery,
+  }) : _pickImagePaths = pickImagePaths ?? pickMotionPhotoPaths,
        _encodeWebp = encodeWebp ?? _encodeAsWebp,
        _loadImageDirectory =
            loadImageDirectory ??
@@ -56,20 +56,29 @@ class DeviceArchiveImageService implements ArchiveImageService {
     if (maxImages < 1) {
       throw ArgumentError.value(maxImages, 'maxImages', 'must be positive');
     }
-    final sourcePaths = (await _pickImagePaths(
-      maxImages,
-    )).take(maxImages).toList(growable: false);
-    if (sourcePaths.isEmpty) return const [];
+    final selections = pairMotionPhotoSelections(
+      await _pickImagePaths(maxImages),
+      maxImages: maxImages,
+    );
+    if (selections.isEmpty) return const [];
 
     final directory = await _loadImageDirectory();
     await directory.create(recursive: true);
     final storedPaths = <String>[];
     final attemptedPaths = <String>[];
     try {
-      for (final sourcePath in sourcePaths) {
-        final destinationPath = p.join(directory.path, '${uuid.v4()}.webp');
+      for (final selection in selections) {
+        final imageId = uuid.v4();
+        final destinationPath = p.join(directory.path, '$imageId.webp');
+        final motionPath = p.join(directory.path, motionPhotoFileName(imageId));
         attemptedPaths.add(destinationPath);
-        final encoded = await _encodeWebp(sourcePath, destinationPath);
+        final hasMotion = await storeMotionPhotoVideo(
+          imagePath: selection.imagePath,
+          pairedMotionPath: selection.motionPath,
+          destinationPath: motionPath,
+        );
+        if (hasMotion) attemptedPaths.add(motionPath);
+        final encoded = await _encodeWebp(selection.imagePath, destinationPath);
         if (!encoded || !await File(destinationPath).exists()) {
           throw FileSystemException('WebP encoding did not create a file.');
         }
@@ -132,15 +141,15 @@ class DeviceArchiveImageService implements ArchiveImageService {
     }
   }
 
-  static Future<List<String>> _pickImagesFromGallery(int maxImages) async {
-    final images = await ImagePicker().pickMultiImage(limit: maxImages);
-    return images.map((image) => image.path).toList(growable: false);
-  }
-
   static Future<bool> _encodeAsWebp(
     String sourcePath,
     String destinationPath,
   ) async {
+    final extension = p.extension(sourcePath).toLowerCase();
+    if (extension == '.gif' || extension == '.webp') {
+      await File(sourcePath).copy(destinationPath);
+      return true;
+    }
     if (Platform.isWindows) {
       // flutter_image_compress has no Windows implementation. Flutter's
       // decoder reads the copied image by its file signature, so keeping the

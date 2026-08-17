@@ -5,8 +5,34 @@ import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 
 Document diaryDocumentFromHtml(String html) {
   final delta = HtmlToDelta().convert(html);
-  final normalized = _normalizeImageAttributes(delta);
+  final normalized = _normalizeImageAttributes(
+    delta,
+    centeredImageIndexes: _centeredImageIndexes(html),
+  );
   return normalized.isEmpty ? Document() : Document.fromDelta(normalized);
+}
+
+Set<int> _centeredImageIndexes(String html) {
+  final indexes = <int>{};
+  final imageTags = RegExp(
+    r'''<img\b(?:[^>"']+|"[^"]*"|'[^']*')*>''',
+    caseSensitive: false,
+  ).allMatches(html);
+  var index = 0;
+  for (final match in imageTags) {
+    final tag = match.group(0)!;
+    final hasCenterClass = RegExp(
+      r'''\bclass\s*=\s*(["'])[^"']*\bql-align-center\b''',
+      caseSensitive: false,
+    ).hasMatch(tag);
+    final hasCenterStyle = RegExp(
+      r'''(?:text-align\s*:\s*center|margin-(?:left|right)\s*:\s*auto)''',
+      caseSensitive: false,
+    ).hasMatch(tag);
+    if (hasCenterClass || hasCenterStyle) indexes.add(index);
+    index++;
+  }
+  return indexes;
 }
 
 String diaryDocumentToHtml(Document document) {
@@ -19,6 +45,15 @@ String diaryDocumentToHtml(Document document) {
           'max-width:100%',
           'height:auto',
           if (width != null) 'width:$width',
+          if (operation.attributes.align?.value ==
+              Attribute.centerAlignment.value)
+            'display:block',
+          if (operation.attributes.align?.value ==
+              Attribute.centerAlignment.value)
+            'margin-left:auto',
+          if (operation.attributes.align?.value ==
+              Attribute.centerAlignment.value)
+            'margin-right:auto',
         ];
       },
     ),
@@ -29,7 +64,11 @@ String diaryDocumentToHtml(Document document) {
   ).convert();
 }
 
-Delta _normalizeImageAttributes(Delta delta) {
+Delta _normalizeImageAttributes(
+  Delta delta, {
+  Set<int> centeredImageIndexes = const {},
+}) {
+  var imageIndex = 0;
   final operations = delta.toJson().map<Map<String, dynamic>>((rawOperation) {
     final operation = Map<String, dynamic>.from(rawOperation);
     final insert = operation['insert'];
@@ -46,8 +85,19 @@ Delta _normalizeImageAttributes(Delta delta) {
       final imageStyles = parseImageStyleAttribute(style, '');
       final width = imageStyles[Attribute.width.key];
       if (width != null) attributes[Attribute.width.key] = width.toString();
+      if (RegExp(
+        r'text-align\s*:\s*center',
+        caseSensitive: false,
+      ).hasMatch(style)) {
+        attributes[Attribute.align.key] = Attribute.centerAlignment.value;
+      }
       attributes.remove(Attribute.style.key);
     }
+
+    if (centeredImageIndexes.contains(imageIndex)) {
+      attributes[Attribute.align.key] = Attribute.centerAlignment.value;
+    }
+    imageIndex++;
 
     if (attributes.isEmpty) {
       operation.remove('attributes');

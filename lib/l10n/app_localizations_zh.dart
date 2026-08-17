@@ -24,6 +24,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navigationSettings => '设置';
 
   @override
+  String get livePhoto => '实况照片';
+
+  @override
   String get newDiary => '新建日记';
 
   @override

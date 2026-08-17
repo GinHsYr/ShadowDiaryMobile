@@ -24,6 +24,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationSettings => 'Settings';
 
   @override
+  String get livePhoto => 'Live Photo';
+
+  @override
   String get newDiary => 'New diary';
 
   @override

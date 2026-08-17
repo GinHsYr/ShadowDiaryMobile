@@ -4,6 +4,7 @@ import 'package:flutter_quill/quill_delta.dart';
 
 import '../../core/services/diary_image_debug_trace.dart';
 import '../../core/services/diary_image_store.dart';
+import '../../core/widgets/live_photo_badge.dart';
 import '../../l10n/app_localizations.dart';
 
 void applyDiaryImageWidth(
@@ -25,11 +26,13 @@ class DiaryImageEmbedBuilder extends EmbedBuilder {
     this.targetOffset,
     this.targetKey,
     this.onTargetReady,
+    this.onPreview,
   });
 
   final int? targetOffset;
   final Key? targetKey;
   final VoidCallback? onTargetReady;
+  final ValueChanged<String>? onPreview;
 
   @override
   String get key => BlockEmbed.imageType;
@@ -49,6 +52,10 @@ class DiaryImageEmbedBuilder extends EmbedBuilder {
       readOnly: embedContext.readOnly,
       isSourceTarget: isSourceTarget,
       onTargetReady: isSourceTarget ? onTargetReady : null,
+      onPreview: onPreview,
+      alignment: node.style.attributes[Attribute.align.key]?.value == 'center'
+          ? Alignment.center
+          : Alignment.centerLeft,
     );
   }
 }
@@ -62,6 +69,8 @@ class _DiaryImageEmbed extends StatefulWidget {
     required this.readOnly,
     required this.isSourceTarget,
     required this.onTargetReady,
+    required this.onPreview,
+    required this.alignment,
     super.key,
   });
 
@@ -72,6 +81,8 @@ class _DiaryImageEmbed extends StatefulWidget {
   final bool readOnly;
   final bool isSourceTarget;
   final VoidCallback? onTargetReady;
+  final ValueChanged<String>? onPreview;
+  final Alignment alignment;
 
   @override
   State<_DiaryImageEmbed> createState() => _DiaryImageEmbedState();
@@ -136,11 +147,16 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                 .toDouble();
         final imageWidth = availableWidth * percentage / 100;
         return Align(
-          alignment: Alignment.centerLeft,
+          alignment: widget.alignment,
           child: GestureDetector(
             key: Key('diary-image-${widget.offset}'),
             behavior: HitTestBehavior.opaque,
-            onTap: widget.readOnly
+            onTap: widget.onPreview == null
+                ? (widget.readOnly
+                      ? null
+                      : () => setState(() => _isSelected = !_isSelected))
+                : () => widget.onPreview!.call(widget.source),
+            onLongPress: widget.readOnly
                 ? null
                 : () => setState(() => _isSelected = !_isSelected),
             child: SizedBox(
@@ -189,6 +205,12 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                             ),
                     ),
                   ),
+                  if (file != null)
+                    PositionedDirectional(
+                      top: 6,
+                      end: 6,
+                      child: LivePhotoBadge(file: file),
+                    ),
                   if (_isSelected && !widget.readOnly) ...[
                     PositionedDirectional(
                       top: 0,

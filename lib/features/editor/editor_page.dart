@@ -21,6 +21,7 @@ import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import 'diary_document_codec.dart';
 import 'diary_image_embed.dart';
+import 'diary_image_viewer.dart';
 
 class EditorPage extends ConsumerStatefulWidget {
   const EditorPage({
@@ -433,6 +434,7 @@ class _EditorPageState extends ConsumerState<EditorPage>
       for (var index = 0; index < images.length; index++) {
         insertion.insert(BlockEmbed.image(images[index].source).toJson(), {
           Attribute.width.key: '100%',
+          Attribute.align.key: Attribute.centerAlignment.value,
         });
         if (index < images.length - 1 || !endsAtLineBoundary) {
           insertion.insert('\n');
@@ -466,6 +468,15 @@ class _EditorPageState extends ConsumerState<EditorPage>
     } finally {
       if (mounted) setState(() => _isAddingImage = false);
     }
+  }
+
+  Future<void> _openImagePreview(String source) async {
+    final images = diaryImageReferencesFromDelta(
+      _quillController.document.toDelta(),
+    ).map((reference) => reference.source).toList(growable: false);
+    final index = images.indexOf(source);
+    if (index < 0) return;
+    await showDiaryImageViewer(context, images: images, initialIndex: index);
   }
 
   @override
@@ -571,6 +582,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
                                 targetKey: _sourceImageKey,
                                 onTargetReady: () {
                                   unawaited(_revealSourceImage());
+                                },
+                                onPreview: (source) {
+                                  unawaited(_openImagePreview(source));
                                 },
                               ),
                             ],

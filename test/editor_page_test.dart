@@ -288,6 +288,10 @@ void main() {
       ]),
     );
     expect(imageOperations.map(_imageWidth), everyElement('100%'));
+    expect(
+      imageOperations.map(_imageAlignment),
+      everyElement(Attribute.centerAlignment.value),
+    );
 
     tester.view.viewInsets = FakeViewPadding.zero;
     editor.scrollController.jumpTo(0);
@@ -295,6 +299,10 @@ void main() {
     final firstImage = find.byKey(const Key('diary-image-0'));
     await tester.ensureVisible(firstImage);
     await tester.tap(firstImage);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.binding.handlePopRoute();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.longPress(firstImage);
     await tester.pump();
     for (final corner in [
       'top-left',
@@ -536,6 +544,12 @@ String _imageSource(Map<String, dynamic> operation) {
 String _imageWidth(Map<String, dynamic> operation) {
   return (operation['attributes'] as Map<String, dynamic>)[Attribute.width.key]
       as String;
+}
+
+String? _imageAlignment(Map<String, dynamic> operation) {
+  final attributes = operation['attributes'];
+  if (attributes is! Map) return null;
+  return attributes[Attribute.align.key]?.toString();
 }
 
 double _imagePercentage(Map<String, dynamic> operation) {

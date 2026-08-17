@@ -38,6 +38,7 @@ dependencies:
   sqlite3: ^3.5.0
   table_calendar: ^3.2.0
   uuid: ^4.6.0
+  video_player: ^2.10.0
   vsc_quill_delta_to_html: ^1.0.5
   web_socket_channel: ^3.0.3
   wheel_slider: ^1.2.0

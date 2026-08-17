@@ -11,6 +11,7 @@ import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/services/diary_image_store.dart';
+import '../../core/widgets/live_photo_badge.dart';
 import '../../core/sync/sync_write_guard.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -898,7 +899,8 @@ class _MainImagePicker extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final imageFile = imagePath == null
         ? null
-        : diaryImageStoreOf(context).fileForSource(imagePath!);
+        : diaryImageStoreOf(context).fileForSource(imagePath!) ??
+              File(imagePath!);
     final placeholder = Container(
       decoration: BoxDecoration(
         color: colors.surfaceContainerHighest,
@@ -957,6 +959,12 @@ class _MainImagePicker extends StatelessWidget {
                 ),
               ),
             ),
+            if (imagePath != null)
+              PositionedDirectional(
+                end: 8,
+                top: 8,
+                child: LivePhotoBadge(file: imageFile!),
+              ),
             if (imagePath != null)
               PositionedDirectional(
                 end: 2,
@@ -1096,6 +1104,11 @@ class _GalleryImageTile extends StatelessWidget {
               ),
             ),
           ),
+        ),
+        PositionedDirectional(
+          end: 6,
+          top: 42,
+          child: LivePhotoBadge(file: imageFile),
         ),
         PositionedDirectional(
           end: 6,

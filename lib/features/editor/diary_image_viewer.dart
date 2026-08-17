@@ -9,9 +9,7 @@ import '../../core/widgets/live_photo_badge.dart';
 import '../../core/widgets/live_photo_player.dart';
 import '../../l10n/app_localizations.dart';
 
-String archiveImageHeroTag(String path) => 'archive-image:$path';
-
-Future<void> showArchiveImageViewer(
+Future<void> showDiaryImageViewer(
   BuildContext context, {
   required List<String> images,
   required int initialIndex,
@@ -28,7 +26,7 @@ Future<void> showArchiveImageViewer(
           ? Duration.zero
           : const Duration(milliseconds: 180),
       pageBuilder: (context, animation, secondaryAnimation) {
-        return _ArchiveImageViewer(
+        return _DiaryImageViewer(
           images: images,
           initialIndex: initialIndex.clamp(0, images.length - 1),
         );
@@ -40,17 +38,17 @@ Future<void> showArchiveImageViewer(
   );
 }
 
-class _ArchiveImageViewer extends StatefulWidget {
-  const _ArchiveImageViewer({required this.images, required this.initialIndex});
+class _DiaryImageViewer extends StatefulWidget {
+  const _DiaryImageViewer({required this.images, required this.initialIndex});
 
   final List<String> images;
   final int initialIndex;
 
   @override
-  State<_ArchiveImageViewer> createState() => _ArchiveImageViewerState();
+  State<_DiaryImageViewer> createState() => _DiaryImageViewerState();
 }
 
-class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
+class _DiaryImageViewerState extends State<_DiaryImageViewer> {
   late final PageController _pageController;
   late int _currentIndex;
 
@@ -79,7 +77,7 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
       context,
     ).motionFileForSource(widget.images[_currentIndex]);
     return Material(
-      key: const Key('archive-image-viewer'),
+      key: const Key('diary-image-viewer'),
       color: Colors.black,
       child: Stack(
         children: [
@@ -90,16 +88,18 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
             backgroundDecoration: const BoxDecoration(color: Colors.black),
             onPageChanged: (index) => setState(() => _currentIndex = index),
             builder: (context, index) {
-              final path = widget.images[index];
-              final imageFile =
-                  diaryImageStoreOf(context).fileForSource(path) ?? File(path);
+              final file =
+                  diaryImageStoreOf(
+                    context,
+                  ).fileForSource(widget.images[index]) ??
+                  File(widget.images[index]);
               final motionFile = diaryImageStoreOf(
                 context,
-              ).motionFileForSource(path);
+              ).motionFileForSource(widget.images[index]);
               if (motionFile != null && motionFile.existsSync()) {
                 return PhotoViewGalleryPageOptions.customChild(
                   child: LivePhotoPlayer(
-                    posterFile: imageFile,
+                    posterFile: file,
                     motionFile: motionFile,
                   ),
                   semanticLabel: l10n.archiveImagePosition(
@@ -112,10 +112,7 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
                 );
               }
               return PhotoViewGalleryPageOptions(
-                imageProvider: FileImage(imageFile),
-                heroAttributes: PhotoViewHeroAttributes(
-                  tag: archiveImageHeroTag(path),
-                ),
+                imageProvider: FileImage(file),
                 semanticLabel: l10n.archiveImagePosition(
                   index + 1,
                   widget.images.length,
@@ -123,27 +120,32 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
                 minScale: PhotoViewComputedScale.contained,
                 initialScale: PhotoViewComputedScale.contained,
                 maxScale: PhotoViewComputedScale.covered * 4,
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.white70,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.archiveImageMissing,
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Text(
+                    l10n.editorImageMissing,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
               );
             },
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: IconButton.filledTonal(
+                  key: const Key('diary-image-viewer-close'),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black54,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ),
           ),
           SafeArea(
             child: Align(
@@ -154,24 +156,6 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
                   file: currentFile,
                   motionFile: currentMotionFile,
                   iconOnly: false,
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: IconButton.filledTonal(
-                  key: const Key('archive-image-viewer-close'),
-                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black54,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
                 ),
               ),
             ),
@@ -194,7 +178,7 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
                       ),
                       child: Text(
                         '${_currentIndex + 1} / ${widget.images.length}',
-                        key: const Key('archive-image-viewer-counter'),
+                        key: const Key('diary-image-viewer-counter'),
                         style: const TextStyle(color: Colors.white),
                       ),
                     ),

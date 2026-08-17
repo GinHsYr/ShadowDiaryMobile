@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import 'diary_image_store.dart';
+import 'motion_photo_support.dart';
 
 final diaryImageServiceProvider = Provider<DiaryImageService>((ref) {
   return DeviceDiaryImageService(
@@ -16,10 +16,15 @@ final diaryImageServiceProvider = Provider<DiaryImageService>((ref) {
 });
 
 class StoredDiaryImage {
-  const StoredDiaryImage({required this.filePath, required this.source});
+  const StoredDiaryImage({
+    required this.filePath,
+    required this.source,
+    this.motionFilePath,
+  });
 
   final String filePath;
   final String source;
+  final String? motionFilePath;
 }
 
 abstract interface class DiaryImageService {
@@ -38,7 +43,7 @@ class DeviceDiaryImageService implements DiaryImageService {
     LoadDiaryImageDirectory? loadImageDirectory,
     DiaryImageStore? imageStore,
     this._uuid = const Uuid(),
-  }) : _pickImagePaths = pickImagePaths ?? _pickImagesFromGallery,
+  }) : _pickImagePaths = pickImagePaths ?? pickMotionPhotoPaths,
        _encodeWebp = encodeWebp ?? _encodeAsWebp,
        _loadImageDirectory =
            loadImageDirectory ??
@@ -56,10 +61,11 @@ class DeviceDiaryImageService implements DiaryImageService {
     if (maxImages < 1) {
       throw ArgumentError.value(maxImages, 'maxImages', 'must be positive');
     }
-    final sourcePaths = (await _pickImagePaths(
-      maxImages,
-    )).take(maxImages).toList(growable: false);
-    if (sourcePaths.isEmpty) return const [];
+    final selections = pairMotionPhotoSelections(
+      await _pickImagePaths(maxImages),
+      maxImages: maxImages,
+    );
+    if (selections.isEmpty) return const [];
 
     final directory = await _loadImageDirectory();
     await directory.create(recursive: true);
@@ -67,11 +73,19 @@ class DeviceDiaryImageService implements DiaryImageService {
     final storedImages = <StoredDiaryImage>[];
 
     try {
-      for (final sourcePath in sourcePaths) {
-        final destinationPath = p.join(directory.path, '${_uuid.v4()}.webp');
+      for (final selection in selections) {
+        final imageId = _uuid.v4();
+        final destinationPath = p.join(directory.path, '$imageId.webp');
+        final motionPath = p.join(directory.path, motionPhotoFileName(imageId));
         final destinationFile = File(destinationPath);
         destinationFiles.add(destinationFile);
-        final encoded = await _encodeWebp(sourcePath, destinationPath);
+        final hasMotion = await storeMotionPhotoVideo(
+          imagePath: selection.imagePath,
+          pairedMotionPath: selection.motionPath,
+          destinationPath: motionPath,
+        );
+        if (hasMotion) destinationFiles.add(File(motionPath));
+        final encoded = await _encodeWebp(selection.imagePath, destinationPath);
         if (!encoded || !await destinationFile.exists()) {
           throw FileSystemException('WebP encoding did not create a file.');
         }
@@ -81,6 +95,7 @@ class DeviceDiaryImageService implements DiaryImageService {
             source: diaryImageSourceFromFileName(
               p.basename(destinationPath),
             )!.source,
+            motionFilePath: hasMotion ? motionPath : null,
           ),
         );
       }
@@ -95,15 +110,15 @@ class DeviceDiaryImageService implements DiaryImageService {
     }
   }
 
-  static Future<List<String>> _pickImagesFromGallery(int maxImages) async {
-    final images = await ImagePicker().pickMultiImage(limit: maxImages);
-    return images.map((image) => image.path).toList(growable: false);
-  }
-
   static Future<bool> _encodeAsWebp(
     String sourcePath,
     String destinationPath,
   ) async {
+    final extension = p.extension(sourcePath).toLowerCase();
+    if (extension == '.gif' || extension == '.webp') {
+      await File(sourcePath).copy(destinationPath);
+      return true;
+    }
     if (Platform.isWindows) {
       // flutter_image_compress has no Windows implementation. Flutter's
       // decoder reads the copied image by its file signature, so keeping the

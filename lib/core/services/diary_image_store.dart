@@ -7,12 +7,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'diary_image_debug_trace.dart';
+import 'motion_photo_support.dart';
 import '../database/app_database.dart';
 
 const diaryImageScheme = 'diary-image';
 const diaryImageSchemePrefix = '$diaryImageScheme://';
-const _duplicatedDiaryImageSchemePrefix =
-    'diary-imag$diaryImageSchemePrefix';
+const _duplicatedDiaryImageSchemePrefix = 'diary-imag$diaryImageSchemePrefix';
 
 final diaryImageStoreProvider = Provider<DiaryImageStore>((ref) {
   return const DiaryImageStore.unconfigured();
@@ -33,6 +33,11 @@ DiaryImageStore diaryImageStoreOf(BuildContext context) {
 final RegExp _diaryImageFileNamePattern = RegExp(
   r'^([a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})'
   r'(?:(?:(_thumb)\.webp)|\.(webp|png|jpe?g))$',
+  caseSensitive: false,
+);
+
+final RegExp _motionPhotoFileNamePattern = RegExp(
+  r'^([a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})_motion\.(?:mp4|mov)$',
   caseSensitive: false,
 );
 
@@ -117,9 +122,7 @@ String _normalizeDiaryImagePrefix(String source) {
     }
   }
 
-  if (normalized.toLowerCase().startsWith(
-    _duplicatedDiaryImageSchemePrefix,
-  )) {
+  if (normalized.toLowerCase().startsWith(_duplicatedDiaryImageSchemePrefix)) {
     return '$diaryImageSchemePrefix${normalized.substring(_duplicatedDiaryImageSchemePrefix.length)}';
   }
   return normalized;
@@ -143,6 +146,14 @@ DiaryImageSource? diaryImageSourceFromSource(String? source) {
 
 String? canonicalDiaryImageSource(String? source) {
   return diaryImageSourceFromSource(source)?.source;
+}
+
+String? motionPhotoImageIdFromFileName(String fileName) {
+  if (fileName != p.basename(fileName)) return null;
+  return _motionPhotoFileNamePattern
+      .firstMatch(fileName)
+      ?.group(1)
+      ?.toLowerCase();
 }
 
 Iterable<String> diaryImageSourcesFromHtml(String html) sync* {
@@ -235,16 +246,33 @@ class DiaryImageStore {
     return file;
   }
 
+  File? motionFileForSource(String source) {
+    final parsed = diaryImageSourceFromSource(source);
+    if (parsed != null && documentsDirectory != null) {
+      return File(
+        p.join(imageDirectory.path, motionPhotoFileName(parsed.imageId)),
+      );
+    }
+    final localPath = localPathFromImageSource(source);
+    if (localPath == null) return null;
+    final directory = p.dirname(localPath);
+    final stem = p.basenameWithoutExtension(localPath);
+    return File(p.join(directory, '$stem$motionPhotoFileSuffix'));
+  }
+
   Future<File> writeAsset(String fileName, List<int> bytes) async {
     final parsed = diaryImageSourceFromFileName(fileName);
-    if (parsed == null) {
+    final motionImageId = motionPhotoImageIdFromFileName(fileName);
+    if (parsed == null && motionImageId == null) {
       throw const FormatException('Invalid diary image asset identifier.');
     }
     await ensureDirectories();
-    final target = fileForParsedSource(parsed);
+    final target = parsed == null
+        ? File(p.join(imageDirectory.path, fileName.toLowerCase()))
+        : fileForParsedSource(parsed);
     DiaryImageDebugTrace.fileState(
       'asset.store.write.begin',
-      assetId: parsed.fileName,
+      assetId: fileName,
       file: target,
       fields: {'incomingBytes': bytes.length},
     );
@@ -254,7 +282,7 @@ class DiaryImageStore {
     final stored = await temporary.rename(target.path);
     DiaryImageDebugTrace.fileState(
       'asset.store.write.complete',
-      assetId: parsed.fileName,
+      assetId: fileName,
       file: stored,
     );
     return stored;
@@ -279,10 +307,11 @@ class DiaryImageStore {
           if (!await directory.exists()) continue;
           await for (final entity in directory.list(followLinks: false)) {
             if (entity is! File) continue;
-            final parsed = diaryImageSourceFromFileName(
-              p.basename(entity.path),
-            );
-            if (parsed != null) candidateIds.add(parsed.imageId);
+            final fileName = p.basename(entity.path);
+            final parsed = diaryImageSourceFromFileName(fileName);
+            final imageId =
+                parsed?.imageId ?? motionPhotoImageIdFromFileName(fileName);
+            if (imageId != null) candidateIds.add(imageId);
           }
         } on FileSystemException {
           // Cleanup is best-effort and can be retried after the next save.
@@ -319,8 +348,11 @@ class DiaryImageStore {
         if (!await directory.exists()) continue;
         await for (final entity in directory.list(followLinks: false)) {
           if (entity is! File) continue;
-          final parsed = diaryImageSourceFromFileName(p.basename(entity.path));
-          if (parsed?.imageId == normalized) files.add(entity);
+          final fileName = p.basename(entity.path);
+          final parsed = diaryImageSourceFromFileName(fileName);
+          final imageId =
+              parsed?.imageId ?? motionPhotoImageIdFromFileName(fileName);
+          if (imageId == normalized) files.add(entity);
         }
       } on FileSystemException {
         // Return any files already discovered in the other managed directory.

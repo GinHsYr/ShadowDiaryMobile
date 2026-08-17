@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart' as native_sqflite;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class AppDatabase {
@@ -15,17 +17,47 @@ class AppDatabase {
   /// Opens the app database with a bundled SQLite build.
   ///
   /// Android's platform SQLite does not consistently include FTS5, while the
-  /// bundled build does. Keeping the normal sqflite database directory makes
-  /// the file location stable if the backend changes.
-  static Future<AppDatabase> openBundled() async {
+  /// bundled build does. The FFI factory's default `.dart_tool` path is only
+  /// suitable for desktop development, so mobile uses the native app database
+  /// directory and desktop uses Application Support.
+  static Future<AppDatabase> openBundled({
+    DatabaseFactory? factory,
+    String? databaseDirectory,
+  }) async {
     sqfliteFfiInit();
-    final factory = databaseFactoryFfi;
-    final databaseDirectory = await factory.getDatabasesPath();
-    await Directory(databaseDirectory).create(recursive: true);
-    return open(
-      factory: factory,
-      path: p.join(databaseDirectory, databaseName),
-    );
+    final selectedFactory = factory ?? databaseFactoryFfi;
+    final selectedDirectory =
+        databaseDirectory ?? await _bundledDatabaseDirectory();
+    await Directory(selectedDirectory).create(recursive: true);
+    final databasePath = p.join(selectedDirectory, databaseName);
+    if (databaseDirectory == null) {
+      await _migrateLegacyDesktopDatabase(selectedFactory, databasePath);
+    }
+    return open(factory: selectedFactory, path: databasePath);
+  }
+
+  static Future<String> _bundledDatabaseDirectory() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return native_sqflite.getDatabasesPath();
+    }
+    final supportDirectory = await getApplicationSupportDirectory();
+    return p.join(supportDirectory.path, 'databases');
+  }
+
+  static Future<void> _migrateLegacyDesktopDatabase(
+    DatabaseFactory factory,
+    String databasePath,
+  ) async {
+    if (!Platform.isWindows || await File(databasePath).exists()) return;
+    final legacyPath = p.join(await factory.getDatabasesPath(), databaseName);
+    if (p.equals(legacyPath, databasePath) ||
+        !await File(legacyPath).exists()) {
+      return;
+    }
+    for (final suffix in const ['', '-wal', '-shm']) {
+      final source = File('$legacyPath$suffix');
+      if (await source.exists()) await source.copy('$databasePath$suffix');
+    }
   }
 
   static Future<AppDatabase> open({

@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'设置'**
   String get navigationSettings;
 
+  /// No description provided for @livePhoto.
+  ///
+  /// In zh, this message translates to:
+  /// **'实况照片'**
+  String get livePhoto;
+
   /// No description provided for @newDiary.
   ///
   /// In zh, this message translates to:

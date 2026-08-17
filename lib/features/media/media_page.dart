@@ -10,6 +10,8 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../../core/media/media_library.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/live_photo_badge.dart';
+import '../../core/widgets/live_photo_player.dart';
 import '../../core/widgets/app_page.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -561,6 +563,13 @@ class _MediaImageTile extends StatelessWidget {
                   );
                 },
               ),
+              PositionedDirectional(
+                top: 6,
+                end: 6,
+                child: LivePhotoBadge(
+                  file: _mediaFile(context, item.imageSource),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.all(6),
                 child: DecoratedBox(
@@ -792,6 +801,7 @@ class _MediaImageViewerState extends State<_MediaImageViewer> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final currentItem = widget.items[_currentIndex];
+    final currentFile = _mediaFile(context, currentItem.imageSource);
     return Material(
       key: const Key('media-image-viewer'),
       color: Colors.black,
@@ -805,8 +815,27 @@ class _MediaImageViewerState extends State<_MediaImageViewer> {
             onPageChanged: (index) => setState(() => _currentIndex = index),
             builder: (context, index) {
               final item = widget.items[index];
+              final imageFile = _mediaFile(context, item.imageSource);
+              final motionFile = diaryImageStoreOf(
+                context,
+              ).motionFileForSource(item.imageSource);
+              if (motionFile != null && motionFile.existsSync()) {
+                return PhotoViewGalleryPageOptions.customChild(
+                  child: LivePhotoPlayer(
+                    posterFile: imageFile,
+                    motionFile: motionFile,
+                  ),
+                  semanticLabel: l10n.archiveImagePosition(
+                    index + 1,
+                    widget.items.length,
+                  ),
+                  minScale: PhotoViewComputedScale.contained,
+                  initialScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 4,
+                );
+              }
               return PhotoViewGalleryPageOptions(
-                imageProvider: FileImage(_mediaFile(context, item.imageSource)),
+                imageProvider: FileImage(imageFile),
                 semanticLabel: l10n.archiveImagePosition(
                   index + 1,
                   widget.items.length,
@@ -835,6 +864,21 @@ class _MediaImageViewerState extends State<_MediaImageViewer> {
                 },
               );
             },
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: LivePhotoBadge(
+                  file: currentFile,
+                  motionFile: diaryImageStoreOf(
+                    context,
+                  ).motionFileForSource(currentItem.imageSource),
+                  iconOnly: false,
+                ),
+              ),
+            ),
           ),
           SafeArea(
             child: Align(
