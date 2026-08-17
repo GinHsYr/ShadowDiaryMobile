@@ -37,10 +37,7 @@ void main() {
       expect(unsafeImage, isNotNull);
       expect(unsafeImage!.source, 'diary-image://$_imageId.png');
       expect(duplicatedSchemeImage, isNotNull);
-      expect(
-        duplicatedSchemeImage!.source,
-        'diary-image://$_imageId.webp',
-      );
+      expect(duplicatedSchemeImage!.source, 'diary-image://$_imageId.webp');
       expect(thumbnail, isNotNull);
       expect(thumbnail!.isThumbnail, isTrue);
       expect(thumbnail.fileName, '${_imageId}_thumb.webp');
@@ -168,8 +165,15 @@ void main() {
     );
     for (final file in [diaryFile, archiveFile, thumbnailFile]) {
       file.parent.createSync(recursive: true);
-      file.writeAsBytesSync([1, 2, 3]);
     }
+    final largeImageBytes = List<int>.generate(
+      3 * 64 * 1024 + 17,
+      (index) => index % 251,
+      growable: false,
+    );
+    diaryFile.writeAsBytesSync(largeImageBytes);
+    archiveFile.writeAsBytesSync([1, 2, 3]);
+    thumbnailFile.writeAsBytesSync([1, 2, 3]);
     final missingPath = p.join(
       documents.path,
       'media',
@@ -214,6 +218,17 @@ void main() {
 
     final store = DiaryImageStore(documents);
     await store.migrateLegacyReferences(database);
+
+    final marker = await database.database.query(
+      'settings',
+      where: 'key = ?',
+      whereArgs: [diaryImageMigrationSettingKey],
+    );
+    expect(marker.single['value'], '1');
+
+    final lateLegacyFile = File(missingPath)
+      ..parent.createSync(recursive: true)
+      ..writeAsBytesSync([9, 8, 7]);
     await store.migrateLegacyReferences(database);
 
     final diary = (await database.database.query('diary_entries')).single;
@@ -254,6 +269,13 @@ void main() {
     expect(await diaryFile.exists(), isFalse);
     expect(await archiveFile.exists(), isFalse);
     expect(await thumbnailFile.exists(), isFalse);
+    expect(await lateLegacyFile.exists(), isTrue);
+    expect(
+      await File(
+        p.join(documents.path, 'images', '$_missingImageId.webp'),
+      ).exists(),
+      isFalse,
+    );
   });
 
   test(

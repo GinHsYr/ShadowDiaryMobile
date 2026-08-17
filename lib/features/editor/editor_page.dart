@@ -14,6 +14,7 @@ import '../../core/diary/diary_content_images.dart';
 import '../../core/diary/diary_entry.dart';
 import '../../core/diary/diary_overview.dart';
 import '../../core/diary/diary_repository.dart';
+import '../../core/media/media_library.dart';
 import '../../core/services/diary_image_service.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../core/services/image_picker_support.dart';
@@ -77,6 +78,8 @@ class _EditorPageState extends ConsumerState<EditorPage>
   bool _isExiting = false;
   bool _allowPop = false;
   bool _lastSaveSucceeded = true;
+  bool _needsContentRefresh = false;
+  bool _overviewRefreshPending = false;
   bool _didRevealSourceImage = false;
   int _sourceImageRevealAttempts = 0;
   int _characterCount = 0;
@@ -305,10 +308,8 @@ class _EditorPageState extends ConsumerState<EditorPage>
       try {
         await _repository.save(entry);
         _lastSaveSucceeded = true;
-        if (mounted) {
-          ref.invalidate(diaryOverviewProvider);
-          ref.invalidate(diaryEntryListProvider);
-        }
+        _needsContentRefresh = true;
+        _overviewRefreshPending = true;
         if (date == _selectedDate && revision == _changeRevision) {
           _hasChanges = false;
         }
@@ -340,6 +341,10 @@ class _EditorPageState extends ConsumerState<EditorPage>
         _showSaveError();
         return;
       }
+      if (_overviewRefreshPending && mounted) {
+        ref.invalidate(diaryOverviewProvider);
+        _overviewRefreshPending = false;
+      }
       final nextEntry = await _repository.findByDate(nextDate);
       if (!mounted) return;
       setState(() {
@@ -368,6 +373,14 @@ class _EditorPageState extends ConsumerState<EditorPage>
       _isExiting = false;
       _showSaveError();
       return;
+    }
+    if (_needsContentRefresh && mounted) {
+      ref
+        ..invalidate(diaryOverviewProvider)
+        ..invalidate(diaryEntryListProvider)
+        ..invalidate(mediaLibraryProvider);
+      _needsContentRefresh = false;
+      _overviewRefreshPending = false;
     }
     await _imageCleanup.cleanupUnreferenced();
     if (!mounted) return;

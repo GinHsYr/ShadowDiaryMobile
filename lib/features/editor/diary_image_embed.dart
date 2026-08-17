@@ -185,6 +185,13 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                               child: Image.file(
                                 file,
                                 width: imageWidth,
+                                cacheWidth:
+                                    (imageWidth *
+                                            MediaQuery.devicePixelRatioOf(
+                                              context,
+                                            ))
+                                        .round()
+                                        .clamp(1, 8192),
                                 fit: BoxFit.contain,
                                 gaplessPlayback: true,
                                 errorBuilder: (context, error, stackTrace) {

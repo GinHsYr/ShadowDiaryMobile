@@ -13,6 +13,7 @@ import 'motion_photo_support.dart';
 final archiveImageServiceProvider = Provider<ArchiveImageService>((ref) {
   return DeviceArchiveImageService(
     imageStore: ref.watch(diaryImageStoreProvider),
+    imageCleanup: ref.watch(diaryImageCleanupProvider),
   );
 });
 
@@ -34,6 +35,7 @@ class DeviceArchiveImageService implements ArchiveImageService {
     EncodeArchiveImageAsWebp? encodeWebp,
     LoadArchiveImageDirectory? loadImageDirectory,
     DiaryImageStore? imageStore,
+    this._imageCleanup,
     this._isImageReferenced,
     this.uuid = const Uuid(),
   }) : _pickImagePaths = pickImagePaths ?? pickGalleryImagePaths,
@@ -49,6 +51,7 @@ class DeviceArchiveImageService implements ArchiveImageService {
   final EncodeArchiveImageAsWebp _encodeWebp;
   final LoadArchiveImageDirectory _loadImageDirectory;
   final DiaryImageStore? _imageStore;
+  final DiaryImageCleanup? _imageCleanup;
   final IsArchiveImageReferenced? _isImageReferenced;
   final Uuid uuid;
 
@@ -99,6 +102,11 @@ class DeviceArchiveImageService implements ArchiveImageService {
   Future<void> deleteManagedImages(Iterable<String> paths) async {
     final requestedSources = paths.where((path) => path.isNotEmpty).toSet();
     if (requestedSources.isEmpty) return;
+    final imageCleanup = _imageCleanup;
+    if (imageCleanup != null) {
+      await imageCleanup.cleanupUnreferenced(candidates: requestedSources);
+      return;
+    }
     final Directory directory;
     try {
       directory = await _loadImageDirectory();

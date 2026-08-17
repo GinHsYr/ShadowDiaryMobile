@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 
 import 'diary_image_debug_trace.dart';
 import 'motion_photo_support.dart';
@@ -12,6 +13,8 @@ import '../database/app_database.dart';
 
 const diaryImageScheme = 'diary-image';
 const diaryImageSchemePrefix = '$diaryImageScheme://';
+const diaryImageMigrationSettingKey = 'maintenance.diary_image_migration';
+const _diaryImageMigrationVersion = '1';
 const _duplicatedDiaryImageSchemePrefix = 'diary-imag$diaryImageSchemePrefix';
 
 final diaryImageStoreProvider = Provider<DiaryImageStore>((ref) {
@@ -300,23 +303,10 @@ class DiaryImageStore {
   }) async {
     if (documentsDirectory == null) return;
     final referencedIds = await _referencedImageIds(appDatabase);
+    final filesByImageId = await _managedFilesByImageId();
     final candidateIds = <String>{};
     if (candidates == null) {
-      for (final directory in [imageDirectory, thumbnailDirectory]) {
-        try {
-          if (!await directory.exists()) continue;
-          await for (final entity in directory.list(followLinks: false)) {
-            if (entity is! File) continue;
-            final fileName = p.basename(entity.path);
-            final parsed = diaryImageSourceFromFileName(fileName);
-            final imageId =
-                parsed?.imageId ?? motionPhotoImageIdFromFileName(fileName);
-            if (imageId != null) candidateIds.add(imageId);
-          }
-        } on FileSystemException {
-          // Cleanup is best-effort and can be retried after the next save.
-        }
-      }
+      candidateIds.addAll(filesByImageId.keys);
     } else {
       for (final source in candidates) {
         final parsed = diaryImageSourceFromSource(source);
@@ -325,7 +315,7 @@ class DiaryImageStore {
     }
 
     for (final imageId in candidateIds.difference(referencedIds)) {
-      for (final file in await filesForImageId(imageId)) {
+      for (final file in filesByImageId[imageId] ?? const <File>[]) {
         try {
           if (await file.exists()) await file.delete();
         } on FileSystemException {
@@ -342,7 +332,13 @@ class DiaryImageStore {
     ).hasMatch(normalized)) {
       return const [];
     }
-    final files = <File>[];
+    return List.unmodifiable(
+      (await _managedFilesByImageId())[normalized] ?? const <File>[],
+    );
+  }
+
+  Future<Map<String, List<File>>> _managedFilesByImageId() async {
+    final files = <String, List<File>>{};
     for (final directory in [imageDirectory, thumbnailDirectory]) {
       try {
         if (!await directory.exists()) continue;
@@ -352,13 +348,15 @@ class DiaryImageStore {
           final parsed = diaryImageSourceFromFileName(fileName);
           final imageId =
               parsed?.imageId ?? motionPhotoImageIdFromFileName(fileName);
-          if (imageId == normalized) files.add(entity);
+          if (imageId != null) {
+            files.putIfAbsent(imageId, () => <File>[]).add(entity);
+          }
         }
       } on FileSystemException {
-        // Return any files already discovered in the other managed directory.
+        // Cleanup is best-effort and can be retried after the next save.
       }
     }
-    return List.unmodifiable(files);
+    return files;
   }
 
   Future<Set<String>> _referencedImageIds(AppDatabase appDatabase) async {
@@ -411,6 +409,17 @@ class DiaryImageStore {
   Future<void> migrateLegacyReferences(AppDatabase appDatabase) async {
     await ensureDirectories();
     final database = appDatabase.database;
+    final markerRows = await database.query(
+      'settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [diaryImageMigrationSettingKey],
+      limit: 1,
+    );
+    if (markerRows.isNotEmpty &&
+        markerRows.single['value'] == _diaryImageMigrationVersion) {
+      return;
+    }
     final diaryRows = await database.query(
       'diary_entries',
       columns: ['id', 'content'],
@@ -446,6 +455,7 @@ class DiaryImageStore {
     Map<String, File>? legacyFiles;
     final replacements = <String, String>{};
     final migratedLegacyFiles = <String>{};
+    var hadRetryableFailure = false;
     for (final source in sources) {
       final parsed = diaryImageSourceFromSource(source);
       if (parsed == null) continue;
@@ -470,6 +480,7 @@ class DiaryImageStore {
           await sourceFile.copy(temporary.path);
           await temporary.rename(target.path);
         } on FileSystemException {
+          hadRetryableFailure = true;
           try {
             if (await temporary.exists()) await temporary.delete();
           } on FileSystemException {
@@ -491,7 +502,7 @@ class DiaryImageStore {
       }
     }
 
-    if (replacements.isNotEmpty) {
+    if (replacements.isNotEmpty || !hadRetryableFailure) {
       await database.transaction((transaction) async {
         for (final row in diaryRows) {
           final content = row['content']! as String;
@@ -547,6 +558,12 @@ class DiaryImageStore {
             where: 'image_id = ? AND source_type = ? AND source_id = ?',
             whereArgs: [row['image_id'], row['source_type'], row['source_id']],
           );
+        }
+        if (!hadRetryableFailure) {
+          await transaction.insert('settings', {
+            'key': diaryImageMigrationSettingKey,
+            'value': _diaryImageMigrationVersion,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       });
     }
@@ -672,11 +689,28 @@ bool _listEquals(List<String> left, List<String> right) {
 }
 
 Future<bool> _filesHaveSameContent(File left, File right) async {
-  if (await left.length() != await right.length()) return false;
-  final leftBytes = await left.readAsBytes();
-  final rightBytes = await right.readAsBytes();
-  for (var index = 0; index < leftBytes.length; index++) {
-    if (leftBytes[index] != rightBytes[index]) return false;
+  final length = await left.length();
+  if (length != await right.length()) return false;
+  final leftInput = await left.open();
+  final rightInput = await right.open();
+  try {
+    var remaining = length;
+    const chunkSize = 64 * 1024;
+    while (remaining > 0) {
+      final requested = remaining < chunkSize ? remaining : chunkSize;
+      final leftBytes = await leftInput.read(requested);
+      final rightBytes = await rightInput.read(requested);
+      if (leftBytes.length != requested || rightBytes.length != requested) {
+        return false;
+      }
+      for (var index = 0; index < requested; index++) {
+        if (leftBytes[index] != rightBytes[index]) return false;
+      }
+      remaining -= requested;
+    }
+    return true;
+  } finally {
+    await leftInput.close();
+    await rightInput.close();
   }
-  return true;
 }

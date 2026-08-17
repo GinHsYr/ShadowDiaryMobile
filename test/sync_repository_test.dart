@@ -563,6 +563,46 @@ void main() {
     );
   });
 
+  test('atomically installs a verified streamed asset part', () async {
+    const id = '123e4567-e89b-42d3-a456-426614174000.webp';
+    const bytes = <int>[97, 98, 99];
+    const hash =
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+
+    final part = await repository.createAssetPartFile(id);
+    await part.writeAsBytes(bytes, flush: true);
+    await repository.storeAssetFromFile(
+      id,
+      part,
+      hash,
+      expectedSize: bytes.length,
+    );
+
+    final target = File(p.join(mediaDirectory.path, id));
+    expect(await target.readAsBytes(), bytes);
+    expect(await part.exists(), isFalse);
+  });
+
+  test('rejects a streamed asset hash and cleans its temporary part', () async {
+    const id = '223e4567-e89b-42d3-a456-426614174001.jpg';
+    final part = await repository.createAssetPartFile(id);
+    await part.writeAsBytes(const [97, 98, 99], flush: true);
+
+    await expectLater(
+      repository.storeAssetFromFile(
+        id,
+        part,
+        'ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb',
+        expectedSize: 3,
+      ),
+      throwsFormatException,
+    );
+    if (await part.exists()) await part.delete();
+
+    expect(await File(p.join(mediaDirectory.path, id)).exists(), isFalse);
+    expect(await part.exists(), isFalse);
+  });
+
   test('collects legacy JPEG archive assets with their MIME type', () async {
     const id = '223e4567-e89b-42d3-a456-426614174001.jpg';
     final image = File('${mediaDirectory.path}${Platform.pathSeparator}$id');

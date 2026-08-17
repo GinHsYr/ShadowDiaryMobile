@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 const motionPhotoFileSuffix = '_motion.mp4';
+const _motionPhotoScanChunkSize = 64 * 1024;
+const _motionPhotoHeaderOverlap = 7;
 
 const _imageExtensions = <String>{
   '.avif',
@@ -57,16 +59,95 @@ Future<bool> extractEmbeddedMotionPhotoVideo(
   File source,
   File destination,
 ) async {
-  Uint8List bytes;
+  int? offset;
   try {
-    bytes = await source.readAsBytes();
+    offset = await _embeddedMotionPhotoVideoOffsetInFile(source);
   } on FileSystemException {
     return false;
   }
-  final offset = embeddedMotionPhotoVideoOffset(bytes);
   if (offset == null) return false;
-  await destination.writeAsBytes(bytes.sublist(offset), flush: true);
-  return true;
+
+  final temporary = File('${destination.path}.part');
+  try {
+    await destination.parent.create(recursive: true);
+    if (await temporary.exists()) await temporary.delete();
+    final output = temporary.openWrite();
+    try {
+      await output.addStream(source.openRead(offset));
+      await output.flush();
+    } finally {
+      await output.close();
+    }
+    final expectedLength = await source.length() - offset;
+    if (await temporary.length() != expectedLength) {
+      throw FileSystemException(
+        'Motion photo source changed during extraction.',
+        source.path,
+      );
+    }
+    if (await destination.exists()) await destination.delete();
+    await temporary.rename(destination.path);
+    return true;
+  } on Object {
+    try {
+      if (await temporary.exists()) await temporary.delete();
+    } on FileSystemException {
+      // A stale partial file can be cleaned on the next extraction attempt.
+    }
+    rethrow;
+  }
+}
+
+Future<int?> _embeddedMotionPhotoVideoOffsetInFile(File source) async {
+  final fileLength = await source.length();
+  if (fileLength < 16) return null;
+
+  final input = await source.open();
+  var processed = 0;
+  var overlap = Uint8List(0);
+  int? candidate;
+  try {
+    while (processed < fileLength) {
+      final remaining = fileLength - processed;
+      final chunk = await input.read(
+        remaining < _motionPhotoScanChunkSize
+            ? remaining
+            : _motionPhotoScanChunkSize,
+      );
+      if (chunk.isEmpty) break;
+
+      final window = Uint8List(overlap.length + chunk.length)
+        ..setRange(0, overlap.length, overlap)
+        ..setRange(overlap.length, overlap.length + chunk.length, chunk);
+      final windowOffset = processed - overlap.length;
+      for (var index = 4; index + 4 <= window.length; index++) {
+        final markerOffset = windowOffset + index;
+        if (markerOffset < 8 || markerOffset + 12 > fileLength) continue;
+        if (window[index] != 0x66 ||
+            window[index + 1] != 0x74 ||
+            window[index + 2] != 0x79 ||
+            window[index + 3] != 0x70) {
+          continue;
+        }
+        final boxStart = markerOffset - 4;
+        if (boxStart < 1024) continue;
+        final boxSize = _readUint32(window, index - 4);
+        if (boxSize < 8 || boxStart + boxSize > fileLength) continue;
+        candidate = boxStart;
+      }
+
+      processed += chunk.length;
+      final overlapLength = window.length < _motionPhotoHeaderOverlap
+          ? window.length
+          : _motionPhotoHeaderOverlap;
+      overlap = Uint8List.fromList(
+        window.sublist(window.length - overlapLength),
+      );
+    }
+  } finally {
+    await input.close();
+  }
+  return candidate;
 }
 
 int? embeddedMotionPhotoVideoOffset(List<int> bytes) {

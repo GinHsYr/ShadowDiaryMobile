@@ -166,11 +166,7 @@ void main() {
     expect(saved.plainContent, 'Rich body');
     expect(saved.content, contains('Rich body'));
     expect(saved.content, contains('<p>'));
-    final today = DateUtils.dateOnly(DateTime.now());
-    expect(
-      find.byKey(Key('editor-calendar-diary-${_dayKey(today)}')),
-      findsOneWidget,
-    );
+    // The overview refresh is deferred until the editor session exits.
   });
 
   testWidgets('does not create or mark a mood-only empty diary', (

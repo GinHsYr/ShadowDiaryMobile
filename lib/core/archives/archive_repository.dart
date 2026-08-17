@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
 import 'archive.dart';
+import 'archive_index.dart';
 
 final archiveRepositoryProvider = Provider<ArchiveRepository>((ref) {
   throw StateError('ArchiveRepository must be overridden at bootstrap.');
@@ -11,6 +12,13 @@ final archiveRepositoryProvider = Provider<ArchiveRepository>((ref) {
 
 final archiveListProvider = FutureProvider<List<Archive>>((ref) {
   return ref.watch(archiveRepositoryProvider).listArchives();
+});
+
+final archiveDerivedIndexProvider = FutureProvider<ArchiveDerivedIndex>((
+  ref,
+) async {
+  final archives = await ref.watch(archiveListProvider.future);
+  return ArchiveDerivedIndex(archives);
 });
 
 abstract interface class ArchiveRepository {
@@ -23,10 +31,53 @@ abstract interface class ArchiveRepository {
   Future<void> delete(String id);
 }
 
-class SqliteArchiveRepository implements ArchiveRepository {
+/// Lightweight fields needed to build the media library.
+class ArchiveMediaSource {
+  const ArchiveMediaSource({
+    required this.id,
+    required this.name,
+    required this.mainImage,
+    required this.images,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String name;
+  final String? mainImage;
+  final List<String> images;
+  final DateTime updatedAt;
+}
+
+abstract interface class ArchiveMediaRepository {
+  Future<List<ArchiveMediaSource>> listArchiveMediaSources();
+}
+
+class SqliteArchiveRepository
+    implements ArchiveRepository, ArchiveMediaRepository {
   SqliteArchiveRepository(this._appDatabase);
 
   final AppDatabase _appDatabase;
+
+  @override
+  Future<List<ArchiveMediaSource>> listArchiveMediaSources() async {
+    final rows = await _appDatabase.database.query(
+      'archives',
+      columns: ['id', 'name', 'main_image', 'images', 'updated_at'],
+    );
+    return rows
+        .map(
+          (row) => ArchiveMediaSource(
+            id: row['id']! as String,
+            name: row['name']! as String,
+            mainImage: row['main_image'] as String?,
+            images: _decodeImages(row['images']),
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(
+              row['updated_at']! as int,
+            ),
+          ),
+        )
+        .toList(growable: false);
+  }
 
   @override
   Future<List<Archive>> listArchives() async {

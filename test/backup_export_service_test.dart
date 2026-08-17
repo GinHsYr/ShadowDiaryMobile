@@ -69,8 +69,9 @@ void main() {
       imageStore: imageStore,
       appVersion: 'test-version',
       random: _FixedRandom(),
-      saveBackupFile: (fileName, bytes) async {
-        await File('$outputPath.zip').writeAsBytes(bytes);
+      saveBackupFile: (fileName, source) async {
+        expect(await source.exists(), isTrue);
+        await source.copy('$outputPath.zip');
         return '$outputPath.zip';
       },
     );
@@ -152,7 +153,7 @@ void main() {
     final service = DeviceBackupExportService(
       database,
       imageStore: DiaryImageStore(Directory(p.join(root.path, 'documents'))),
-      saveBackupFile: (fileName, bytes) async => null,
+      saveBackupFile: (fileName, source) async => null,
     );
     try {
       expect(await service.exportBackup(), isNull);

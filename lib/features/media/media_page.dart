@@ -31,12 +31,17 @@ class MediaPage extends ConsumerStatefulWidget {
 class _MediaPageState extends ConsumerState<MediaPage> {
   _MediaFilter _filter = _MediaFilter.all;
   late final ScrollController _scrollController;
-  double _scrollFraction = 0;
+  late final ValueNotifier<double> _scrollFraction;
+  MediaLibrary? _cachedLibrary;
+  _MediaFilter? _cachedLibraryFilter;
+  List<MediaItem> _cachedVisibleItems = const <MediaItem>[];
+  List<DateTime> _cachedMediaDates = const <DateTime>[];
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
+    _scrollFraction = ValueNotifier<double>(0);
   }
 
   @override
@@ -44,6 +49,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
+    _scrollFraction.dispose();
     super.dispose();
   }
 
@@ -64,7 +70,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
           final loadedLibrary = library.value;
           final visibleItems = loadedLibrary == null
               ? const <MediaItem>[]
-              : _visibleItems(loadedLibrary);
+              : _visibleItemsFor(loadedLibrary);
           final showDateRail = visibleItems.isNotEmpty;
           return Stack(
             fit: StackFit.expand,
@@ -112,7 +118,7 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                           ),
                         ];
                       }
-                      final visibleItems = _visibleItems(value);
+                      final visibleItems = _visibleItemsFor(value);
                       if (visibleItems.isEmpty) {
                         return const <Widget>[
                           SliverFillRemaining(
@@ -154,10 +160,13 @@ class _MediaPageState extends ConsumerState<MediaPage> {
                   top: 136,
                   end: 4,
                   bottom: isDesktop ? AppSpacing.lg : 112,
-                  child: _MediaDateRail(
-                    dates: _mediaDates(visibleItems),
-                    value: _scrollFraction,
-                    onChanged: _scrollToFraction,
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _scrollFraction,
+                    builder: (context, value, child) => _MediaDateRail(
+                      dates: _cachedMediaDates,
+                      value: value,
+                      onChanged: _scrollToFraction,
+                    ),
                   ),
                 ),
             ],
@@ -173,8 +182,8 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     final next = position.maxScrollExtent <= 0
         ? 0.0
         : (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
-    if ((next - _scrollFraction).abs() < 0.005) return;
-    setState(() => _scrollFraction = next);
+    if ((next - _scrollFraction.value).abs() < 0.005) return;
+    _scrollFraction.value = next;
   }
 
   void _scrollToFraction(double fraction, {bool animate = false}) {
@@ -191,21 +200,30 @@ class _MediaPageState extends ConsumerState<MediaPage> {
     } else {
       _scrollController.jumpTo(target);
     }
-    if ((_scrollFraction - next).abs() >= 0.005) {
-      setState(() => _scrollFraction = next);
+    if ((_scrollFraction.value - next).abs() >= 0.005) {
+      _scrollFraction.value = next;
     }
   }
 
-  List<MediaItem> _visibleItems(MediaLibrary library) {
+  List<MediaItem> _visibleItemsFor(MediaLibrary library) {
+    if (identical(_cachedLibrary, library) && _cachedLibraryFilter == _filter) {
+      return _cachedVisibleItems;
+    }
     final sourceType = switch (_filter) {
       _MediaFilter.all => null,
       _MediaFilter.diary => MediaSourceType.diary,
       _MediaFilter.archive => MediaSourceType.archive,
     };
-    if (sourceType == null) return library.items;
-    return library.items
-        .where((item) => item.sourceType == sourceType)
-        .toList(growable: false);
+    final visibleItems = sourceType == null
+        ? library.items
+        : library.items
+              .where((item) => item.sourceType == sourceType)
+              .toList(growable: false);
+    _cachedLibrary = library;
+    _cachedLibraryFilter = _filter;
+    _cachedVisibleItems = visibleItems;
+    _cachedMediaDates = _mediaDates(visibleItems);
+    return visibleItems;
   }
 
   Future<void> _openViewer(List<MediaItem> items, int initialIndex) async {
@@ -529,70 +547,81 @@ class _MediaImageTile extends StatelessWidget {
     final sourceLabel = item.sourceType == MediaSourceType.diary
         ? l10n.mediaFilterDiary
         : l10n.mediaFilterArchive;
-    return Semantics(
-      button: true,
-      label: '$sourceLabel · ${_mediaSourceTitle(item, l10n)}',
-      child: Material(
-        key: Key('media-item-${item.id}'),
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(10),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Stack(
-            alignment: AlignmentDirectional.bottomEnd,
-            children: [
-              Image.file(
-                _mediaFile(context, item.imageSource),
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
-                filterQuality: FilterQuality.medium,
-                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                  if (wasSynchronouslyLoaded || frame != null) return child;
-                  return const AspectRatio(
-                    aspectRatio: 1,
-                    child: _MediaImagePlaceholder(loading: true),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return AspectRatio(
-                    aspectRatio: 1,
-                    child: _MediaImagePlaceholder(
-                      label: l10n.mediaImageMissing,
-                    ),
-                  );
-                },
-              ),
-              PositionedDirectional(
-                top: 6,
-                end: 6,
-                child: LivePhotoBadge(
-                  file: _mediaFile(context, item.imageSource),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(6),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.58),
-                    shape: BoxShape.circle,
+    final imageFile = _mediaFile(context, item.imageSource);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cacheWidth =
+            (constraints.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                .round()
+                .clamp(1, 8192);
+        return Semantics(
+          button: true,
+          label: '$sourceLabel · ${_mediaSourceTitle(item, l10n)}',
+          child: Material(
+            key: Key('media-item-${item.id}'),
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(10),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: Stack(
+                alignment: AlignmentDirectional.bottomEnd,
+                children: [
+                  Image.file(
+                    imageFile,
+                    width: double.infinity,
+                    cacheWidth: cacheWidth,
+                    fit: BoxFit.fitWidth,
+                    filterQuality: FilterQuality.medium,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                          if (wasSynchronouslyLoaded || frame != null) {
+                            return child;
+                          }
+                          return const AspectRatio(
+                            aspectRatio: 1,
+                            child: _MediaImagePlaceholder(loading: true),
+                          );
+                        },
+                    errorBuilder: (context, error, stackTrace) {
+                      return AspectRatio(
+                        aspectRatio: 1,
+                        child: _MediaImagePlaceholder(
+                          label: l10n.mediaImageMissing,
+                        ),
+                      );
+                    },
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: Icon(
-                      item.sourceType == MediaSourceType.diary
-                          ? Icons.menu_book_rounded
-                          : Icons.folder_rounded,
-                      color: Colors.white,
-                      size: 15,
+                  PositionedDirectional(
+                    top: 6,
+                    end: 6,
+                    child: LivePhotoBadge(file: imageFile),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.58),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(
+                          item.sourceType == MediaSourceType.diary
+                              ? Icons.menu_book_rounded
+                              : Icons.folder_rounded,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

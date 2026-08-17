@@ -436,6 +436,11 @@ class DeviceBackupImportService implements BackupImportService {
       await transaction.delete('archives');
       await transaction.delete('image_refs');
       await transaction.delete('media_source_refs');
+      await transaction.delete(
+        'settings',
+        where: 'key = ?',
+        whereArgs: [diaryImageMigrationSettingKey],
+      );
 
       for (final row in data.diaries) {
         await transaction.insert('diary_entries', _diaryValues(row, assets));
@@ -482,6 +487,11 @@ class DeviceBackupImportService implements BackupImportService {
     _ImportedAssets assets,
   ) async {
     await _database.database.transaction((transaction) async {
+      await transaction.delete(
+        'settings',
+        where: 'key = ?',
+        whereArgs: [diaryImageMigrationSettingKey],
+      );
       final existingDiaryRows = await transaction.query(
         'diary_entries',
         columns: ['id'],
@@ -1134,13 +1144,30 @@ class _ImportedAssets {
 }
 
 Future<bool> _filesEqual(File left, File right) async {
-  if (await left.length() != await right.length()) return false;
-  final leftBytes = await left.readAsBytes();
-  final rightBytes = await right.readAsBytes();
-  for (var index = 0; index < leftBytes.length; index++) {
-    if (leftBytes[index] != rightBytes[index]) return false;
+  final length = await left.length();
+  if (length != await right.length()) return false;
+  final leftInput = await left.open();
+  final rightInput = await right.open();
+  try {
+    var remaining = length;
+    const chunkSize = 64 * 1024;
+    while (remaining > 0) {
+      final requested = remaining < chunkSize ? remaining : chunkSize;
+      final leftBytes = await leftInput.read(requested);
+      final rightBytes = await rightInput.read(requested);
+      if (leftBytes.length != requested || rightBytes.length != requested) {
+        return false;
+      }
+      for (var index = 0; index < requested; index++) {
+        if (leftBytes[index] != rightBytes[index]) return false;
+      }
+      remaining -= requested;
+    }
+    return true;
+  } finally {
+    await leftInput.close();
+    await rightInput.close();
   }
-  return true;
 }
 
 Future<void> _deleteFiles(Iterable<String> paths) async {

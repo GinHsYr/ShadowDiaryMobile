@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -7,15 +8,57 @@ import 'package:path/path.dart' as p;
 import '../../l10n/app_localizations.dart';
 import '../services/motion_photo_support.dart';
 
-final Map<String, Future<bool>> _livePhotoCache = <String, Future<bool>>{};
+const _livePhotoCacheCapacity = 256;
+final LinkedHashMap<String, Future<bool>> _livePhotoCache =
+    LinkedHashMap<String, Future<bool>>();
 
-Future<bool> isLivePhotoFile(File file, {File? motionFile}) {
+Future<bool> isLivePhotoFile(File file, {File? motionFile}) async {
   final resolvedMotion = motionFile ?? _inferredMotionFile(file);
-  final cacheKey = '${file.path}|${resolvedMotion.path}';
-  return _livePhotoCache.putIfAbsent(cacheKey, () async {
+  final cacheKey = await _livePhotoCacheKey(file, resolvedMotion);
+  final cached = _livePhotoCache.remove(cacheKey);
+  if (cached != null) {
+    _livePhotoCache[cacheKey] = cached;
+    try {
+      return await cached;
+    } on Object {
+      if (identical(_livePhotoCache[cacheKey], cached)) {
+        _livePhotoCache.remove(cacheKey);
+      }
+      return false;
+    }
+  }
+
+  final detection = () async {
     if (await resolvedMotion.exists()) return true;
     return _detectAnimatedImage(file);
-  });
+  }();
+  _livePhotoCache[cacheKey] = detection;
+  while (_livePhotoCache.length > _livePhotoCacheCapacity) {
+    _livePhotoCache.remove(_livePhotoCache.keys.first);
+  }
+  try {
+    return await detection;
+  } on Object {
+    if (identical(_livePhotoCache[cacheKey], detection)) {
+      _livePhotoCache.remove(cacheKey);
+    }
+    return false;
+  }
+}
+
+Future<String> _livePhotoCacheKey(File image, File motion) async {
+  final imageStamp = await _fileStamp(image);
+  final motionStamp = await _fileStamp(motion);
+  return '${image.path}|$imageStamp|${motion.path}|$motionStamp';
+}
+
+Future<String> _fileStamp(File file) async {
+  try {
+    final stat = await file.stat();
+    return '${stat.type}|${stat.size}|${stat.modified.microsecondsSinceEpoch}';
+  } on Object {
+    return 'missing';
+  }
 }
 
 File _inferredMotionFile(File file) {
@@ -24,13 +67,21 @@ File _inferredMotionFile(File file) {
 }
 
 Future<bool> _detectAnimatedImage(File file) async {
+  // Flutter 3.44 exposes ImmutableBuffer.fromUint8List (the file-backed
+  // constructor is newer), so keep the bytes in the engine buffer rather than
+  // passing them through a Dart image codec.
+  final buffer = await ui.ImmutableBuffer.fromUint8List(
+    await file.readAsBytes(),
+  );
   try {
-    final codec = await ui.instantiateImageCodec(await file.readAsBytes());
-    final isAnimated = codec.frameCount > 1;
-    codec.dispose();
-    return isAnimated;
-  } on Object {
-    return false;
+    final codec = await ui.instantiateImageCodecFromBuffer(buffer);
+    try {
+      return codec.frameCount > 1;
+    } finally {
+      codec.dispose();
+    }
+  } finally {
+    buffer.dispose();
   }
 }
 

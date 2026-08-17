@@ -133,4 +133,30 @@ void main() {
     expect(await managed.exists(), isFalse);
     expect(await outside.exists(), isTrue);
   });
+
+  test('delegates a batch of managed sources to image cleanup once', () async {
+    final cleanup = _RecordingImageCleanup();
+    final service = DeviceArchiveImageService(
+      imageStore: DiaryImageStore(temporaryDirectory),
+      imageCleanup: cleanup,
+    );
+    const first = 'diary-image://123e4567-e89b-42d3-a456-426614174000.webp';
+    const second = 'diary-image://223e4567-e89b-42d3-a456-426614174001.webp';
+
+    await service.deleteManagedImages([first, second, first]);
+
+    expect(cleanup.calls, 1);
+    expect(cleanup.candidates, {first, second});
+  });
+}
+
+class _RecordingImageCleanup implements DiaryImageCleanup {
+  int calls = 0;
+  Set<String> candidates = const {};
+
+  @override
+  Future<void> cleanupUnreferenced({Iterable<String>? candidates}) async {
+    calls++;
+    this.candidates = candidates?.toSet() ?? const {};
+  }
 }

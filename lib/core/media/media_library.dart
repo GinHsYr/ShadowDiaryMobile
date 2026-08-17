@@ -42,19 +42,60 @@ class MediaLibrary {
 }
 
 final mediaLibraryProvider = FutureProvider<MediaLibrary>((ref) async {
-  final diaryEntriesFuture = ref.watch(diaryEntryListProvider.future);
-  final archivesFuture = ref.watch(archiveListProvider.future);
-  final diaryEntries = await diaryEntriesFuture;
-  final archives = await archivesFuture;
-  return buildMediaLibrary(diaryEntries: diaryEntries, archives: archives);
+  final diaryRepository = ref.watch(diaryRepositoryProvider);
+  final archiveRepository = ref.watch(archiveRepositoryProvider);
+  final Future<Iterable<DiaryMediaSource>> diarySourcesFuture;
+  if (diaryRepository is DiaryMediaRepository) {
+    diarySourcesFuture = (diaryRepository as DiaryMediaRepository)
+        .listDiaryMediaSources();
+  } else {
+    diarySourcesFuture = ref
+        .watch(diaryEntryListProvider.future)
+        .then((entries) => entries.map(_sourceFromDiary));
+  }
+  final Future<Iterable<ArchiveMediaSource>> archiveSourcesFuture;
+  if (archiveRepository is ArchiveMediaRepository) {
+    archiveSourcesFuture = (archiveRepository as ArchiveMediaRepository)
+        .listArchiveMediaSources();
+  } else {
+    archiveSourcesFuture = ref
+        .watch(archiveListProvider.future)
+        .then((archives) => archives.map(_sourceFromArchive));
+  }
+  final resolvedDiarySources = await diarySourcesFuture;
+  final resolvedArchiveSources = await archiveSourcesFuture;
+  return buildMediaLibraryFromSources(
+    diarySources: resolvedDiarySources,
+    archiveSources: resolvedArchiveSources,
+  );
 });
 
-MediaLibrary buildMediaLibrary({
-  required Iterable<DiaryEntry> diaryEntries,
-  required Iterable<Archive> archives,
+DiaryMediaSource _sourceFromDiary(DiaryEntry entry) {
+  return DiaryMediaSource(
+    id: entry.id,
+    title: entry.title,
+    content: entry.content,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt,
+  );
+}
+
+ArchiveMediaSource _sourceFromArchive(Archive archive) {
+  return ArchiveMediaSource(
+    id: archive.id,
+    name: archive.name,
+    mainImage: archive.mainImage,
+    images: archive.images,
+    updatedAt: archive.updatedAt,
+  );
+}
+
+MediaLibrary buildMediaLibraryFromSources({
+  required Iterable<DiaryMediaSource> diarySources,
+  required Iterable<ArchiveMediaSource> archiveSources,
 }) {
   final items = <MediaItem>[];
-  for (final entry in diaryEntries) {
+  for (final entry in diarySources) {
     final references = diaryImageReferencesFromHtml(entry.content);
     for (final reference in references) {
       items.add(
@@ -71,8 +112,7 @@ MediaLibrary buildMediaLibrary({
       );
     }
   }
-
-  for (final archive in archives) {
+  for (final archive in archiveSources) {
     final imagePaths = <String>[?archive.mainImage, ...archive.images];
     for (var index = 0; index < imagePaths.length; index++) {
       final path = imagePaths[index].trim();
@@ -91,7 +131,21 @@ MediaLibrary buildMediaLibrary({
       );
     }
   }
+  _sortMediaItems(items);
+  return MediaLibrary(List.unmodifiable(items));
+}
 
+MediaLibrary buildMediaLibrary({
+  required Iterable<DiaryEntry> diaryEntries,
+  required Iterable<Archive> archives,
+}) {
+  return buildMediaLibraryFromSources(
+    diarySources: diaryEntries.map(_sourceFromDiary),
+    archiveSources: archives.map(_sourceFromArchive),
+  );
+}
+
+void _sortMediaItems(List<MediaItem> items) {
   items.sort((left, right) {
     final dateComparison = right.updatedAt.compareTo(left.updatedAt);
     if (dateComparison != 0) return dateComparison;
@@ -103,5 +157,4 @@ MediaLibrary buildMediaLibrary({
     if (idComparison != 0) return idComparison;
     return left.sourceImageIndex.compareTo(right.sourceImageIndex);
   });
-  return MediaLibrary(List.unmodifiable(items));
 }

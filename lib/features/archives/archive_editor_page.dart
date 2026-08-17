@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/archives/archive.dart';
 import '../../core/archives/archive_repository.dart';
+import '../../core/media/media_library.dart';
 import '../../core/services/archive_image_service.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../core/services/image_picker_support.dart';
@@ -531,7 +532,9 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
         oldPaths.difference(retainedPaths),
       );
       _newManagedPaths.clear();
-      ref.invalidate(archiveListProvider);
+      ref
+        ..invalidate(archiveListProvider)
+        ..invalidate(mediaLibraryProvider);
       if (!mounted) return;
       await _pop(true);
     } on Object {
@@ -580,7 +583,9 @@ class _ArchiveEditorPageState extends ConsumerState<ArchiveEditorPage> {
         ..._newManagedPaths,
       });
       _newManagedPaths.clear();
-      ref.invalidate(archiveListProvider);
+      ref
+        ..invalidate(archiveListProvider)
+        ..invalidate(mediaLibraryProvider);
       if (!mounted) return;
       await _pop(true);
     } on Object {
@@ -949,6 +954,12 @@ class _MainImagePicker extends StatelessWidget {
                             imageFile,
                             width: double.infinity,
                             height: double.infinity,
+                            cacheWidth:
+                                (164 * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
+                            cacheHeight:
+                                (164 * MediaQuery.devicePixelRatioOf(context))
+                                    .round(),
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return _MissingArchiveImage(
@@ -1068,59 +1079,69 @@ class _GalleryImageTile extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final imageFile =
         diaryImageStoreOf(context).fileForSource(path) ?? File(path);
-    return Stack(
-      children: [
-        Material(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            key: Key('archive-gallery-preview-$index'),
-            onTap: onTap,
-            child: Hero(
-              tag: archiveImageHeroTag(path),
-              child: Image.file(
-                imageFile,
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
-                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                  if (wasSynchronouslyLoaded || frame != null) return child;
-                  return AspectRatio(
-                    aspectRatio: 1,
-                    child: ColoredBox(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return AspectRatio(
-                    aspectRatio: 1,
-                    child: _MissingArchiveImage(
-                      label: l10n.archiveImageMissing,
-                    ),
-                  );
-                },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final cacheWidth = ((constraints.maxWidth) * dpr).round();
+        return Stack(
+          children: [
+            Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                key: Key('archive-gallery-preview-$index'),
+                onTap: onTap,
+                child: Hero(
+                  tag: archiveImageHeroTag(path),
+                  child: Image.file(
+                    imageFile,
+                    width: double.infinity,
+                    cacheWidth: cacheWidth > 0 ? cacheWidth : null,
+                    fit: BoxFit.fitWidth,
+                    frameBuilder:
+                        (context, child, frame, wasSynchronouslyLoaded) {
+                          if (wasSynchronouslyLoaded || frame != null) {
+                            return child;
+                          }
+                          return AspectRatio(
+                            aspectRatio: 1,
+                            child: ColoredBox(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                            ),
+                          );
+                        },
+                    errorBuilder: (context, error, stackTrace) {
+                      return AspectRatio(
+                        aspectRatio: 1,
+                        child: _MissingArchiveImage(
+                          label: l10n.archiveImageMissing,
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        PositionedDirectional(
-          end: 6,
-          top: 42,
-          child: LivePhotoBadge(file: imageFile),
-        ),
-        PositionedDirectional(
-          end: 6,
-          top: 6,
-          child: _ImageOverlayButton(
-            tooltip: l10n.archiveRemoveImage,
-            icon: Icons.close_rounded,
-            onPressed: onRemove,
-          ),
-        ),
-      ],
+            PositionedDirectional(
+              end: 6,
+              top: 42,
+              child: LivePhotoBadge(file: imageFile),
+            ),
+            PositionedDirectional(
+              end: 6,
+              top: 6,
+              child: _ImageOverlayButton(
+                tooltip: l10n.archiveRemoveImage,
+                icon: Icons.close_rounded,
+                onPressed: onRemove,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

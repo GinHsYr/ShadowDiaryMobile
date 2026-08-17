@@ -13,11 +13,7 @@ AGENTS.md
 .svn/
 .swiftpm/
 migrate_working_dir/
-.flutter-plugins-dependencies
-.dart_tool/
 .agents/
-pubspec.lock
-resources/db.md
 
 # IntelliJ related
 *.iml

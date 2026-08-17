@@ -22,31 +22,33 @@ class LivePhotoPlayer extends StatefulWidget {
 class _LivePhotoPlayerState extends State<LivePhotoPlayer> {
   VideoPlayerController? _controller;
   bool _ready = false;
+  int _initializationGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _initialize(++_initializationGeneration);
   }
 
   @override
   void didUpdateWidget(covariant LivePhotoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.motionFile.path != widget.motionFile.path) {
-      _controller?.dispose();
+      final previous = _controller;
       _controller = null;
       _ready = false;
-      _initialize();
+      previous?.dispose();
+      _initialize(++_initializationGeneration);
     }
   }
 
-  Future<void> _initialize() async {
+  Future<void> _initialize(int generation) async {
     final controller = VideoPlayerController.file(widget.motionFile);
     try {
       await controller.initialize();
       await controller.setLooping(true);
       await controller.play();
-      if (!mounted || _controller != null) {
+      if (!mounted || generation != _initializationGeneration) {
         await controller.dispose();
         return;
       }
@@ -61,6 +63,7 @@ class _LivePhotoPlayerState extends State<LivePhotoPlayer> {
 
   @override
   void dispose() {
+    _initializationGeneration++;
     _controller?.dispose();
     super.dispose();
   }

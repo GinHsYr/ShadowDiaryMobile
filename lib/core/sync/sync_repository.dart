@@ -415,14 +415,16 @@ class SyncRepository {
     for (final entry in pathsById.entries) {
       final file = File(entry.value);
       if (!await file.exists()) continue;
-      final bytes = await file.readAsBytes();
-      final digest = await _sha256.hash(bytes);
+      final size = await file.length();
+      if (size > _maxAssetBytes) {
+        throw const FormatException('Sync asset exceeds 32 MiB.');
+      }
       assets.add(
         SyncAsset(
           id: entry.key,
           path: file.path,
-          size: bytes.length,
-          sha256: _hex(digest.bytes),
+          size: size,
+          sha256: await _hashFile(file),
           mimeType: _syncAssetMimeType(entry.key),
         ),
       );
@@ -441,8 +443,10 @@ class SyncRepository {
       );
       return false;
     }
-    final digest = await _sha256.hash(await file.readAsBytes());
-    final matches = _hex(digest.bytes) == expectedHash.toLowerCase();
+    final size = await file.length();
+    final matches =
+        size <= _maxAssetBytes &&
+        await _hashFile(file) == expectedHash.toLowerCase();
     DiaryImageDebugTrace.fileState(
       'asset.has.result',
       assetId: id,
@@ -465,12 +469,8 @@ class SyncRepository {
       'bytes': bytes.length,
       'sha256': DiaryImageDebugTrace.hashPrefix(expectedHash),
     });
-    if (bytes.length > 32 * 1024 * 1024) {
+    if (bytes.length > _maxAssetBytes) {
       throw const FormatException('Sync asset exceeds 32 MiB.');
-    }
-    final actual = _hex((await _sha256.hash(bytes)).bytes);
-    if (actual != expectedHash.toLowerCase()) {
-      throw const FormatException('Sync asset hash mismatch.');
     }
     final target = await _assetFile(id);
     DiaryImageDebugTrace.fileState(
@@ -480,29 +480,76 @@ class SyncRepository {
     );
     await target.parent.create(recursive: true);
     if (await target.exists()) {
-      final current = _hex(
-        (await _sha256.hash(await target.readAsBytes())).bytes,
+      final current = await _hashFile(target);
+      if (current == expectedHash.toLowerCase()) return;
+      throw const FormatException(
+        'Sync asset identifier is already used by different content.',
       );
+    }
+    final temporary = File('${target.path}.${_uuid.v4()}.part');
+    await temporary.writeAsBytes(bytes, flush: true);
+    try {
+      await storeAssetFromFile(id, temporary, expectedHash);
+    } finally {
+      if (await temporary.exists()) await temporary.delete();
+    }
+  }
+
+  static const _maxAssetBytes = 32 * 1024 * 1024;
+
+  /// Creates the per-asset receive file beside its final destination.
+  ///
+  /// Keeping this file in the same directory allows [storeAssetFromFile] to
+  /// install it with a single atomic rename after validation.
+  Future<File> createAssetPartFile(String id) async {
+    final target = await _assetFile(id);
+    await target.parent.create(recursive: true);
+    final part = File('${target.path}.part');
+    if (await part.exists()) await part.delete();
+    return part;
+  }
+
+  /// Validates and atomically installs an already streamed asset file.
+  Future<void> storeAssetFromFile(
+    String id,
+    File source,
+    String expectedHash, {
+    int? expectedSize,
+  }) async {
+    final size = await source.length();
+    if (size > _maxAssetBytes ||
+        (expectedSize != null && size != expectedSize)) {
+      throw const FormatException('Sync asset size mismatch.');
+    }
+    final actual = await _hashFile(source);
+    if (actual != expectedHash.toLowerCase()) {
+      throw const FormatException('Sync asset hash mismatch.');
+    }
+
+    final target = await _assetFile(id);
+    await target.parent.create(recursive: true);
+    if (await target.exists()) {
+      final current = await _hashFile(target);
       if (current == actual) return;
       throw const FormatException(
         'Sync asset identifier is already used by different content.',
       );
     }
-    final store = _imageStore;
-    if (store?.documentsDirectory != null) {
-      await store!.writeAsset(id, bytes);
-      DiaryImageDebugTrace.fileState(
-        'asset.store.managed.complete',
-        assetId: id,
-        file: target,
-      );
-      return;
+    try {
+      await source.rename(target.path);
+    } on FileSystemException {
+      // A caller may provide a temporary file on another volume. Stream it
+      // into a same-directory staging file before the atomic final rename.
+      final staging = File('${target.path}.${_uuid.v4()}.part');
+      try {
+        await _copyFile(source, staging);
+        await staging.rename(target.path);
+      } finally {
+        if (await staging.exists()) await staging.delete();
+      }
     }
-    final temporary = File('${target.path}.part');
-    await temporary.writeAsBytes(bytes, flush: true);
-    await temporary.rename(target.path);
     DiaryImageDebugTrace.fileState(
-      'asset.store.fallback.complete',
+      'asset.store.atomic.complete',
       assetId: id,
       file: target,
     );
@@ -796,6 +843,28 @@ class SyncRepository {
     if (payload == null) return '';
     final digest = await _sha256.hash(utf8.encode(_stableJson(payload)));
     return _hex(digest.bytes);
+  }
+
+  Future<String> _hashFile(File file) async {
+    final sink = _sha256.newHashSink();
+    await for (final chunk in file.openRead()) {
+      sink.add(chunk);
+    }
+    sink.close();
+    final digest = await sink.hash();
+    return _hex(digest.bytes);
+  }
+
+  Future<void> _copyFile(File source, File destination) async {
+    final sink = destination.openWrite();
+    try {
+      await for (final chunk in source.openRead()) {
+        sink.add(chunk);
+      }
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
   }
 
   Future<SyncRecord> _normalizeRecordForSync(SyncRecord record) async {

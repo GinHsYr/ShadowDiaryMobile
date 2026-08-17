@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -57,8 +58,7 @@ class UnavailableBackupExportService implements BackupExportService {
   }
 }
 
-typedef SaveBackupFile =
-    Future<String?> Function(String fileName, List<int> bytes);
+typedef SaveBackupFile = Future<String?> Function(String fileName, File source);
 
 class DeviceBackupExportService implements BackupExportService {
   DeviceBackupExportService(
@@ -102,51 +102,9 @@ class DeviceBackupExportService implements BackupExportService {
         _sanitizeDatabase(databasePath);
         _encryptDatabase(databasePath, keyHex);
 
-        final archive = Archive()
-          ..addFile(
-            ArchiveFile.bytes(
-              'diary.db',
-              await File(databasePath).readAsBytes(),
-            ),
-          );
-        await _addDirectoryFiles(archive, _imageStore.imageDirectory, 'images');
-        await _addDirectoryFiles(
-          archive,
-          _imageStore.thumbnailDirectory,
-          'thumbnails',
-        );
-        await _addAttachmentFiles(archive);
-        archive
-          ..addFile(
-            ArchiveFile.string(
-              'metadata.json',
-              jsonEncode({
-                'appName': appName,
-                'appVersion': appVersion,
-                'exportedAt': DateTime.now().toUtc().toIso8601String(),
-                'backupFormatVersion': backupExportFormatVersion,
-                'compression': 'zip',
-                'encryption': {
-                  'db': 'sqlcipher',
-                  'keyFile': 'plain-text',
-                  'attachments': 'plain-zip',
-                },
-              }),
-            ),
-          )
-          ..addFile(
-            ArchiveFile.string(
-              'backup-key.json',
-              jsonEncode({
-                'version': 1,
-                'format': 'plain-text',
-                'dbKeyHex': keyHex,
-              }),
-            ),
-          );
-
-        final bytes = ZipEncoder().encodeBytes(archive);
-        final selectedPath = await _saveBackupFile(fileName, bytes);
+        final zipPath = p.join(temporaryDirectory.path, fileName);
+        await _createArchive(File(zipPath), File(databasePath), keyHex);
+        final selectedPath = await _saveBackupFile(fileName, File(zipPath));
         if (selectedPath == null || selectedPath.trim().isEmpty) return null;
         return BackupExportResult(path: _withZipExtension(selectedPath));
       } finally {
@@ -156,15 +114,66 @@ class DeviceBackupExportService implements BackupExportService {
       rethrow;
     } on FileSystemException catch (error) {
       throw BackupExportException(BackupExportErrorCode.unreadableFile, error);
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Backup export failed: $error\n$stackTrace');
+      }
       throw BackupExportException(BackupExportErrorCode.exportFailed, error);
     } finally {
       _isBusy = false;
     }
   }
 
+  Future<void> _createArchive(
+    File destination,
+    File database,
+    String keyHex,
+  ) async {
+    final encoder = ZipFileEncoder();
+    encoder.create(destination.path);
+    try {
+      await encoder.addFile(database, 'diary.db');
+      await _addDirectoryFiles(encoder, _imageStore.imageDirectory, 'images');
+      await _addDirectoryFiles(
+        encoder,
+        _imageStore.thumbnailDirectory,
+        'thumbnails',
+      );
+      await _addAttachmentFiles(encoder);
+      encoder.addArchiveFile(
+        ArchiveFile.string(
+          'metadata.json',
+          jsonEncode({
+            'appName': appName,
+            'appVersion': appVersion,
+            'exportedAt': DateTime.now().toUtc().toIso8601String(),
+            'backupFormatVersion': backupExportFormatVersion,
+            'compression': 'zip',
+            'encryption': {
+              'db': 'sqlcipher',
+              'keyFile': 'plain-text',
+              'attachments': 'plain-zip',
+            },
+          }),
+        ),
+      );
+      encoder.addArchiveFile(
+        ArchiveFile.string(
+          'backup-key.json',
+          jsonEncode({
+            'version': 1,
+            'format': 'plain-text',
+            'dbKeyHex': keyHex,
+          }),
+        ),
+      );
+    } finally {
+      await encoder.close();
+    }
+  }
+
   Future<void> _addDirectoryFiles(
-    Archive archive,
+    ZipFileEncoder encoder,
     Directory directory,
     String archiveDirectory,
   ) async {
@@ -180,16 +189,14 @@ class DeviceBackupExportService implements BackupExportService {
           BackupExportErrorCode.invalidDatabase,
         );
       }
-      archive.addFile(
-        ArchiveFile.bytes(
-          p.posix.join(archiveDirectory, p.split(relativePath).join('/')),
-          await entity.readAsBytes(),
-        ),
+      await encoder.addFile(
+        entity,
+        p.posix.join(archiveDirectory, p.split(relativePath).join('/')),
       );
     }
   }
 
-  Future<void> _addAttachmentFiles(Archive archive) async {
+  Future<void> _addAttachmentFiles(ZipFileEncoder encoder) async {
     final documentsDirectory = _imageStore.documentsDirectory;
     if (documentsDirectory == null) return;
     final rows = await _database.database.query('attachments');
@@ -204,12 +211,7 @@ class DeviceBackupExportService implements BackupExportService {
       if (!await source.exists()) {
         throw const BackupExportException(BackupExportErrorCode.unreadableFile);
       }
-      archive.addFile(
-        ArchiveFile.bytes(
-          storedPath.replaceAll('\\', '/'),
-          await source.readAsBytes(),
-        ),
-      );
+      await encoder.addFile(source, storedPath.replaceAll('\\', '/'));
     }
   }
 
@@ -218,14 +220,25 @@ class DeviceBackupExportService implements BackupExportService {
     return bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join();
   }
 
-  static Future<String?> _saveFile(String fileName, List<int> bytes) {
-    return FilePicker.saveFile(
+  static Future<String?> _saveFile(String fileName, File source) async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return const MethodChannel(
+        'com.shadowdiary.hsyr/backup_export',
+      ).invokeMethod<String>('saveTemporaryZip', {
+        'sourcePath': source.path,
+        'suggestedName': fileName,
+      });
+    }
+    final selectedPath = await FilePicker.saveFile(
       dialogTitle: 'Export backup',
       fileName: fileName,
       type: FileType.custom,
       allowedExtensions: const ['zip'],
-      bytes: Uint8List.fromList(bytes),
     );
+    if (selectedPath == null || selectedPath.trim().isEmpty) return null;
+    final destination = File(_withZipExtension(selectedPath));
+    await source.copy(destination.path);
+    return destination.path;
   }
 }
 

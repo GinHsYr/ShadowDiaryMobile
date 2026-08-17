@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadow_diary_mobile/core/backup/backup_import_service.dart';
 import 'package:shadow_diary_mobile/core/database/app_database.dart';
+import 'package:shadow_diary_mobile/core/services/diary_image_store.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
@@ -94,6 +95,14 @@ void main() {
       final tagRows = await harness.database.database.query('tags');
       expect(tagRows.single['name'], 'imported-tag');
       expect(await harness.rowCount('diary_tags'), 1);
+      expect(
+        await harness.database.database.query(
+          'settings',
+          where: 'key = ?',
+          whereArgs: [diaryImageMigrationSettingKey],
+        ),
+        isEmpty,
+      );
     },
   );
 
@@ -172,8 +181,39 @@ void main() {
         ),
         hasLength(1),
       );
+      expect(
+        await harness.database.database.query(
+          'settings',
+          where: 'key = ?',
+          whereArgs: [diaryImageMigrationSettingKey],
+        ),
+        isEmpty,
+      );
     },
   );
+
+  test('reuses an identical large image already in managed storage', () async {
+    final harness = await _BackupHarness.create();
+    addTearDown(harness.dispose);
+    final imageBytes = List<int>.generate(
+      3 * 64 * 1024 + 17,
+      (index) => index % 251,
+      growable: false,
+    );
+    final installedImage = File(
+      '${harness.documentsDirectory.path}/images/$_imageName',
+    );
+    await installedImage.parent.create(recursive: true);
+    await installedImage.writeAsBytes(imageBytes);
+    final backup = await harness.createBackup(imageBytes: imageBytes);
+    final service = harness.serviceFor(backup);
+    final preview = (await service.selectBackup())!;
+
+    await service.importBackup(preview, BackupImportMode.incremental);
+
+    expect(await installedImage.length(), imageBytes.length);
+    expect(await installedImage.readAsBytes(), imageBytes);
+  });
 
   test('rejects unsupported formats before changing local data', () async {
     final harness = await _BackupHarness.create();
@@ -195,6 +235,14 @@ void main() {
     );
     expect(await harness.rowCount('diary_entries'), 2);
     expect(await harness.rowCount('archives'), 1);
+    expect(
+      await harness.database.database.query(
+        'settings',
+        where: 'key = ?',
+        whereArgs: [diaryImageMigrationSettingKey],
+      ),
+      hasLength(1),
+    );
   });
 
   test('rejects unsafe attachment paths', () async {
@@ -345,6 +393,10 @@ class _BackupHarness {
       'key': 'appearance.theme_mode',
       'value': 'dark',
     });
+    await database.database.insert('settings', {
+      'key': diaryImageMigrationSettingKey,
+      'value': '1',
+    });
     final emptyDate = DateTime(2026, 7, 21, 7).millisecondsSinceEpoch;
     await database.database.insert('diary_entries', {
       'id': 'current-empty',
@@ -367,6 +419,7 @@ class _BackupHarness {
     bool includeKeyFile = true,
     bool invalidImageRef = false,
     String keyFileName = 'shadow-diary-backup-key.json',
+    List<int> imageBytes = const [1, 2, 3, 4],
   }) async {
     final sourceDatabasePath =
         '${root.path}/source-${DateTime.now().microsecondsSinceEpoch}.db';
@@ -491,7 +544,7 @@ class _BackupHarness {
           await File(sourceDatabasePath).readAsBytes(),
         ),
       )
-      ..addFile(ArchiveFile.bytes('images/$_imageName', [1, 2, 3, 4]))
+      ..addFile(ArchiveFile.bytes('images/$_imageName', imageBytes))
       ..addFile(ArchiveFile.bytes('thumbnails/$_thumbnailName', [4, 3, 2, 1]))
       ..addFile(
         ArchiveFile.bytes(

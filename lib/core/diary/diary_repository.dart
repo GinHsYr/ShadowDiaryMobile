@@ -39,7 +39,29 @@ abstract interface class DiaryRepository {
   Future<void> save(DiaryEntry entry);
 }
 
-class SqliteDiaryRepository implements DiaryRepository, DiarySearchRepository {
+/// Lightweight fields needed to build the media library.
+class DiaryMediaSource {
+  const DiaryMediaSource({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final String content;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+}
+
+abstract interface class DiaryMediaRepository {
+  Future<List<DiaryMediaSource>> listDiaryMediaSources();
+}
+
+class SqliteDiaryRepository
+    implements DiaryRepository, DiarySearchRepository, DiaryMediaRepository {
   SqliteDiaryRepository(this._appDatabase, {DateTime Function()? now})
     : _now = now ?? DateTime.now;
 
@@ -56,6 +78,29 @@ class SqliteDiaryRepository implements DiaryRepository, DiarySearchRepository {
       orderBy: 'updated_at DESC',
     );
     return rows.map(_fromRow).toList(growable: false);
+  }
+
+  @override
+  Future<List<DiaryMediaSource>> listDiaryMediaSources() async {
+    final rows = await _appDatabase.database.query(
+      'diary_entries',
+      columns: ['id', 'title', 'content', 'created_at', 'updated_at'],
+    );
+    return rows
+        .map(
+          (row) => DiaryMediaSource(
+            id: row['id']! as String,
+            title: row['title']! as String,
+            content: row['content']! as String,
+            createdAt: DateTime.fromMillisecondsSinceEpoch(
+              row['created_at']! as int,
+            ),
+            updatedAt: DateTime.fromMillisecondsSinceEpoch(
+              row['updated_at']! as int,
+            ),
+          ),
+        )
+        .toList(growable: false);
   }
 
   @override
@@ -147,16 +192,30 @@ class SqliteDiaryRepository implements DiaryRepository, DiarySearchRepository {
     late final List<Map<String, Object?>> rows;
     late final int total;
     if (requiresPostFilter) {
-      final candidates = await _appDatabase.database.rawQuery(
-        '${_entrySelect()} ${query.whereSql} '
-        'ORDER BY e.created_at DESC',
-        query.arguments,
-      );
-      final matches = candidates
-          .where((row) => _rowMatchesKeywordGroups(row, keywordGroups))
+      final matchingIds = <String>[];
+      var scanOffset = 0;
+      const scanBatchSize = 256;
+      while (true) {
+        final candidates = await _appDatabase.database.rawQuery(
+          '${_lightweightEntrySelect()} ${query.whereSql} '
+          'ORDER BY e.created_at DESC LIMIT ? OFFSET ?',
+          [...query.arguments, scanBatchSize, scanOffset],
+        );
+        if (candidates.isEmpty) break;
+        for (final row in candidates) {
+          if (_rowMatchesKeywordGroups(row, keywordGroups)) {
+            matchingIds.add(row['id']! as String);
+          }
+        }
+        scanOffset += candidates.length;
+        if (candidates.length < scanBatchSize) break;
+      }
+      total = matchingIds.length;
+      final pageIds = matchingIds
+          .skip(offset)
+          .take(limit)
           .toList(growable: false);
-      total = matches.length;
-      rows = matches.skip(offset).take(limit).toList(growable: false);
+      rows = await _loadEntriesByIds(pageIds);
     } else {
       final countRows = await _appDatabase.database.rawQuery(
         'SELECT COUNT(*) AS total FROM diary_entries e ${query.whereSql}',
@@ -411,6 +470,25 @@ class SqliteDiaryRepository implements DiaryRepository, DiarySearchRepository {
   String _entrySelect() {
     return 'SELECT e.id, e.title, e.content, e.plain_content, e.mood, '
         'e.weather, e.created_at, e.updated_at FROM diary_entries e';
+  }
+
+  String _lightweightEntrySelect() {
+    return 'SELECT e.id, e.title, e.plain_content, e.mood, e.created_at '
+        'FROM diary_entries e';
+  }
+
+  Future<List<Map<String, Object?>>> _loadEntriesByIds(List<String> ids) async {
+    if (ids.isEmpty) return const <Map<String, Object?>>[];
+    final placeholders = List.filled(ids.length, '?').join(', ');
+    final rows = await _appDatabase.database.rawQuery(
+      '${_entrySelect()} WHERE e.id IN ($placeholders)',
+      ids,
+    );
+    final byId = {for (final row in rows) row['id']! as String: row};
+    return ids
+        .map((id) => byId[id])
+        .whereType<Map<String, Object?>>()
+        .toList(growable: false);
   }
 }
 

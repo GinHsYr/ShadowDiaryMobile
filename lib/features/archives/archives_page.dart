@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../core/archives/archive.dart';
-import '../../core/archives/archive_repository.dart';
-import '../../core/archives/archive_search.dart';
 import '../../core/archives/archive_sort.dart';
+import '../../core/archives/archive_repository.dart';
 import '../../core/services/archive_image_service.dart';
+import '../../core/media/media_library.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page.dart';
@@ -74,7 +74,7 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final archives = ref.watch(archiveListProvider);
+    final archives = ref.watch(archiveDerivedIndexProvider);
     final isDesktop = AppPage.isDesktop(context);
     return SafeArea(
       key: const Key('archives-page-safe-area'),
@@ -96,21 +96,24 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
                   key: const ValueKey('archives-error'),
                   header: _buildHeader(context),
                   child: _ArchiveErrorState(
-                    onRetry: () => ref.invalidate(archiveListProvider),
+                    onRetry: () {
+                      ref
+                        ..invalidate(archiveListProvider)
+                        ..invalidate(archiveDerivedIndexProvider);
+                    },
                   ),
                 ),
-                data: (values) {
-                  if (values.isEmpty) {
+                data: (index) {
+                  if (index.archives.isEmpty) {
                     return _ArchiveStaticLayout(
                       key: const ValueKey('archives-empty'),
                       header: _buildHeader(context),
                       child: const _ArchivesEmptyState(),
                     );
                   }
-                  final matches = searchArchives(values, _searchQuery);
                   return _buildArchiveList(
                     context,
-                    groupAndSortArchives(matches),
+                    index.groupAndSort(query: _searchQuery),
                   );
                 },
               ),
@@ -327,12 +330,20 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
 
   Future<void> _openNew() async {
     final result = await widget.onAddArchive?.call();
-    if (result == true) ref.invalidate(archiveListProvider);
+    if (result == true) {
+      ref
+        ..invalidate(archiveListProvider)
+        ..invalidate(mediaLibraryProvider);
+    }
   }
 
   Future<void> _openEditor(String archiveId) async {
     final result = await widget.onEditArchive?.call(archiveId);
-    if (result == true) ref.invalidate(archiveListProvider);
+    if (result == true) {
+      ref
+        ..invalidate(archiveListProvider)
+        ..invalidate(mediaLibraryProvider);
+    }
   }
 
   Future<void> _confirmAndDelete(Archive archive) async {
@@ -371,7 +382,11 @@ class _ArchivesPageState extends ConsumerState<ArchivesPage> {
         ?archive.mainImage,
         ...archive.images,
       ]);
-      if (mounted) ref.invalidate(archiveListProvider);
+      if (mounted) {
+        ref
+          ..invalidate(archiveListProvider)
+          ..invalidate(mediaLibraryProvider);
+      }
     } on Object {
       if (!mounted) return;
       setState(() => _removingIds.remove(archive.id));
@@ -623,6 +638,9 @@ class _ArchiveAvatar extends StatelessWidget {
           ? fallback
           : Image.file(
               imageFile,
+              cacheWidth: (54 * MediaQuery.devicePixelRatioOf(context)).round(),
+              cacheHeight: (54 * MediaQuery.devicePixelRatioOf(context))
+                  .round(),
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => fallback,
             ),

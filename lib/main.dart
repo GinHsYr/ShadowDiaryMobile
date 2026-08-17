@@ -38,8 +38,7 @@ Future<void> main() async {
     );
     final archiveImageService = DeviceArchiveImageService(
       imageStore: diaryImageStore,
-      isImageReferenced: (source) =>
-          diaryImageStore.isReferenced(database, source),
+      imageCleanup: diaryImageCleanup,
     );
     final backupImportService = DeviceBackupImportService(
       database,

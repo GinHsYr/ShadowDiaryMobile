@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
@@ -357,24 +356,48 @@ class ShadowSyncClient {
         'sha256': DiaryImageDebugTrace.hashPrefix(asset.sha256),
       },
     );
-    final bytes = await file.readAsBytes();
-    var offset = 0;
-    while (offset < bytes.length) {
-      final end = (offset + _chunkSize).clamp(0, bytes.length);
-      final chunk = bytes.sublist(offset, end);
-      await connection.sendEncrypted(cipher, {
-        'kind': 'assetChunk',
-        'id': asset.id,
-        'sha256': asset.sha256,
-        'size': asset.size,
-        'offset': offset,
-        'data': base64Encode(chunk),
-        'final': end == bytes.length,
-      });
-      offset = end;
-      onProgress(offset);
+    final size = await file.length();
+    if (size > 32 * 1024 * 1024 || size != asset.size) {
+      throw const FormatException('Sync asset size changed during upload.');
     }
-    return bytes.length;
+    final access = await file.open(mode: FileMode.read);
+    var offset = 0;
+    try {
+      while (offset < size) {
+        final length = (size - offset).clamp(0, _chunkSize).toInt();
+        final chunk = await access.read(length);
+        if (chunk.length != length) {
+          throw const FormatException('Sync asset ended during upload.');
+        }
+        final end = offset + chunk.length;
+        await connection.sendEncrypted(cipher, {
+          'kind': 'assetChunk',
+          'id': asset.id,
+          'sha256': asset.sha256,
+          'size': asset.size,
+          'offset': offset,
+          'data': base64Encode(chunk),
+          'final': end == size,
+        });
+        offset = end;
+        onProgress(offset);
+      }
+      if (size == 0) {
+        await connection.sendEncrypted(cipher, {
+          'kind': 'assetChunk',
+          'id': asset.id,
+          'sha256': asset.sha256,
+          'size': asset.size,
+          'offset': 0,
+          'data': '',
+          'final': true,
+        });
+        onProgress(0);
+      }
+    } finally {
+      await access.close();
+    }
+    return size;
   }
 
   Future<int> _receiveAssets(
@@ -383,49 +406,90 @@ class ShadowSyncClient {
     Map<String, _AssetManifest> manifests,
     Set<String> requested,
   ) async {
-    final builders = <String, BytesBuilder>{};
+    final parts = <String, File>{};
+    final access = <String, RandomAccessFile>{};
+    final offsets = <String, int>{};
     var receivedBytes = 0;
-    while (true) {
-      final message = await connection.nextEncrypted(cipher);
-      final kind = message['kind'];
-      if (kind == 'assetsComplete') break;
-      _expectKind(message, 'assetChunk');
-      final id = message['id']! as String;
-      final manifest = manifests[id];
-      if (!requested.contains(id) || manifest == null) {
-        throw const FormatException('Received an unrequested sync asset.');
-      }
-      final builder = builders.putIfAbsent(id, BytesBuilder.new);
-      final expectedOffset = builder.length;
-      final offset = (message['offset']! as num).toInt();
-      if (offset != expectedOffset) {
-        throw const FormatException('Sync asset chunk is out of order.');
-      }
-      final data = base64Decode(message['data']! as String);
-      builder.add(data);
-      receivedBytes += data.length;
-      if (builder.length > manifest.size || builder.length > 32 * 1024 * 1024) {
-        throw const FormatException('Sync asset exceeds its declared size.');
-      }
-      if (message['final'] == true) {
-        if (builder.length != manifest.size) {
-          throw const FormatException('Sync asset size mismatch.');
+    try {
+      while (true) {
+        final message = await connection.nextEncrypted(cipher);
+        final kind = message['kind'];
+        if (kind == 'assetsComplete') break;
+        _expectKind(message, 'assetChunk');
+        final id = message['id']! as String;
+        final manifest = manifests[id];
+        if (!requested.contains(id) || manifest == null) {
+          throw const FormatException('Received an unrequested sync asset.');
         }
-        DiaryImageDebugTrace.event('asset.download.complete', {
-          'asset': id,
-          'bytes': builder.length,
-          'manifestBytes': manifest.size,
-          'sha256': DiaryImageDebugTrace.hashPrefix(manifest.sha256),
-        });
-        await repository.storeAsset(id, builder.takeBytes(), manifest.sha256);
-        builders.remove(id);
-        requested.remove(id);
+        if (message['sha256'] != manifest.sha256 ||
+            (message['size'] as num?)?.toInt() != manifest.size) {
+          throw const FormatException('Sync asset manifest mismatch.');
+        }
+        final offset = (message['offset'] as num?)?.toInt();
+        final expectedOffset = offsets[id] ?? 0;
+        if (offset == null || offset < 0 || offset != expectedOffset) {
+          throw const FormatException('Sync asset chunk is out of order.');
+        }
+        final data = base64Decode(message['data']! as String);
+        if (data.length > _chunkSize) {
+          throw const FormatException('Sync asset chunk is too large.');
+        }
+        final newOffset = offset + data.length;
+        if (newOffset > manifest.size || newOffset > 32 * 1024 * 1024) {
+          throw const FormatException('Sync asset exceeds its declared size.');
+        }
+        final isFinal = message['final'] == true;
+        if (isFinal != (newOffset == manifest.size)) {
+          throw const FormatException('Sync asset final chunk is invalid.');
+        }
+        final part = parts[id] ??= await repository.createAssetPartFile(id);
+        final file = access[id] ??= await part.open(mode: FileMode.write);
+        await file.setPosition(offset);
+        await file.writeFrom(data);
+        offsets[id] = newOffset;
+        receivedBytes += data.length;
+        if (isFinal) {
+          await file.flush();
+          await file.close();
+          access.remove(id);
+          await repository.storeAssetFromFile(
+            id,
+            part,
+            manifest.sha256,
+            expectedSize: manifest.size,
+          );
+          if (await part.exists()) await part.delete();
+          DiaryImageDebugTrace.event('asset.download.complete', {
+            'asset': id,
+            'bytes': newOffset,
+            'manifestBytes': manifest.size,
+            'sha256': DiaryImageDebugTrace.hashPrefix(manifest.sha256),
+          });
+          parts.remove(id);
+          offsets.remove(id);
+          requested.remove(id);
+        }
+      }
+      if (requested.isNotEmpty || parts.isNotEmpty) {
+        throw const FormatException('Sync asset transfer ended prematurely.');
+      }
+      return receivedBytes;
+    } finally {
+      for (final file in access.values) {
+        try {
+          await file.close();
+        } on Object {
+          // Cleanup below remains best effort after a failed transfer.
+        }
+      }
+      for (final part in parts.values) {
+        try {
+          if (await part.exists()) await part.delete();
+        } on Object {
+          // Do not mask the transfer error with cleanup failure.
+        }
       }
     }
-    if (requested.isNotEmpty || builders.isNotEmpty) {
-      throw const FormatException('Sync asset transfer ended prematurely.');
-    }
-    return receivedBytes;
   }
 
   List<SyncRecord> _recordList(Object? value) {
