@@ -20,6 +20,7 @@ import 'package:shadow_diary_mobile/core/settings/app_settings_repository.dart';
 import 'package:shadow_diary_mobile/core/widgets/app_page.dart';
 import 'package:shadow_diary_mobile/core/widgets/app_search_field.dart';
 import 'package:shadow_diary_mobile/features/settings/about_page.dart';
+import 'package:shadow_diary_mobile/l10n/app_localizations_zh.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 void main() {
@@ -423,10 +424,52 @@ void main() {
       tester.getSize(find.byKey(const Key('home-calendar-card'))).width,
       lessThanOrEqualTo(AppPage.maxContentWidth),
     );
+    final contentSurface = tester.widget<ColoredBox>(
+      find.byKey(const Key('desktop-content-surface')),
+    );
+    expect(contentSurface.color.a, 1);
+    final contentClip = tester.widget<ClipRRect>(
+      find.byKey(const Key('desktop-content-clip')),
+    );
+    expect(
+      contentClip.borderRadius,
+      BorderRadius.circular(AppShell.desktopContentRadius),
+    );
+    final titlebar = find.byType(DesktopTitleBar);
+    final expectedContentTop = titlebar.evaluate().isEmpty
+        ? 0.0
+        : tester.getBottomLeft(titlebar).dy;
+    final contentTopLeft = tester.getTopLeft(
+      find.byKey(const Key('desktop-content-clip')),
+    );
+    expect(contentTopLeft.dx, DesktopNavigationRail.width);
+    expect(contentTopLeft.dy, expectedContentTop);
+    expect(find.byType(VerticalDivider), findsNothing);
     expect(
       tester.widget<Scaffold>(find.byType(Scaffold).first).extendBody,
       isFalse,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses the ShadowDiary icon in the Windows title bar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(useMaterial3: true, platform: TargetPlatform.windows),
+        home: DesktopTitleBar(l10n: AppLocalizationsZh()),
+      ),
+    );
+    await tester.pump();
+
+    final titlebarIcon = tester.widget<Image>(
+      find.byKey(const Key('desktop-titlebar-icon')),
+    );
+    expect(titlebarIcon.width, 21);
+    expect(titlebarIcon.height, 21);
+    expect(titlebarIcon.image, isA<AssetImage>());
+    expect((titlebarIcon.image as AssetImage).assetName, 'resources/icon.png');
     expect(tester.takeException(), isNull);
   });
 

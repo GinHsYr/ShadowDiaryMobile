@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -25,17 +26,24 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
+    await Window.initialize();
     await windowManager.waitUntilReadyToShow(
       const WindowOptions(
         size: Size(1280, 720),
         minimumSize: Size(960, 600),
         center: true,
         titleBarStyle: TitleBarStyle.hidden,
-        backgroundColor: Colors.transparent,
       ),
       () async {
         await windowManager.show();
         await windowManager.focus();
+        // window_manager applies WindowOptions (including transparency) just
+        // before this callback. Apply Acrylic last so it is not overwritten.
+        await Window.setEffect(
+          effect: WindowEffect.acrylic,
+          color: const Color(0x66F5F5F5),
+          dark: false,
+        );
       },
     );
   }

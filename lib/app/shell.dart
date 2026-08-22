@@ -11,6 +11,8 @@ import 'app_ionicons.dart';
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
+  static const desktopContentRadius = 8.0;
+
   final StatefulNavigationShell navigationShell;
 
   @override
@@ -29,21 +31,46 @@ class AppShell extends StatelessWidget {
           },
           l10n: l10n,
         ),
-        const VerticalDivider(width: 1),
-        Expanded(child: navigationShell),
+        Expanded(
+          child: ClipRRect(
+            key: const Key('desktop-content-clip'),
+            borderRadius: BorderRadius.circular(desktopContentRadius),
+            clipBehavior: Clip.antiAlias,
+            child: ColoredBox(
+              key: const Key('desktop-content-surface'),
+              color: Theme.of(context).scaffoldBackgroundColor,
+              child: navigationShell,
+            ),
+          ),
+        ),
       ],
+    );
+    final desktopContentWithBackdrop = ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: desktopContent,
+      ),
     );
     return Scaffold(
       extendBody: !isDesktop,
+      backgroundColor:
+          isDesktop && Theme.of(context).platform == TargetPlatform.windows
+          ? Colors.transparent
+          : null,
       body: isDesktop
           ? (Theme.of(context).platform == TargetPlatform.windows
-                ? Column(
-                    children: [
-                      DesktopTitleBar(l10n: l10n),
-                      Expanded(child: desktopContent),
-                    ],
+                ? ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                      child: Column(
+                        children: [
+                          DesktopTitleBar(l10n: l10n),
+                          Expanded(child: desktopContent),
+                        ],
+                      ),
+                    ),
                   )
-                : desktopContent)
+                : desktopContentWithBackdrop)
           : navigationShell,
       bottomNavigationBar: isDesktop
           ? null
@@ -96,65 +123,61 @@ class DesktopTitleBar extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final chromeColor = colors.surface.withValues(alpha: isDark ? 0.48 : 0.38);
     return SizedBox(
       height: 44,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surface.withValues(alpha: isDark ? 0.66 : 0.72),
-              border: Border(
-                bottom: BorderSide(
-                  color: colors.outlineVariant.withValues(
-                    alpha: isDark ? 0.42 : 0.72,
-                  ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: chromeColor),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onDoubleTap: () async {
+                  if (await windowManager.isMaximized()) {
+                    await windowManager.unmaximize();
+                  } else {
+                    await windowManager.maximize();
+                  }
+                },
+                onPanStart: (_) => windowManager.startDragging(),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    Image.asset(
+                      'resources/icon.png',
+                      key: const Key('desktop-titlebar-icon'),
+                      width: 21,
+                      height: 21,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                      excludeFromSemantics: true,
+                    ),
+                    const SizedBox(width: 9),
+                    Text(
+                      l10n.appName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onDoubleTap: () => windowManager.isMaximized().then((maximized) {
-                if (maximized) {
-                  windowManager.unmaximize();
-                } else {
-                  windowManager.maximize();
-                }
-              }),
-              onPanStart: (_) => windowManager.startDragging(),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  Icon(
-                    Icons.auto_awesome_rounded,
-                    size: 17,
-                    color: colors.primary,
-                  ),
-                  const SizedBox(width: 9),
-                  Text(
-                    l10n.appName,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const Spacer(),
-                  _WindowButton(
-                    icon: Icons.remove_rounded,
-                    label: l10n.windowMinimize,
-                    onPressed: windowManager.minimize,
-                  ),
-                  _WindowMaximizeButton(l10n: l10n),
-                  _WindowButton(
-                    icon: Icons.close_rounded,
-                    label: l10n.windowClose,
-                    destructive: true,
-                    onPressed: windowManager.close,
-                  ),
-                ],
-              ),
+            _WindowButton(
+              icon: Icons.remove_rounded,
+              label: l10n.windowMinimize,
+              onPressed: windowManager.minimize,
             ),
-          ),
+            _WindowMaximizeButton(l10n: l10n),
+            _WindowButton(
+              icon: Icons.close_rounded,
+              label: l10n.windowClose,
+              destructive: true,
+              onPressed: windowManager.close,
+            ),
+          ],
         ),
       ),
     );
@@ -255,53 +278,40 @@ class _DesktopNavigationRailState extends State<DesktopNavigationRail> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                color: colors.outlineVariant.withValues(alpha: 0.62),
+    final isDark = theme.brightness == Brightness.dark;
+    return Material(
+      color: colors.surface.withValues(alpha: isDark ? 0.48 : 0.38),
+      child: SafeArea(
+        right: false,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: _isExpanded
+              ? DesktopNavigationRail.expandedWidth
+              : DesktopNavigationRail.collapsedWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _DesktopSidebarToggle(
+                expanded: _isExpanded,
+                l10n: widget.l10n,
+                onPressed: () {
+                  setState(() => _isExpanded = !_isExpanded);
+                },
               ),
-            ),
-          ),
-          child: Material(
-            color: colors.surfaceContainerLow.withValues(alpha: 0.68),
-            child: SafeArea(
-              right: false,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                width: _isExpanded
-                    ? DesktopNavigationRail.expandedWidth
-                    : DesktopNavigationRail.collapsedWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _DesktopSidebarToggle(
-                      expanded: _isExpanded,
-                      l10n: widget.l10n,
-                      onPressed: () {
-                        setState(() => _isExpanded = !_isExpanded);
-                      },
-                    ),
-                    Divider(
-                      height: 1,
-                      color: colors.outlineVariant.withValues(alpha: 0.7),
-                    ),
-                    Expanded(
-                      child: _DesktopDestinations(
-                        expanded: _isExpanded,
-                        selectedIndex: widget.selectedIndex,
-                        onDestinationSelected: widget.onDestinationSelected,
-                        l10n: widget.l10n,
-                      ),
-                    ),
-                  ],
+              Divider(
+                height: 1,
+                color: colors.outlineVariant.withValues(alpha: 0.7),
+              ),
+              Expanded(
+                child: _DesktopDestinations(
+                  expanded: _isExpanded,
+                  selectedIndex: widget.selectedIndex,
+                  onDestinationSelected: widget.onDestinationSelected,
+                  l10n: widget.l10n,
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
