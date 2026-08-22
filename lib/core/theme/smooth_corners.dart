@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 
-export 'package:smooth_corner/smooth_corner.dart';
+import 'package:smooth_corner/smooth_corner.dart' as smooth_corner;
+
+export 'package:smooth_corner/smooth_corner.dart' hide SmoothClipRRect;
 
 /// The Figma/iOS-style corner smoothing used throughout the app.
 const double cornerSmoothing = 0.6;
+
+/// Shared multiplier for all app corner radii.
+const double cornerRadiusScale = 1.35;
 
 /// Creates the app's standard smooth rectangular shape.
 SmoothRectangleBorder smoothRectangleBorder({
@@ -13,7 +18,7 @@ SmoothRectangleBorder smoothRectangleBorder({
   double smoothness = cornerSmoothing,
 }) {
   return SmoothRectangleBorder(
-    borderRadius: borderRadius,
+    borderRadius: borderRadius * cornerRadiusScale,
     side: side,
     smoothness: smoothness,
   );
@@ -31,7 +36,7 @@ class SmoothRoundedRectangleBorder extends RoundedRectangleBorder {
   final double smoothness;
 
   SmoothRectangleBorder get _delegate => SmoothRectangleBorder(
-    borderRadius: borderRadius,
+    borderRadius: borderRadius * cornerRadiusScale,
     side: side,
     smoothness: smoothness,
   );
@@ -118,6 +123,32 @@ class SmoothBoxDecoration extends BoxDecoration {
       ).getOuterPath(rect, textDirection: textDirection);
     }
     return super.getClipPath(rect, textDirection);
+  }
+}
+
+/// A smooth clip whose radius follows the app-wide corner scale.
+class SmoothClipRRect extends StatelessWidget {
+  const SmoothClipRRect({
+    super.key,
+    this.smoothness = cornerSmoothing,
+    this.borderRadius = BorderRadius.zero,
+    this.side = BorderSide.none,
+    required this.child,
+  });
+
+  final BorderRadius borderRadius;
+  final double smoothness;
+  final BorderSide side;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return smooth_corner.SmoothClipRRect(
+      smoothness: smoothness,
+      borderRadius: borderRadius * cornerRadiusScale,
+      side: side,
+      child: child,
+    );
   }
 }
 
