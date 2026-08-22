@@ -128,6 +128,42 @@ abstract class AppLocalizations {
   /// **'设置'**
   String get navigationSettings;
 
+  /// No description provided for @desktopSidebarExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开侧栏'**
+  String get desktopSidebarExpand;
+
+  /// No description provided for @desktopSidebarCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'折叠侧栏'**
+  String get desktopSidebarCollapse;
+
+  /// No description provided for @windowMinimize.
+  ///
+  /// In zh, this message translates to:
+  /// **'最小化'**
+  String get windowMinimize;
+
+  /// No description provided for @windowMaximize.
+  ///
+  /// In zh, this message translates to:
+  /// **'最大化'**
+  String get windowMaximize;
+
+  /// No description provided for @windowRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'还原窗口'**
+  String get windowRestore;
+
+  /// No description provided for @windowClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭窗口'**
+  String get windowClose;
+
   /// No description provided for @livePhoto.
   ///
   /// In zh, this message translates to:

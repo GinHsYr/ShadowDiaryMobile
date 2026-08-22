@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app/app.dart';
 import 'core/archives/archive_repository.dart';
@@ -20,6 +23,22 @@ import 'core/sync/sync_secure_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows) {
+    await windowManager.ensureInitialized();
+    await windowManager.waitUntilReadyToShow(
+      const WindowOptions(
+        size: Size(1280, 720),
+        minimumSize: Size(960, 600),
+        center: true,
+        titleBarStyle: TitleBarStyle.hidden,
+        backgroundColor: Colors.transparent,
+      ),
+      () async {
+        await windowManager.show();
+        await windowManager.focus();
+      },
+    );
+  }
   DiaryImageDebugTrace.event('app.bootstrap.begin');
 
   try {

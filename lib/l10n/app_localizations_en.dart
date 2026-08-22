@@ -24,6 +24,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationSettings => 'Settings';
 
   @override
+  String get desktopSidebarExpand => 'Expand sidebar';
+
+  @override
+  String get desktopSidebarCollapse => 'Collapse sidebar';
+
+  @override
+  String get windowMinimize => 'Minimize';
+
+  @override
+  String get windowMaximize => 'Maximize';
+
+  @override
+  String get windowRestore => 'Restore window';
+
+  @override
+  String get windowClose => 'Close window';
+
+  @override
   String get livePhoto => 'Live Photo';
 
   @override

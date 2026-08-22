@@ -24,6 +24,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navigationSettings => '设置';
 
   @override
+  String get desktopSidebarExpand => '展开侧栏';
+
+  @override
+  String get desktopSidebarCollapse => '折叠侧栏';
+
+  @override
+  String get windowMinimize => '最小化';
+
+  @override
+  String get windowMaximize => '最大化';
+
+  @override
+  String get windowRestore => '还原窗口';
+
+  @override
+  String get windowClose => '关闭窗口';
+
+  @override
   String get livePhoto => '实况照片';
 
   @override

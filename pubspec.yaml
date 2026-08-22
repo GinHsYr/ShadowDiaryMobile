@@ -43,6 +43,7 @@ dependencies:
   vsc_quill_delta_to_html: ^1.0.5
   web_socket_channel: ^3.0.3
   wheel_slider: ^1.2.0
+  window_manager: ^0.5.1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
