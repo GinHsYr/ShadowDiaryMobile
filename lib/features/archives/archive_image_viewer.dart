@@ -5,6 +5,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 
 import '../../core/services/diary_image_store.dart';
+import '../../core/theme/smooth_corners.dart';
 import '../../core/widgets/live_photo_badge.dart';
 import '../../core/widgets/live_photo_player.dart';
 import '../../l10n/app_localizations.dart';
@@ -87,7 +88,9 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
             itemCount: widget.images.length,
             pageController: _pageController,
             allowImplicitScrolling: true,
-            backgroundDecoration: const BoxDecoration(color: Colors.black),
+            backgroundDecoration: const SmoothBoxDecoration(
+              color: Colors.black,
+            ),
             onPageChanged: (index) => setState(() => _currentIndex = index),
             builder: (context, index) {
               final path = widget.images[index];
@@ -183,7 +186,7 @@ class _ArchiveImageViewerState extends State<_ArchiveImageViewer> {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: DecoratedBox(
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(99),
                     ),

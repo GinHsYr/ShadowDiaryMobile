@@ -759,7 +759,7 @@ class _DatePicker extends StatelessWidget {
     final diaryDayKeys = diaryDates.map(_dayKey).toSet();
     return Container(
       key: const Key('editor-day-picker'),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         border: Border(
           bottom: BorderSide(
             color: colors.outlineVariant.withValues(alpha: .5),
@@ -844,12 +844,14 @@ class _EditorCalendarDay extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: isDisabled ? null : onTap,
-          borderRadius: BorderRadius.circular(8),
+          customBorder: smoothRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: AnimatedContainer(
             key: Key('editor-calendar-day-$dayKey'),
             duration: const Duration(milliseconds: 160),
             padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
+            decoration: SmoothBoxDecoration(
               color: isSelected ? colors.primary : Colors.transparent,
               border: Border.all(color: borderColor),
               borderRadius: BorderRadius.circular(8),
@@ -966,14 +968,16 @@ class _EditorFields extends StatelessWidget {
                       label: _moodLabel(l10n, entry.key),
                       child: InkWell(
                         key: Key('editor-mood-${entry.key}'),
-                        borderRadius: BorderRadius.circular(18),
+                        customBorder: smoothRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                         onTap: () => onMoodChanged(entry.key),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 120),
                           width: 34,
                           height: 34,
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
+                          decoration: SmoothBoxDecoration(
                             color: mood == entry.key
                                 ? Theme.of(
                                     context,

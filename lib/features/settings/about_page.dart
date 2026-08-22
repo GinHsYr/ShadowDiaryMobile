@@ -54,8 +54,9 @@ class AboutPage extends StatelessWidget {
                       children: [
                         Semantics(
                           label: l10n.aboutSoftwareIcon,
-                          child: ClipRRect(
+                          child: SmoothClipRRect(
                             key: const Key('about-app-icon'),
+                            smoothness: cornerSmoothing,
                             borderRadius: BorderRadius.circular(24),
                             child: Image.asset(
                               'resources/icon.png',
@@ -159,7 +160,9 @@ class _AboutInfoRow extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          customBorder: smoothRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(

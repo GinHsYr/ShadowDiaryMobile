@@ -2,6 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../settings/app_settings.dart';
+import 'smooth_corners.dart';
+
+export 'smooth_corners.dart';
 
 abstract final class AppSpacing {
   static const double xs = 4;
@@ -53,7 +56,7 @@ abstract final class AppTheme {
         color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
+        shape: smoothRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
           side: BorderSide(color: borderColor),
         ),
@@ -78,7 +81,7 @@ abstract final class AppTheme {
         indicatorColor: seed == ThemeSeed.neutral
             ? (isDark ? const Color(0xFFD8D8D8) : const Color(0xFFE4E4E4))
             : scheme.secondaryContainer,
-        indicatorShape: RoundedRectangleBorder(
+        indicatorShape: SmoothRoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
         iconTheme: WidgetStateProperty.resolveWith((states) {
@@ -99,10 +102,25 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        border: OutlineInputBorder(
+        border: SmoothOutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        shape: smoothRectangleBorder(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        clipBehavior: Clip.antiAlias,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: DividerThemeData(color: borderColor),
     );

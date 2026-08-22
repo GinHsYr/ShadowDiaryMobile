@@ -68,7 +68,7 @@ class AppEmptyState extends StatelessWidget {
         Container(
           width: 72,
           height: 72,
-          decoration: BoxDecoration(
+          decoration: SmoothBoxDecoration(
             color: theme.colorScheme.secondaryContainer,
             shape: BoxShape.circle,
           ),

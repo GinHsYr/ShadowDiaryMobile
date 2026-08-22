@@ -53,7 +53,7 @@ class _LanSyncPageState extends ConsumerState<LanSyncPage> {
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       color: colors.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: colors.outlineVariant),
@@ -313,7 +313,7 @@ class _SyncHeroCard extends StatelessWidget {
     return Container(
       key: const Key('sync-hero-card'),
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
@@ -402,7 +402,7 @@ class _PeerCard extends StatelessWidget {
             Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(
+              decoration: SmoothBoxDecoration(
                 color: paired
                     ? colors.primaryContainer
                     : colors.surfaceContainerHighest,
@@ -619,7 +619,7 @@ class _ConflictActions extends StatelessWidget {
           AppSpacing.md,
           AppSpacing.sm,
         ),
-        decoration: BoxDecoration(
+        decoration: SmoothBoxDecoration(
           border: Border(top: BorderSide(color: colors.outlineVariant)),
         ),
         child: SafeArea(
@@ -713,7 +713,7 @@ class _ConflictDiff extends StatelessWidget {
     return Container(
       key: const Key('sync-conflict-diff'),
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.outlineVariant),
@@ -970,7 +970,7 @@ class _EmptyDevicesCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: colors.outlineVariant),
@@ -1013,7 +1013,7 @@ class _SyncErrorCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.errorContainer,
         borderRadius: BorderRadius.circular(16),
       ),

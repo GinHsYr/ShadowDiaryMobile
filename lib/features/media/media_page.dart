@@ -311,7 +311,7 @@ class _MediaDateRailState extends State<_MediaDateRail> {
                       child: Container(
                         key: const Key('media-date-line'),
                         width: 3,
-                        decoration: BoxDecoration(
+                        decoration: SmoothBoxDecoration(
                           color: colors.outlineVariant.withValues(alpha: 0.76),
                           borderRadius: BorderRadius.circular(3),
                         ),
@@ -326,7 +326,7 @@ class _MediaDateRailState extends State<_MediaDateRail> {
                         key: const Key('media-date-thumb'),
                         width: 8,
                         height: 8,
-                        decoration: BoxDecoration(
+                        decoration: SmoothBoxDecoration(
                           color: colors.primary,
                           shape: BoxShape.circle,
                           border: Border.all(color: colors.onPrimary, width: 1),
@@ -391,7 +391,7 @@ class _MediaDateBubble extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return DecoratedBox(
       key: const Key('media-date-bubble'),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: colors.outlineVariant),
@@ -560,7 +560,9 @@ class _MediaImageTile extends StatelessWidget {
           child: Material(
             key: Key('media-item-${item.id}'),
             color: Theme.of(context).colorScheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(10),
+            shape: smoothRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: onTap,
@@ -600,7 +602,7 @@ class _MediaImageTile extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(6),
                     child: DecoratedBox(
-                      decoration: BoxDecoration(
+                      decoration: SmoothBoxDecoration(
                         color: Colors.black.withValues(alpha: 0.58),
                         shape: BoxShape.circle,
                       ),
@@ -840,7 +842,9 @@ class _MediaImageViewerState extends State<_MediaImageViewer> {
             itemCount: widget.items.length,
             pageController: _pageController,
             allowImplicitScrolling: true,
-            backgroundDecoration: const BoxDecoration(color: Colors.black),
+            backgroundDecoration: const SmoothBoxDecoration(
+              color: Colors.black,
+            ),
             onPageChanged: (index) => setState(() => _currentIndex = index),
             builder: (context, index) {
               final item = widget.items[index];
@@ -967,7 +971,7 @@ class _MediaViewerSourceCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
       child: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: SmoothBoxDecoration(
           color: Colors.black.withValues(alpha: 0.68),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.white24),

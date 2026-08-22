@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../l10n/app_localizations.dart';
+import '../core/theme/smooth_corners.dart';
 import '../core/widgets/app_page.dart';
 import 'app_ionicons.dart';
 
@@ -35,11 +36,17 @@ class AppShell extends StatelessWidget {
           child: ClipRRect(
             key: const Key('desktop-content-clip'),
             borderRadius: BorderRadius.circular(desktopContentRadius),
-            clipBehavior: Clip.antiAlias,
-            child: ColoredBox(
-              key: const Key('desktop-content-surface'),
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: navigationShell,
+            // Keep the compatibility render node for integrations that query
+            // this key; SmoothClipRRect below owns the actual clipping path.
+            clipBehavior: Clip.none,
+            child: SmoothClipRRect(
+              smoothness: cornerSmoothing,
+              borderRadius: BorderRadius.circular(desktopContentRadius),
+              child: ColoredBox(
+                key: const Key('desktop-content-surface'),
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: navigationShell,
+              ),
             ),
           ),
         ),
@@ -59,16 +66,14 @@ class AppShell extends StatelessWidget {
           : null,
       body: isDesktop
           ? (Theme.of(context).platform == TargetPlatform.windows
-                ? ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-                      child: Column(
-                        children: [
-                          DesktopTitleBar(l10n: l10n),
-                          Expanded(child: desktopContent),
-                        ],
-                      ),
-                    ),
+                // Windows Acrylic already supplies the backdrop blur. A
+                // second rectangular filter here leaves a dark patch where
+                // the rounded content surface is transparent.
+                ? Column(
+                    children: [
+                      DesktopTitleBar(l10n: l10n),
+                      Expanded(child: desktopContent),
+                    ],
                   )
                 : desktopContentWithBackdrop)
           : navigationShell,
@@ -427,7 +432,9 @@ class _DesktopDestinations extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8),
           child: Material(
             color: selected ? selectedBackground : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            shape: smoothRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => onDestinationSelected(index),

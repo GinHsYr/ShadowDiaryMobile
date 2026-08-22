@@ -681,7 +681,7 @@ class _ArchiveEditorHeader extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         border: Border(
           bottom: BorderSide(
             color: Theme.of(context).colorScheme.outlineVariant,
@@ -875,7 +875,7 @@ class _SourceImageAnchor extends StatelessWidget {
       key: isTarget ? const Key('archive-source-image-target') : null,
       duration: _motionDuration(context, 180),
       padding: EdgeInsets.all(isTarget ? 3 : 0),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         borderRadius: BorderRadius.circular(17),
         border: isTarget
             ? Border.all(color: Theme.of(context).colorScheme.primary, width: 3)
@@ -908,7 +908,7 @@ class _MainImagePicker extends StatelessWidget {
         : diaryImageStoreOf(context).fileForSource(imagePath!) ??
               File(imagePath!);
     final placeholder = Container(
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerHighest,
         shape: BoxShape.circle,
         border: Border.all(color: colors.outlineVariant),
@@ -1087,7 +1087,9 @@ class _GalleryImageTile extends StatelessWidget {
           children: [
             Material(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
+              shape: smoothRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 key: Key('archive-gallery-preview-$index'),
@@ -1160,7 +1162,7 @@ class _GalleryAddTile extends StatelessWidget {
       aspectRatio: 1,
       child: Material(
         color: colors.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(14),
+        shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(14)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: const Key('archive-add-images-button'),

@@ -157,7 +157,7 @@ class _LockedScreen extends StatelessWidget {
                   Container(
                     width: 88,
                     height: 88,
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       color: colorScheme.primaryContainer,
                       shape: BoxShape.circle,
                     ),

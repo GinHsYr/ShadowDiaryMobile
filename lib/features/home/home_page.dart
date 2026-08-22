@@ -365,7 +365,7 @@ class HomeDiaryAnalysisEntry extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             alignment: AlignmentDirectional.centerStart,
             padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(
+            shape: smoothRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
@@ -442,7 +442,7 @@ class _HomeCalendarState extends State<HomeCalendar> {
     final daysInMonth = _daysInMonth(_focusedDay);
     final writtenDays = _writtenDaysInMonth(_focusedDay);
     final progress = writtenDays / daysInMonth;
-    final dayCellDecoration = BoxDecoration(
+    final dayCellDecoration = SmoothBoxDecoration(
       borderRadius: BorderRadius.circular(10),
     );
 
@@ -535,7 +535,7 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   color: colors.onPrimary,
                   fontWeight: FontWeight.w700,
                 ),
-                selectedDecoration: BoxDecoration(
+                selectedDecoration: SmoothBoxDecoration(
                   color: colors.primary,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -543,7 +543,7 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   color: colors.onSecondaryContainer,
                   fontWeight: FontWeight.w700,
                 ),
-                todayDecoration: BoxDecoration(
+                todayDecoration: SmoothBoxDecoration(
                   color: colors.secondaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -570,17 +570,20 @@ class _HomeCalendarState extends State<HomeCalendar> {
               ],
             ),
             const SizedBox(height: 6),
-            LinearProgressIndicator(
-              key: const Key('calendar-progress'),
-              value: progress,
-              minHeight: 7,
+            SmoothClipRRect(
+              smoothness: cornerSmoothing,
               borderRadius: BorderRadius.circular(99),
-              backgroundColor: colors.primary == Colors.black
-                  ? (theme.brightness == Brightness.dark
-                        ? const Color(0xFF555555)
-                        : const Color(0xFFD7D7D7))
-                  : colors.surfaceContainerHighest,
-              color: colors.primary,
+              child: LinearProgressIndicator(
+                key: const Key('calendar-progress'),
+                value: progress,
+                minHeight: 7,
+                backgroundColor: colors.primary == Colors.black
+                    ? (theme.brightness == Brightness.dark
+                          ? const Color(0xFF555555)
+                          : const Color(0xFFD7D7D7))
+                    : colors.surfaceContainerHighest,
+                color: colors.primary,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -683,7 +686,7 @@ class _MonthYearWheelDialogState extends State<_MonthYearWheelDialog> {
       backgroundColor: colors.surfaceContainerLow,
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Padding(
@@ -932,7 +935,7 @@ class _WheelEdgeBlurOverlay extends StatelessWidget {
                 ),
               DecoratedBox(
                 key: const Key('calendar-wheel-edge-fade'),
-                decoration: BoxDecoration(
+                decoration: SmoothBoxDecoration(
                   gradient: LinearGradient(
                     begin: edge,
                     end: -edge,
@@ -964,7 +967,7 @@ class _WheelSelectionIndicator extends StatelessWidget {
     return Container(
       width: 112,
       height: 46,
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: color.withValues(alpha: 0.06),
         border: Border.all(color: color, width: 2),
         borderRadius: BorderRadius.circular(10),

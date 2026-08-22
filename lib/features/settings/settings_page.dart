@@ -457,7 +457,7 @@ class _BackupImportSheetState extends State<_BackupImportSheet> {
                 Container(
                   width: 42,
                   height: 42,
-                  decoration: BoxDecoration(
+                  decoration: SmoothBoxDecoration(
                     color: colors.secondaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -494,7 +494,7 @@ class _BackupImportSheetState extends State<_BackupImportSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
             DecoratedBox(
-              decoration: BoxDecoration(
+              decoration: SmoothBoxDecoration(
                 color: colors.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: colors.outlineVariant),
@@ -588,7 +588,7 @@ class _BackupImportSheetState extends State<_BackupImportSheet> {
                   horizontal: AppSpacing.md,
                   vertical: AppSpacing.sm,
                 ),
-                decoration: BoxDecoration(
+                decoration: SmoothBoxDecoration(
                   color: colors.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -755,7 +755,7 @@ class _SettingsDropdown<T> extends StatelessWidget {
           color: colorScheme.surfaceContainerHigh,
           surfaceTintColor: Colors.transparent,
           constraints: const BoxConstraints(minWidth: 176, maxWidth: 176),
-          shape: RoundedRectangleBorder(
+          shape: smoothRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(color: colorScheme.outlineVariant),
           ),
@@ -803,7 +803,7 @@ class _SettingsDropdown<T> extends StatelessWidget {
             width: 148,
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            decoration: BoxDecoration(
+            decoration: SmoothBoxDecoration(
               color: colorScheme.surfaceContainerHighest.withValues(
                 alpha: 0.65,
               ),
@@ -871,7 +871,7 @@ class _ThemeSeedSelector extends StatelessWidget {
                   width: 40,
                   height: 40,
                   padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
+                  decoration: SmoothBoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: value == seed
@@ -881,7 +881,7 @@ class _ThemeSeedSelector extends StatelessWidget {
                     ),
                   ),
                   child: DecoratedBox(
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       color: seed == ThemeSeed.monet ? null : seed.color,
                       gradient: seed == ThemeSeed.monet
                           ? const SweepGradient(

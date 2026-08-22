@@ -535,7 +535,7 @@ class _ArchiveListRow extends StatelessWidget {
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(16)),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
@@ -575,7 +575,7 @@ class _ArchiveListRow extends StatelessWidget {
                       horizontal: 9,
                       vertical: 4,
                     ),
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       border: Border.all(
                         color: colors.primary.withValues(alpha: 0.55),
                       ),
@@ -630,7 +630,7 @@ class _ArchiveAvatar extends StatelessWidget {
       width: 54,
       height: 54,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.secondaryContainer,
         shape: BoxShape.circle,
       ),
@@ -668,7 +668,7 @@ class _AlphabetRail extends StatelessWidget {
       key: const Key('archive-alphabet-rail'),
       width: 28,
       padding: const EdgeInsets.symmetric(vertical: 5),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.surfaceContainerLow.withValues(alpha: 0.94),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.6)),
@@ -711,7 +711,7 @@ class _AlphabetRail extends StatelessWidget {
                           width: 17,
                           height: 17,
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
+                          decoration: SmoothBoxDecoration(
                             color: selectedInitial == initial
                                 ? colors.primary
                                 : Colors.transparent,

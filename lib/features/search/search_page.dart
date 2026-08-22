@@ -263,7 +263,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       key: const Key('search-page'),
       resizeToAvoidBottomInset: true,
       body: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: SmoothBoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
@@ -659,7 +659,7 @@ class _SearchDateRangeSheetState extends State<_SearchDateRangeSheet> {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final bodyStyle = theme.textTheme.bodyMedium ?? const TextStyle();
     final labelStyle = theme.textTheme.labelMedium ?? const TextStyle();
-    final dayDecoration = BoxDecoration(
+    final dayDecoration = SmoothBoxDecoration(
       borderRadius: BorderRadius.circular(10),
     );
 
@@ -748,7 +748,7 @@ class _SearchDateRangeSheetState extends State<_SearchDateRangeSheet> {
                     weekendTextStyle: bodyStyle,
                     defaultDecoration: dayDecoration,
                     weekendDecoration: dayDecoration,
-                    selectedDecoration: BoxDecoration(
+                    selectedDecoration: SmoothBoxDecoration(
                       color: colors.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -756,7 +756,7 @@ class _SearchDateRangeSheetState extends State<_SearchDateRangeSheet> {
                       color: colors.onPrimary,
                       fontWeight: FontWeight.w700,
                     ),
-                    todayDecoration: BoxDecoration(
+                    todayDecoration: SmoothBoxDecoration(
                       color: colors.secondaryContainer,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -767,11 +767,11 @@ class _SearchDateRangeSheetState extends State<_SearchDateRangeSheet> {
                     rangeHighlightColor: colors.primaryContainer.withValues(
                       alpha: 0.72,
                     ),
-                    rangeStartDecoration: BoxDecoration(
+                    rangeStartDecoration: SmoothBoxDecoration(
                       color: colors.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    rangeEndDecoration: BoxDecoration(
+                    rangeEndDecoration: SmoothBoxDecoration(
                       color: colors.primary,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -879,7 +879,7 @@ class _SearchHistoryChip extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Material(
       color: colors.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(12),
+      shape: smoothRectangleBorder(borderRadius: BorderRadius.circular(12)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onPressed,
@@ -907,7 +907,7 @@ class _ExpansionNote extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
+      decoration: SmoothBoxDecoration(
         color: colors.secondaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
@@ -1036,7 +1036,7 @@ class _DiarySearchCard extends StatelessWidget {
                       horizontal: 9,
                       vertical: 5,
                     ),
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       color: colors.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(9),
                     ),
@@ -1161,7 +1161,7 @@ class _SearchMessage extends StatelessWidget {
               Container(
                 width: 72,
                 height: 72,
-                decoration: BoxDecoration(
+                decoration: SmoothBoxDecoration(
                   color: colors.secondaryContainer,
                   shape: BoxShape.circle,
                 ),

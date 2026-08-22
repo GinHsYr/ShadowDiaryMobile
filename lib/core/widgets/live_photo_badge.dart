@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 
 import '../../l10n/app_localizations.dart';
 import '../services/motion_photo_support.dart';
+import '../theme/smooth_corners.dart';
 
 const _livePhotoCacheCapacity = 256;
 final LinkedHashMap<String, Future<bool>> _livePhotoCache =
@@ -106,7 +107,7 @@ class LivePhotoBadge extends StatelessWidget {
         final label = AppLocalizations.of(context).livePhoto;
         final badge = DecoratedBox(
           key: const Key('live-photo-badge'),
-          decoration: BoxDecoration(
+          decoration: SmoothBoxDecoration(
             color: Colors.black.withValues(alpha: 0.68),
             borderRadius: BorderRadius.circular(7),
           ),

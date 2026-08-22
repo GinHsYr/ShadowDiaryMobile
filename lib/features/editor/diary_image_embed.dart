@@ -5,6 +5,7 @@ import 'package:flutter_quill/quill_delta.dart';
 import '../../core/services/diary_image_debug_trace.dart';
 import '../../core/services/diary_image_store.dart';
 import '../../core/widgets/live_photo_badge.dart';
+import '../../core/theme/smooth_corners.dart';
 import '../../l10n/app_localizations.dart';
 
 void applyDiaryImageWidth(
@@ -168,7 +169,7 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                     key: widget.isSourceTarget
                         ? const Key('diary-source-image-target')
                         : null,
-                    decoration: BoxDecoration(
+                    decoration: SmoothBoxDecoration(
                       border: widget.isSourceTarget
                           ? Border.all(color: colors.primary, width: 3)
                           : _isSelected && !widget.readOnly
@@ -176,7 +177,8 @@ class _DiaryImageEmbedState extends State<_DiaryImageEmbed> {
                           : null,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: ClipRRect(
+                    child: SmoothClipRRect(
+                      smoothness: cornerSmoothing,
                       borderRadius: BorderRadius.circular(6),
                       child: file == null
                           ? _MissingImage(label: l10n.editorImageMissing)
@@ -403,7 +405,7 @@ class _ResizeHandle extends StatelessWidget {
               child: Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
+                decoration: SmoothBoxDecoration(
                   color: colors.surface,
                   border: Border.all(color: colors.primary, width: 2),
                   borderRadius: BorderRadius.circular(2),

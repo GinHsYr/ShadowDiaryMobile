@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/smooth_corners.dart';
+
 class AppSearchField extends StatelessWidget {
   const AppSearchField({
     required this.textFieldKey,
@@ -64,7 +66,7 @@ class AppSearchField extends StatelessWidget {
         suffixIcon: suffix,
         filled: true,
         isDense: true,
-        border: OutlineInputBorder(
+        border: SmoothOutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
