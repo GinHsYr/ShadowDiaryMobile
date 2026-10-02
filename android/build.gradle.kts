@@ -1,3 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.compile.JavaCompile
+
 allprojects {
     repositories {
         google()
@@ -23,6 +27,18 @@ subprojects {
         }
     }
 }
+subprojects {
+    afterEvaluate {
+        tasks.withType<KotlinCompile>().configureEach {
+            val javaTaskName = name.replace("Kotlin", "JavaWithJavac")
+            compilerOptions.jvmTarget.set(provider {
+                val javaTask = tasks.named<JavaCompile>(javaTaskName).get()
+                JvmTarget.fromTarget(javaTask.targetCompatibility)
+            })
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

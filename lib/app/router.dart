@@ -12,6 +12,7 @@ import '../features/media/media_page.dart';
 import '../features/search/search_page.dart';
 import '../features/settings/settings_page.dart';
 import '../features/settings/lan_sync_page.dart';
+import 'diary_container_transform.dart';
 import 'radial_reveal_transition.dart';
 import 'shell.dart';
 
@@ -73,8 +74,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   onSearchRequested: (origin) {
                     context.push(AppRoutes.search, extra: origin);
                   },
-                  onCalendarDateSelected: (date) {
-                    context.push(AppRoutes.newEntryForDate(date));
+                  onCalendarDateSelected: (selection) {
+                    context.push(
+                      AppRoutes.newEntryForDate(selection.date),
+                      extra: selection,
+                    );
                   },
                 ),
               ),
@@ -175,11 +179,63 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppRoutes.newEntry,
-        builder: (context, state) {
-          final date = DateTime.tryParse(
-            state.uri.queryParameters['date'] ?? '',
+        pageBuilder: (context, state) {
+          final selection = state.extra is HomeCalendarDateSelection
+              ? state.extra! as HomeCalendarDateSelection
+              : null;
+          final hasOrigin =
+              selection?.rect != null &&
+              !selection!.rect!.isEmpty &&
+              selection.rect!.width.isFinite &&
+              selection.rect!.height.isFinite;
+          final date =
+              DateTime.tryParse(state.uri.queryParameters['date'] ?? '') ??
+              selection?.date;
+          final child = EditorPage(
+            initialDate: date,
+            transparentBackground: hasOrigin,
           );
-          return EditorPage(initialDate: date);
+
+          if (hasOrigin) {
+            return CustomTransitionPage<void>(
+              key: state.pageKey,
+              opaque: false,
+              child: child,
+              transitionDuration: DiaryContainerTransform.openDuration,
+              reverseTransitionDuration: DiaryContainerTransform.closeDuration,
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                    return DiaryContainerTransform(
+                      animation: animation,
+                      selection: selection,
+                      child: child,
+                    );
+                  },
+            );
+          }
+
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: child,
+            transitionDuration: const Duration(milliseconds: 220),
+            reverseTransitionDuration: const Duration(milliseconds: 180),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  if (MediaQuery.disableAnimationsOf(context)) return child;
+                  final curved = CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  );
+                  return FadeTransition(
+                    opacity: curved,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+                      child: child,
+                    ),
+                  );
+                },
+          );
         },
       ),
       GoRoute(

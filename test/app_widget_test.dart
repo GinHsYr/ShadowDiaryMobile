@@ -85,6 +85,38 @@ void main() {
 
     expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
     expect(diaryRepository.requestedDates, <DateTime>[selectedDate]);
+    final transformPanel = find.byKey(const Key('diary-container-panel'));
+    expect(transformPanel, findsOneWidget);
+    expect(tester.getRect(transformPanel).topLeft, Offset.zero);
+    expect(
+      tester.getSize(transformPanel),
+      tester.view.physicalSize / tester.view.devicePixelRatio,
+    );
+    expect(
+      tester
+          .widget<Opacity>(find.byKey(const Key('diary-container-content')))
+          .opacity,
+      closeTo(1, 0.00001),
+    );
+  });
+
+  testWidgets('falls back when a new-entry route has no calendar rectangle', (
+    tester,
+  ) async {
+    final settingsRepository = MemorySettingsRepository(
+      const AppSettings(localePreference: AppLocalePreference.en),
+    );
+    await tester.pumpWidget(_testApp(settingsRepository));
+    await tester.pumpAndSettle();
+
+    GoRouter.of(
+      tester.element(find.byKey(const Key('home-month-calendar'))),
+    ).push(AppRoutes.newEntryForDate(DateTime(2026, 10, 2)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('editor-quill-editor')), findsOneWidget);
+    expect(find.byKey(const Key('diary-container-panel')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('creates an archive through the configured archive routes', (

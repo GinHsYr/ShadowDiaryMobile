@@ -31,6 +31,7 @@ class EditorPage extends ConsumerStatefulWidget {
     this.initialDate,
     this.initialImageSource,
     this.initialImageIndex,
+    this.transparentBackground = false,
     super.key,
   });
 
@@ -38,6 +39,7 @@ class EditorPage extends ConsumerStatefulWidget {
   final DateTime? initialDate;
   final String? initialImageSource;
   final int? initialImageIndex;
+  final bool transparentBackground;
 
   @override
   ConsumerState<EditorPage> createState() => _EditorPageState();
@@ -537,6 +539,9 @@ class _EditorPageState extends ConsumerState<EditorPage>
         if (!didPop) unawaited(_exit());
       },
       child: Scaffold(
+        backgroundColor: widget.transparentBackground
+            ? Colors.transparent
+            : null,
         body: SafeArea(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())

@@ -20,7 +20,7 @@ class HomePage extends ConsumerWidget {
     super.key,
   });
 
-  final ValueChanged<DateTime>? onCalendarDateSelected;
+  final ValueChanged<HomeCalendarDateSelection>? onCalendarDateSelected;
   final ValueChanged<Offset>? onSearchRequested;
 
   @override
@@ -73,11 +73,11 @@ class HomePage extends ConsumerWidget {
           ],
           HomeCalendar(
             diaryDates: overview.diaryDates,
-            onDateSelected: (date) {
+            onDateSelected: (selection) {
               if (showOnboarding) {
                 _completeOnboarding(ref);
               }
-              onCalendarDateSelected?.call(date);
+              onCalendarDateSelected?.call(selection);
             },
           ),
           const SizedBox(height: AppSpacing.md),
@@ -125,6 +125,18 @@ class HomePage extends ConsumerWidget {
           );
     onSearchRequested?.call(origin);
   }
+}
+
+class HomeCalendarDateSelection {
+  const HomeCalendarDateSelection({
+    required this.date,
+    required this.rect,
+    required this.borderRadius,
+  });
+
+  final DateTime date;
+  final Rect? rect;
+  final double borderRadius;
 }
 
 class _HomeOnboardingGuide extends StatelessWidget {
@@ -406,17 +418,22 @@ class HomeCalendar extends StatefulWidget {
 
   final Iterable<DateTime> diaryDates;
   final DateTime? initialDate;
-  final ValueChanged<DateTime>? onDateSelected;
+  final ValueChanged<HomeCalendarDateSelection>? onDateSelected;
 
   @override
   State<HomeCalendar> createState() => _HomeCalendarState();
 }
 
 class _HomeCalendarState extends State<HomeCalendar> {
+  static const _pressFadeInDuration = Duration(milliseconds: 70);
+  static const _pressFadeOutDuration = Duration(milliseconds: 160);
+
   late final DateTime _today;
   late DateTime _focusedDay;
   late DateTime _selectedDay;
+  DateTime? _pressedDay;
   late Set<int> _diaryDayKeys;
+  final Map<String, GlobalKey> _dayCellKeys = <String, GlobalKey>{};
 
   @override
   void initState() {
@@ -443,6 +460,14 @@ class _HomeCalendarState extends State<HomeCalendar> {
     final writtenDays = _writtenDaysInMonth(_focusedDay);
     final progress = writtenDays / daysInMonth;
     final dayCellDecoration = SmoothBoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+    );
+    final selectedDayDecoration = SmoothBoxDecoration(
+      color: colors.primary,
+      borderRadius: BorderRadius.circular(10),
+    );
+    final todayDecoration = SmoothBoxDecoration(
+      color: colors.secondaryContainer,
       borderRadius: BorderRadius.circular(10),
     );
 
@@ -474,9 +499,56 @@ class _HomeCalendarState extends State<HomeCalendar> {
               eventLoader: (day) =>
                   _hasDiary(day) ? const <bool>[true] : const <bool>[],
               calendarBuilders: CalendarBuilders<bool>(
+                prioritizedBuilder: (context, day, focusedDay) {
+                  final isPressed = isSameDay(day, _pressedDay);
+                  final isToday = isSameDay(day, _today);
+                  final isOutside = day.month != focusedDay.month;
+                  final decoration = isPressed
+                      ? selectedDayDecoration
+                      : isToday
+                      ? todayDecoration
+                      : dayCellDecoration;
+                  final textStyle = isPressed
+                      ? theme.textTheme.bodyMedium!.copyWith(
+                          color: colors.onPrimary,
+                          fontWeight: FontWeight.w700,
+                        )
+                      : isToday
+                      ? theme.textTheme.bodyMedium!.copyWith(
+                          color: colors.onSecondaryContainer,
+                          fontWeight: FontWeight.w700,
+                        )
+                      : isOutside
+                      ? theme.textTheme.bodyMedium!.copyWith(
+                          color: colors.onSurface.withValues(alpha: 0.28),
+                        )
+                      : theme.textTheme.bodyMedium!;
+                  return Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (_) => _pressDay(day),
+                    onPointerUp: (_) => _releaseDay(day),
+                    onPointerCancel: (_) => _releaseDay(day),
+                    child: AnimatedContainer(
+                      key: _dayCellKeys.putIfAbsent(
+                        _cellKey(day, focusedDay),
+                        GlobalKey.new,
+                      ),
+                      duration: isPressed
+                          ? _pressFadeInDuration
+                          : _pressFadeOutDuration,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 1,
+                      ),
+                      decoration: decoration,
+                      alignment: Alignment.center,
+                      child: Text('${day.day}', style: textStyle),
+                    ),
+                  );
+                },
                 markerBuilder: (context, day, events) {
                   if (events.isEmpty) return null;
-                  final isSelected = isSameDay(day, _selectedDay);
+                  final isPressed = isSameDay(day, _pressedDay);
                   return PositionedDirectional(
                     end: 1,
                     bottom: 0,
@@ -484,7 +556,7 @@ class _HomeCalendarState extends State<HomeCalendar> {
                       Icons.check_rounded,
                       key: Key('home-calendar-diary-${_dayKey(day)}'),
                       size: 13,
-                      color: isSelected ? colors.onPrimary : colors.primary,
+                      color: isPressed ? colors.onPrimary : colors.primary,
                     ),
                   );
                 },
@@ -502,7 +574,13 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   _selectedDay = date;
                   _focusedDay = DateUtils.dateOnly(focusedDay);
                 });
-                widget.onDateSelected?.call(date);
+                widget.onDateSelected?.call(
+                  HomeCalendarDateSelection(
+                    date: date,
+                    rect: _selectedDayRect(date),
+                    borderRadius: 10,
+                  ),
+                );
               },
               onPageChanged: (focusedDay) {
                 setState(() => _focusedDay = DateUtils.dateOnly(focusedDay));
@@ -535,18 +613,12 @@ class _HomeCalendarState extends State<HomeCalendar> {
                   color: colors.onPrimary,
                   fontWeight: FontWeight.w700,
                 ),
-                selectedDecoration: SmoothBoxDecoration(
-                  color: colors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                selectedDecoration: selectedDayDecoration,
                 todayTextStyle: theme.textTheme.bodyMedium!.copyWith(
                   color: colors.onSecondaryContainer,
                   fontWeight: FontWeight.w700,
                 ),
-                todayDecoration: SmoothBoxDecoration(
-                  color: colors.secondaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                todayDecoration: todayDecoration,
               ),
             ),
             const Divider(height: AppSpacing.md),
@@ -623,6 +695,48 @@ class _HomeCalendarState extends State<HomeCalendar> {
   }
 
   bool _hasDiary(DateTime day) => _diaryDayKeys.contains(_dayKey(day));
+
+  void _pressDay(DateTime day) {
+    if (isSameDay(day, _pressedDay)) return;
+    setState(() => _pressedDay = DateUtils.dateOnly(day));
+  }
+
+  void _releaseDay(DateTime day) {
+    if (!isSameDay(day, _pressedDay)) return;
+    setState(() => _pressedDay = null);
+  }
+
+  Rect? _selectedDayRect(DateTime date) {
+    final dayPrefix = '${_dayKey(date)}:';
+    final viewport = Offset.zero & MediaQuery.sizeOf(context);
+    Rect? selectedRect;
+    var visibleArea = -1.0;
+
+    for (final entry in _dayCellKeys.entries) {
+      if (!entry.key.startsWith(dayPrefix)) continue;
+      final renderObject = entry.value.currentContext?.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) continue;
+
+      final rect = Rect.fromPoints(
+        renderObject.localToGlobal(Offset.zero),
+        renderObject.localToGlobal(renderObject.size.bottomRight(Offset.zero)),
+      );
+      final intersection = rect.intersect(viewport);
+      final area = intersection.isEmpty
+          ? 0.0
+          : intersection.width * intersection.height;
+      if (area > visibleArea) {
+        visibleArea = area;
+        selectedRect = rect;
+      }
+    }
+
+    return selectedRect;
+  }
+
+  static String _cellKey(DateTime day, DateTime focusedDay) {
+    return '${_dayKey(day)}:${focusedDay.year}-${focusedDay.month}';
+  }
 
   int _writtenDaysInMonth(DateTime month) {
     return _diaryDayKeys.where((key) {

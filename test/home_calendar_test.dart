@@ -267,12 +267,104 @@ void main() {
     expect(yearWheel.selectedNumberStyle?.color, isNot(Colors.black));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('captures the selected day cell global rectangle', (
+    tester,
+  ) async {
+    HomeCalendarDateSelection? selection;
+    await tester.pumpWidget(
+      _calendarApp(
+        locale: const Locale('zh'),
+        onDateSelected: (value) => selection = value,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final fifteenth = find.descendant(
+      of: find.byKey(const Key('home-month-calendar')),
+      matching: find.text('15'),
+    );
+    final fifteenthCenter = tester.getCenter(fifteenth);
+    await tester.tap(fifteenth);
+    await tester.pumpAndSettle();
+
+    expect(selection?.date, DateTime(2026, 7, 15));
+    expect(selection?.rect, isNotNull);
+    expect(selection!.rect!.width, greaterThan(0));
+    expect(selection!.rect!.height, greaterThan(0));
+    expect(selection!.rect!.contains(fifteenthCenter), isTrue);
+    final fifteenthRect = selection!.rect;
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const Key('home-month-calendar')),
+        matching: find.text('16'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selection!.date, DateTime(2026, 7, 16));
+    expect(selection!.rect, isNot(fifteenthRect));
+
+    final juneThirtieth = find.descendant(
+      of: find.byKey(const Key('home-month-calendar')),
+      matching: find.text('30'),
+    );
+    final juneThirtiethCenter = tester.getCenter(juneThirtieth.first);
+    await tester.tap(juneThirtieth.first);
+    await tester.pumpAndSettle();
+
+    expect(selection!.date, DateTime(2026, 6, 30));
+    expect(selection!.rect, isNotNull);
+    expect(selection!.rect!.contains(juneThirtiethCenter), isTrue);
+  });
+
+  testWidgets('shows a brief date highlight only while the cell is pressed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_calendarApp(locale: const Locale('zh')));
+    await tester.pumpAndSettle();
+
+    final day = find.descendant(
+      of: find.byKey(const Key('home-month-calendar')),
+      matching: find.text('15'),
+    );
+    final cellListener = find
+        .ancestor(of: day, matching: find.byType(Listener))
+        .first;
+    final cell = find.descendant(
+      of: cellListener,
+      matching: find.byType(AnimatedContainer),
+    );
+    final idleCell = tester.widget<AnimatedContainer>(cell.first);
+    expect((idleCell.decoration! as BoxDecoration).color, isNull);
+
+    final gesture = await tester.startGesture(tester.getCenter(day));
+    await tester.pump(const Duration(milliseconds: 35));
+
+    final pressedCell = tester.widget<AnimatedContainer>(cell.first);
+    expect(
+      (pressedCell.decoration! as BoxDecoration).color,
+      AppTheme.light(ThemeSeed.neutral).colorScheme.primary,
+    );
+    expect(pressedCell.duration, const Duration(milliseconds: 70));
+
+    await gesture.up();
+    await tester.pump();
+
+    final releasedCell = tester.widget<AnimatedContainer>(cell.first);
+    expect((releasedCell.decoration! as BoxDecoration).color, isNull);
+    expect(releasedCell.duration, const Duration(milliseconds: 160));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _calendarApp({
   required Locale locale,
   Iterable<DateTime> diaryDates = const <DateTime>[],
   ThemeData? theme,
+  ValueChanged<HomeCalendarDateSelection>? onDateSelected,
 }) {
   return MaterialApp(
     locale: locale,
@@ -286,6 +378,7 @@ Widget _calendarApp({
           child: HomeCalendar(
             initialDate: DateTime(2026, 7, 20),
             diaryDates: diaryDates,
+            onDateSelected: onDateSelected,
           ),
         ),
       ),
